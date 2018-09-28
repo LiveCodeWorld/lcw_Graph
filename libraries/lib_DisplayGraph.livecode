@@ -1,0 +1,108 @@
+﻿script "lib_DisplayGraph"
+--> MetaData
+-
+license: GPLv3
+name: lib_DisplayGraph
+type: library
+version: 0.2
+
+/*
+A library to do with displaying overlays, creating them from folders of data (overlay_Folder)
+and providing a set of custom properties that can be used to manipulate them.
+
+Essentially it draws graphs using the data stored in arrays created by "deps_SaveMainstackAndExportArrays".
+The main guts of the code is in "hkey_ObjectWalk", which uses "project_ConstructWalkArray" (a hArray walk which uses hArray_FindHkeyInHierarchy)
+This is complicated hacked code with various filtering going on.
+
+Then it walks missing handlers using "hkey_ObjectWalk"
+
+Previously there were many intefaces and libraries - overlayData, overlayFolder, overlayArray, linkArray etc
+This library is designed to provide a standard way to interface with these handlers, 
+using overlay_Folder and overlay_Name to refer to graph overlays uniquely.
+
+= To Do =
+At the moment the data structure is a nested set of dotArrays keyed by the overlayName of each overlayArray.
+This means there is no real metadata for overlayData, and thngs like overlayName are stored
+as a hack by slooping through metadata properties of each overlayArray.
+
+The data structure should perhaps be changed to the usual data/metadata arrangement.
+
+*/
+
+
+--> Working On
+-
+command display_ObjectGraph hObject, pProjectName, pGraphStyle, pProcessObject, pForceCreate
+   /*
+   You can alter the way the graph is constructed by placing a "graph_FilterProcessedArray" handler
+   at the same level as the "display_ObjectGraph"
+   
+   Puts everything in the project_OverlayFolder.
+   Could / should change this to 
+   */
+   if exists (pProcessObject) is false then
+      -- put script_CallingObject() into pProcessObject
+      put item 1 of line -2 of the executioncontexts into pProcessObject
+   end if
+   
+   graph_Project hObject, pProjectName, pGraphStyle, pProcessObject, pForceCreate
+   put the result into imageFile
+   --
+   display_ScriptSVG hObject
+   --
+   return imageFile
+end display_ObjectGraph
+
+
+--> Display | SVG
+-
+command display_ScriptEditorSvg svgFile, pTabName
+   if pTabName is empty then put "Deps" into pTabName
+   
+   put "View|ScriptEditor|SVG" into viewName
+   scriptEditor_AddPane pTabName, viewName
+   put the result into displayView
+   
+   set the svg_File [true] of displayView to svgFile
+   return displayView
+end display_ScriptEditorSvg
+
+command display_SVG svgFile, pStackLabel
+   put the "View|Image|SVG" into viewName
+   
+   stack_CloneInvisible viewName, "Display SVG"
+   put the result into cloneStackName
+   put the long id of widget 1 of cd 1 of stack cloneStackName into displayView
+   --
+   set the svg_File [true] of displayView to svgFile
+   
+   -- show and go
+   if pStackLabel is empty then
+      set the itemdelimiter to slash
+      put item -1 of svgFile into pStackLabel
+   end if
+   show stack cloneStackName
+   if pStackLabel is not empty then set the label of stack cloneStackName to pStackLabel
+   --
+   return displayView
+end display_SVG
+
+
+--> Display | Event Handlers
+-
+/*
+These handlers handle events from display views that are created from the code in this library.
+They do not have to be here, as you can change their location by setting the "event_Target" property of the display_View.
+*/
+
+command display_HkeyArrayGraph hkeyArray, pGraphStyle
+   -- component: true
+   
+   if pGraphStyle is empty then put "hierarchical" into pGraphStyle
+   -- overlayArray_ReconstructAndCreateFiles hKeyArray, pOverlayName, overlayFolder, pGraphStyle, dotHeaderArray, graphPropertyArray
+   put overlayArray_FromLinkArray (hkeyArray) into overlayArray
+   overlayArray_SetGraphProperty overlayArray, "overlay_Style", pGraphStyle
+   overlayArray_CreateAndDisplayGraph overlayArray, pGraphStyle
+   put the result into imageView
+   return imageView
+end display_HkeyArrayGraph

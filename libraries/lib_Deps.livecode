@@ -1,0 +1,45 @@
+﻿script "lib_Deps"
+--> MetaData
+-
+license: GPLv3
+name: lib_Deps
+type: library
+version: 0.1
+
+
+--> Deps | HkeyArray
+-
+function deps_FromHkeyArray hKey, hkeyDepArray, pReturnShortHkey
+   put array_AllNodes (hkeyDepArray) into allHkeys
+   sort allHkeys by item 1 of each
+   repeat for each line depKey in allHkeys
+      put item 1 to 2 of depKey into shortDepKey
+      if shortDepKey =  item 1 to 2 of hKey then next repeat
+      if pReturnShortHkey is not false then
+         put shortDepKey & CR after hKeyDeps
+      else
+         put depKey & CR after hKeyDeps
+      end if
+   end repeat
+   delete char -1 of hKeyDeps
+   return hKeyDeps
+end deps_FromHkeyArray
+
+
+--> Deps | Stored
+-
+function deps_FetchFromStored hKey, pReturnShortHkey
+   put item 1 to 2 of hKey into shortHKey
+   put hkey_GetLinkArray (shortHKey, "hierarchical") into hkeyDepArray
+   put deps_FromHkeyArray (hKey, hkeyDepArray, pReturnShortHkey) into hKeyDeps
+   return hKeyDeps
+end deps_FetchFromStored
+
+function deps_FetchFromStoredAnotherWay hKey, pReturnShortHkey
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put the script_LinkArray of hObject into scriptLinkArray
+   put hkeyArray_ExtractSubArray (hKey,scriptLinkArray) into hkeyLinkArray
+   --
+   put deps_FromHkeyArray (hKey, hkeyLinkArray, pReturnShortHkey) into hKeyDeps
+   return hKeyDeps
+end deps_FetchFromStoredAnotherWay
