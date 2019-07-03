@@ -28,9 +28,14 @@ end deps_FromHkeyArray
 
 --> Deps | Stored
 -
+function deps_HkeyStackNames hKey
+   put deps_FetchFromStored (hKey) into hkeys
+   put hkey_ListStackNames (hkeys) into stackNames
+   return stackNames
+end deps_HkeyStackNames
+
 function deps_FetchFromStored hKey, pReturnShortHkey
-   put item 1 to 2 of hKey into shortHKey
-   put hkey_GetLinkArray (shortHKey, "hierarchical") into hkeyDepArray
+   put hkey_GetLinkArray (hKey) into hkeyDepArray
    put deps_FromHkeyArray (hKey, hkeyDepArray, pReturnShortHkey) into hKeyDeps
    return hKeyDeps
 end deps_FetchFromStored

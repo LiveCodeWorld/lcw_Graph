@@ -14,6 +14,74 @@ See also hkeyArray, and overlayArray for related structures.
 */
 
 
+--> Working on
+-
+function linkarray_RenameKeys someKeyArray, @idArray, @keyArray, pKeyStyle
+   -- modified to use nested someKeyArray instead of just an index of keys
+   -- a general technique for building incremental unique ids and their translations (as in a database id)
+   -- for a single key this returns the (new) or existing simlified translation
+   -- while building the two way arrays
+   -- will also add multiple keys if needed (as with childNodes)
+   
+   if someKeyArray is an array then -- quick hack
+      put keys (someKeyArray) into someKeys
+   else
+      put someKeyArray into someKeys
+   end if
+   
+   repeat for each line someKey in someKeys
+      -- at moment someKey is an old stylye hKey
+      put keyArray [someKey] into simpleID
+      if simpleID is empty then
+         -- not already indexed (work out new incremental ID and add to idArray and keyArray)
+         put the number of lines of keys(idArray) + 1 into keyNumber
+         switch pKeyStyle
+            case "hName"
+               hkey_Deconstruct someKey, hName, hType, hObject, hNum
+               put hName into simpleID
+               break
+            case "short hkey"
+               hkey_Deconstruct someKey, hName, hType, hObject, hNum
+               put quote & hType && hName & quote into simpleID
+               break
+            case "number"
+               put keyNumber into simpleID
+               break
+            default
+               put "n" & keyNumber into simpleID
+         end switch
+         put simpleID into keyArray [someKey]
+         put someKey into idArray [simpleID]
+      end if
+      put simpleID & CR after simpleIDs
+   end repeat
+   delete char -1 of simpleIDs
+   return simpleIDs
+end linkarray_RenameKeys
+
+
+--> LinkArray | Construct | ID
+-
+command linkArray_IdConstruct linkArray, @nodeLinkArray, @nodeIdArray, pKeyStyle
+   -- usefull to create simple arrays from complex data.
+   -- that is it creates simple numbered nodes 1, 2 etc and stores references to these in arrays.
+   local nodeBackArray
+   repeat for each key someKey in linkArray
+      put linkArray [someKey] into frontLinkArray
+      linkArray_Add frontLinkArray, someKey, nodeLinkArray, nodeIdArray, nodeBackArray, pKeyStyle
+   end repeat
+   return allLinks
+end linkArray_IdConstruct
+
+private command linkArray_Add newLinkArray, someNode, @hLinkArray, @hIdArray, @backArray, pKeyStyle
+   -- modified to work with nested newLinkArray
+   put linkarray_RenameKeys (someNode, hIdArray, backArray, pKeyStyle) into nodeID
+   put linkarray_RenameKeys (newLinkArray, hIdArray, backArray, pKeyStyle) into linkIDs   
+   array_AddToIndex linkIDs, nodeID, hLinkArray
+   return the result
+end linkArray_Add
+
+
 --> LinkArray | Processing
 -
 command linkArray_RemoveSelfLinks @linkArray, pIsNested
@@ -384,125 +452,65 @@ command linkArray_WalkKeys linkArray, someKey, @subLinkArray
 end linkArray_WalkKeys
 
 
---> LinkArray | Simple IDs
--
-command linkArray_ConstructIdArray linkArray, @allKeys, @idArray, @backIdArray, @nodeIDs
-   repeat for each key someKey in linkArray
-      line_Add someKey, allKeys
-      linkArray_ConstructSimpleKey someKey, idArray, backIdArray, true
-      put linkArray [someKey] into someLinks
-      line_Add someLinks, allKeys
-      repeat for each line someLink in someLinks
-         linkArray_ConstructSimpleKey someLink, idArray, backIdArray, true
-      end repeat
-   end repeat
-   put keys(idArray) into nodeIDs
-   sort numeric nodeIDs
-   sort allKeys
-   return nodeIDs
-end linkArray_ConstructIdArray
-
-command linkArray_IdConstruct linkArray, @nodeLinkArray, @nodeIdArray
-   -- usefull to create simple arrays from complex data.
-   -- that is it creates simple numbered nodes 1, 2 etc and stores references to these in arrays.
-   local nodeBackArray
-   repeat for each key someKey in linkArray
-      put linkArray [someKey] into frontLinkArray
-      linkArray_Add frontLinkArray, someKey, nodeLinkArray, nodeIdArray, nodeBackArray
-   end repeat
-   return allLinks
-end linkArray_IdConstruct
-
-private command linkArray_Add newLinkArray, someNode, @hLinkArray, @hIdArray, @backArray
-   -- modified to work with nested newLinkArray
-   put array_ConstructSimpleKeys (someNode, hIdArray, backArray) into nodeID
-   put array_ConstructSimpleKeys (newLinkArray, hIdArray, backArray) into linkIDs   
-   array_AddToIndex linkIDs, nodeID, hLinkArray
-   return the result
-end linkArray_Add
-
-function linkArray_Keys linkArray
-   local allKeys, idArray, backIdArray, nodeIDs
-   linkArray_ConstructIdArray linkArray, allKeys, idArray, backIdArray, nodeIDs
-   return allKeys
-end linkArray_Keys
-
-private command linkArray_ConstructSimpleKey someKey, @idArray, @backIdArray, pNumberOnly
-   put backIdArray [someKey] into simpleID
-   if simpleID is not empty then return empty -- already indexed
-   
-   -- work out new incremental ID and add to idArray and keyArray
-   put the number of lines of keys(idArray) + 1 into keyNumber
-   if pNumberOnly is true then
-      put keyNumber into simpleID
-   else
-      put "n" & keyNumber into simpleID
-   end if
-   put simpleID into backIdArray [someKey]
-   put someKey into idArray [simpleID]
-   return simpleID
-end linkArray_ConstructSimpleKey
-
-
 --> LinkArray| Model | Convertion
 -
 function linkArray_ConstructOutline linkArray, hIdArray
-    -- constructs a simple (reversable) outline from a link array
-    -- different outlines are possible depending on the order of keys
-    -- so sorting improves consistency
-    
-    put keys(linkArray) into linkKeys
-    sort linkKeys
-    repeat for each line keyID in linkKeys
-        put hIdArray [keyID] into realKey
-        put html_ConstructNameLink(realKey, keyID) & CR after someOutline
-         
-        put linkArray [keyID] into linkIDs
-        put empty into realValues
-        repeat for each line linkID in linkIDs
-            put hIdArray [linkID] into realValue
-            put tab & html_ConstructNameLink (realValue, linkID) & CR after someOutline
-        end repeat
-    end repeat
-    delete char -1 of someOutline
-    return someOutline
+   -- constructs a simple (reversable) outline from a link array
+   -- different outlines are possible depending on the order of keys
+   -- so sorting improves consistency
+   
+   put keys(linkArray) into linkKeys
+   sort linkKeys
+   repeat for each line keyID in linkKeys
+      put hIdArray [keyID] into realKey
+      put html_ConstructNameLink(realKey, keyID) & CR after someOutline
+      
+      put linkArray [keyID] into linkIDs
+      put empty into realValues
+      repeat for each line linkID in linkIDs
+         put hIdArray [linkID] into realValue
+         put tab & html_ConstructNameLink (realValue, linkID) & CR after someOutline
+      end repeat
+   end repeat
+   delete char -1 of someOutline
+   return someOutline
 end linkArray_ConstructOutline
-            
+
 function linkArray_IdRevert linkArray, hIdArray
-    repeat for each key keyID in linkArray
-        put linkArray [keyID] into linkIDs
-        put empty into realValues
-        repeat for each line linkID in linkIDs
-            put hIdArray [linkID] into realValue
-            put realValue & CR after realValues
-        end repeat
-        delete char -1 of realValues
-        
-        put hIdArray [keyID] into realKey
-        put realValues into realArray [realKey]
-    end repeat
-    return realArray
+   repeat for each key keyID in linkArray
+      put linkArray [keyID] into linkIDs
+      put empty into realValues
+      repeat for each line linkID in linkIDs
+         put hIdArray [linkID] into realValue
+         put realValue & CR after realValues
+      end repeat
+      delete char -1 of realValues
+      
+      put hIdArray [keyID] into realKey
+      put realValues into realArray [realKey]
+   end repeat
+   return realArray
 end linkArray_IdRevert
 
 on linkArray_HashConstruct someArray, @hashedArray, @hashDictionary
-    -- usefull to create simple arrays from complex data.
-    -- references to complex data stored in hash key dictionary "hashDictionary"
-    
-    repeat for each key someKey in someArray
-        put text_Hash (someKey) into hashKey
-        put someKey into hashDictionary [hashKey]
-         
-        put someArray [someKey] into someValues
-        
-        put empty into hashValues
-        repeat for each line someValue in someValues
-            put text_Hash (someValue) into hashValue
-            put someValue into hashDictionary [hashValue]
-            put hashValue & CR after hashValues
-        end repeat
-        delete char -1 of hashValues
-        put hashValues into hashedArray [hashKey]
-    end repeat
+   -- usefull to create simple arrays from complex data.
+   -- references to complex data stored in hash key dictionary "hashDictionary"
+   
+   repeat for each key someKey in someArray
+      put text_Hash (someKey) into hashKey
+      put someKey into hashDictionary [hashKey]
+      
+      put someArray [someKey] into someValues
+      
+      put empty into hashValues
+      repeat for each line someValue in someValues
+         put text_Hash (someValue) into hashValue
+         put someValue into hashDictionary [hashValue]
+         put hashValue & CR after hashValues
+      end repeat
+      delete char -1 of hashValues
+      put hashValues into hashedArray [hashKey]
+   end repeat
 end linkArray_HashConstruct
 
 function linkArray_HashRevert hashedArray, hashDictionary
@@ -626,8 +634,84 @@ on linkArray_ConstructXml someNode, linkArray, treeID, @propertyArray
 end linkArray_ConstructXml
 
 
+--> Outline | XML
+-
+/*
+See also OPML section in libOPN_Data
+*/
+
+function outline_ToXmlStructure tabbedOutline
+   put outline_Simplify (tabbedOutline, idArray, keyArray) into simpleOutline
+   put outline_ToXML (simpleOutline) into someXml
+   put xml_Nodes (someXml) into allNodes
+   
+   put revCreateXMLTree (someXml, true, true, false) into treeID
+   set the itemdelimiter to "/"
+   repeat for each line someNode in allNodes
+      revAddXMLNode treeID, someNode, "contents", "", "before"
+      put the result into createdNode
+      
+      set the itemdelimiter to "/"
+      put item -1 of someNode into attributeValue
+      revSetXMLAttribute treeID, createdNode, "nodeID", attributeValue
+   end repeat
+   put revXMLText (treeID, "", true) into someXml
+   revDeleteXMLTree treeID
+   xml_TidySpace someXML
+   return someXml
+end outline_ToXmlStructure
+
+function outline_ToXML tabbedOutline, propertyArray
+   -- local lineNumber
+   -- outline_RecurseToXML someOutline, someXml, 0, lineNumber, "Test XML"
+   
+   outline_ToXMLRecurse tabbedOutline, propertyArray
+   put the result into treeID
+   put revXMLText (treeID, "", true) into someXml
+   revDeleteXMLTree treeID
+   return someXml
+end outline_ToXML
+
+function outline_Simplify tabbedOutline, @idArray, @keyArray, pKeyStyle
+   repeat for each line someLine in tabbedOutline
+      put word 1 to -1 of someLine into someText
+      put linkarray_RenameKeys(someText, idArray, keyArray, pKeyStyle) into nodeID
+      put nodeID into word 1 to -1 of someLine
+      put someLine & CR after simpleOutline
+   end repeat
+   delete char -1 of simpleOutline
+   return simpleOutline
+end outline_Simplify
+
+
 --> Private
 -
+private command outline_ToXMLRecurse tabbedOutline, propertyArray, treeNode, treeID
+   put propertyArray [treeNode] into nodeContents
+   
+   put "tree" into rootNode
+   if treeNode is empty then
+      -- can do a header here?
+      xml_CreateTree rootNode, treeID
+   else
+      put rootNode & "/" & treeNode into someNode
+      
+      set the itemdelimiter to "/"
+      put item -1 of someNode into nodeName
+      put item 1 to -2 of someNode into parentPath
+      
+      put propertyArray [someNode] into nodeContents
+      revAddXMLNode treeID, parentPath, nodeName, nodeContents
+      put the result into createdNode
+   end if
+   
+   put outline_PathChildren(treeNode, tabbedOutline) into childNodes
+   repeat for each line childNode in childNodes
+      outline_ToXMLRecurse tabbedOutline, propertyArray, childNode, treeID
+   end repeat
+   return treeID
+end outline_ToXMLRecurse
+
 private command _ConstructPropertyArray pDotPropertyArray, @overlap, @concentrate, @splines, @cluster, @direction, @dotOrder, @defaultShape, @defaultUrl
    -- see also dot_ConstructPropertyArray
    put pDotPropertyArray ["graphRect"] into graphRect

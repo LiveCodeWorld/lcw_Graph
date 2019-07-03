@@ -17,12 +17,16 @@ local LocalArray
 --> Global | Hkey | Walk | Menu
 -
 on menu_GraphHandler hKey
-   display_HandlerGraph hKey
+   display_CreateHandlerGraph hKey
 end menu_GraphHandler
 
-on menu_WalkExportedHkeyDeps hKey
-   display_HandlerDeps hKey
-end menu_WalkExportedHkeyDeps
+on menu_DisplaySvg hKey
+   display_HkeyGraph hKey, true
+end menu_DisplaySvg
+
+on menu_DisplayDot hKey
+   display_HkeyDot hKey
+end menu_DisplayDot
 
 on _
 end _
@@ -34,6 +38,10 @@ end submenu_Dev
 
 --> Dev | Menu
 -
+on menu_WalkExportedHkeyDeps hKey
+   display_HandlerDeps hKey
+end menu_WalkExportedHkeyDeps
+
 on menu_HkeyArrayFromExported hKey
    put hkeyArray_FromExported (hKey) into hkeyArray
    display_Array hkeyArray
@@ -69,11 +77,20 @@ end p_Names
 
 --> Global | Hkey | Walk | Menu | Disabled
 -
-getprop disabled_DisplayHkeySvg [hKey]
+getprop disabled_DisplayDot [hKey]
+   put hkey_DotFile (hKey) into dotFile
+   if there is a file svgFile then
+      return false
+   else
+      return "delete"
+   end if
+end disabled_DisplayDot
+
+getprop disabled_DisplaySvg [hKey]
    put hkey_SvgFile (hKey) into svgFile
    if there is a file svgFile then
       return false
    else
-      return true
+      return "delete"
    end if
-end disabled_DisplayHkeySvg
+end disabled_DisplaySvg

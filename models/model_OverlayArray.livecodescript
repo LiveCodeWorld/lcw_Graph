@@ -29,11 +29,11 @@ function overlay_GetDefaultArray
    return empty
 end overlay_GetDefaultArray
 
-function overlayArray_FromLinkArray linkArray, pDotHeaderArray, pGraphPropertyArray
+function overlayArray_FromLinkArray linkArray, pDotHeaderArray, pGraphPropertyArray, pKeyStyle
    local overlayArray
    if linkArray is not an array then return empty
    
-   overlayArray_SetData overlayArray, linkArray
+   overlayArray_SetData overlayArray, linkArray, pKeyStyle
    overlayData_ConstructAndSetGroupStyleArray overlayArray, pOverlayName
    put overlayData_ConstructClusterArray (overlayArray) into clusterArray
    overlayArray_SetClusterArray overlayArray, clusterArray
@@ -301,8 +301,8 @@ end overlayArray_DeconstructGroupStyleArray
 
 --> overlayArray | Graph | Props | Toplevel
 -
-command overlayArray_SetData @overlayArray, linkArray
-   linkArray_IdConstruct linkArray, nodeLinkArray, nodeIdArray
+command overlayArray_SetData @overlayArray, linkArray, pKeyStyle
+   linkArray_IdConstruct linkArray, nodeLinkArray, nodeIdArray, pKeyStyle
    put linkArray_ConstructDataArray (linkArray, nodeLinkArray, nodeIdArray) into dataArray
    put dataArray into overlayArray ["data"]
 end overlayArray_SetData

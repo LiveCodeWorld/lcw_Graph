@@ -12,6 +12,8 @@ This model contains handlers that store the arrays (models) required to draw dot
 Arrays can be stored to file, 
 but also loaded into global variables where they can be accessed by getprop and setprop handlers.
 This allows local getprops to override the behavior of the gloabl model.
+
+See stack "model_Hkey"
 */
 
 

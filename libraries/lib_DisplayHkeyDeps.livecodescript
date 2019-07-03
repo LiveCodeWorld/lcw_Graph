@@ -9,24 +9,59 @@ version: 0.3
 
 --> Display
 -
-command display_ClusterDepGraph hkey, searchHierarchy, pClusterBoolean
-   -- good for checking deps are what you think
-   -- only searches and displays deps found in sepcific script objects
-   set the cursor to watch
-   hkey_CreateSearchHierarchyGraph hkey, searchHierarchy, "hierarchical", pClusterBoolean
-   
-   put the result into imageFile
+command display_ClusterDepGraph hkey, searchHierarchy, pClusterBoolean, pProcessObject  
+   graph_HkeyCreateCluster hkey, searchHierarchy, pClusterBoolean, pProcessObject
    display_HkeySVG hkey
    put the result into displayView
    return displayView
 end display_ClusterDepGraph
 
+command graph_HkeyCreateCluster hkey, searchHierarchy, pClusterBoolean, pProcessObject
+   -- good for checking deps are what you think
+   -- only searches and displays deps found in sepcific script objects
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put the mainstack_Hash of hObject into mainstackHash
+   put hkey_Construct (hName, hType, hObject) into hkey -- fixes and badly formatted hKyes
+   hkey_CreateSearchHierarchyGraph hkey, searchHierarchy, "hierarchical", pClusterBoolean, mainstackHash, pProcessObject
+   put the result into imageFile
+   return imageFile
+end graph_HkeyCreateCluster
+
 
 --> Display | Handler
 -
+command display_HkeyGraph hKey, pRevealFinder
+   put hkey_SvgFile (hKey) into svgFile
+   display_HkeySVG hkey
+   --
+   if pRevealFinder is true then
+      finder_Reveal svgFile
+   end if
+end display_HkeyGraph
+
+command display_HkeyDot hkey
+   put hkey_DotFile (hKey) into dotFile
+   display_TextFile dotFile
+end display_HkeyDot
+
+command display_HkeySVG hkey
+   put hkey_SvgFile (hKey) into svgFile
+   
+   put hkey into stackLabel
+   if scriptEditor_PaneExists ("Deps") then
+      display_ScriptEditorSvg svgFile
+   else
+      display_Svg svgFile, stackLabel
+   end if
+   put the result into displayView
+   --
+   set the displayed_Hkey of displayView to hkey
+   return displayView
+end display_HkeySVG
+
 command display_HandlerCalls hKey
    put hkey_FetchCalls (hKey) into shortCalls
-   hkeyLine_Normalize hKey
+   hkey_Normalize hKey
    display_Lines shortCalls, hKey, "mDouble_EditShortHkey", "hkey_FetchCalls (hKey)"
 end display_HandlerCalls
 
@@ -94,21 +129,6 @@ command display_ScriptSVG hObject, pSvgFile
    return displayView
 end display_ScriptSVG
 
-command display_HkeySVG hkey
-   put hkey_SvgFile (hKey) into svgFile
-   
-   put hkey into stackLabel
-   if scriptEditor_PaneExists ("Deps") then
-      display_ScriptEditorSvg svgFile
-   else
-      display_Svg svgFile, stackLabel
-   end if
-   put the result into displayView
-   --
-   set the displayed_Hkey of displayView to hkey
-   return displayView
-end display_HkeySVG 
-
 
 --> Display | Events
 -
@@ -121,20 +141,6 @@ end mDouble_EditShortHkey
 
 --> Working on
 -
-function hkeyLine_FromHandlerFile handlerPath
-   -- is this needed???
-   -- lcw_User/lcw_Metadata/lib_Display/data/objects/stack/handlers/M display_SpotlightHandler/lcw_handler.txt
-   
-   set the itemdelimiter to slash
-   if item -1 of handlerPath is not "lcw_handler.txt" then return empty
-   put item -2 of handlerPath into shortHkeyLine
-   put item 1 to -4 of of handlerPath into somePath
-   
-   put script_ExportedRootToObject (somePath) into hObject
-   put hKeyLine_Construct (shortHkeyLine, hObject) into hkeyLine
-   return hkeyLine
-end hkeyLine_FromHandlerFile
-
 command hkey_CreateDepGraph hKey, pExternalObjects, pGraphStyle, pClusterBoolean
    -- see also "hkey_FoundArrayFromSearchHierarchy"
    put empty into overlayName -- defaults to pGraphStyle or "hierarchical"
@@ -154,7 +160,7 @@ command hkey_CreateDepGraph hKey, pExternalObjects, pGraphStyle, pClusterBoolean
    return svgFile
 end hkey_CreateDepGraph
 
-command hkey_CreateSearchHierarchyGraph hKey, searchHierarchy, pGraphStyle, pClusterBoolean
+command hkey_CreateSearchHierarchyGraph hKey, searchHierarchy, pGraphStyle, pClusterBoolean, pMainstackHash, pProcessObject
    put empty into overlayName -- defaults to pGraphStyle or "hierarchical"
    if pClusterBoolean is not false then 
       put empty into clusterRank
@@ -163,10 +169,10 @@ command hkey_CreateSearchHierarchyGraph hKey, searchHierarchy, pGraphStyle, pClu
    end if
    
    put hkey_SearchHierarchyDependencyArray (hKey, searchHierarchy, true) into hKeyArray
+   --
    put hkey_MetadataFolder (hKey) into hkeyMetadataFolder
    folder_CreateNested hkeyMetadataFolder
-   --
-   overlay_CreateGraph hkeyMetadataFolder, hkeyArray, overlayName, hKey, pGraphStyle, clusterRank, empty, "svg"
+   overlay_CreateGraph hkeyMetadataFolder, hkeyArray, overlayName, hKey, pGraphStyle, clusterRank, pMainstackHash, "svg", pProcessObject
    --
    put hkey_SvgFile (hKey, pGraphStyle) into svgFile
    return svgFile
@@ -275,14 +281,12 @@ command hkey_ObjectWalkSearchHierarchy shortCall, hKey, @hKeyLinkArray, searchHi
    put hkey_FoundArrayFromSearchHierarchy (callName, callType, shortCall, hObject, searchHierarchy) into foundArray
    put foundArray ["foundHkey"] into foundCall
    
-   -- this could be filtered out at the end
-   -- if _foundUselessCall (foundCall) is true then return empty -- should do something else
-   
    switch
       case foundCall is empty
+         /*
          put merge ("Call '[[shortCall]]' for handler '[[hKey]]' is missing!") into someMessage
          lcw_Notify someMessage, true
-         
+         */
          put hkey_Construct (callName, callType, "missing", 1) into foundCall
          array_AddToIndex foundCall, hKey, hKeyLinkArray
          return empty
@@ -292,8 +296,10 @@ command hkey_ObjectWalkSearchHierarchy shortCall, hKey, @hKeyLinkArray, searchHi
    end switch
    
    -- add it to the array
+   /*
    put merge ("Added [[foundCall]] to hKeyArray!") into someMessage
    lcw_Notify someMessage
+   */
    array_AddToIndex foundCall, hKey, hKeyLinkArray
    
    -- now lets repeat and recurse for each call found
@@ -380,4 +386,21 @@ command hkey_ObjectWalk shortCall, hKey, @hKeyLinkArray, pProjectName, pAllCalls
    end repeat
    return empty
 end hkey_ObjectWalk
+
+
+--> Private 
+-
+private function hkeyLine_FromHandlerFile handlerPath
+   -- used by "display_SpotlightHandler" amd therefore "hkey_Find" ???
+   -- lcw_User/lcw_Metadata/lib_Display/data/objects/stack/handlers/M display_SpotlightHandler/lcw_handler.txt
+   
+   set the itemdelimiter to slash
+   if item -1 of handlerPath is not "lcw_handler.txt" then return empty
+   put item -2 of handlerPath into shortHkeyLine
+   put item 1 to -4 of of handlerPath into somePath
+   
+   put script_ExportedRootToObject (somePath) into hObject
+   put hKeyLine_Construct (shortHkeyLine, hObject) into hkeyLine
+   return hkeyLine
+end hkeyLine_FromHandlerFile
 

@@ -36,6 +36,148 @@ The data structure should perhaps be changed to the usual data/metadata arrangem
 */
 
 
+--> Working on
+-
+command hkeyArray_Process @hkeyArray, processObject
+   -- utility to allow renaming of nadlers in hkeyArray
+   -- designed to be used with "graph_TidyLinkArray" dispatches from "overlay_CreateGraph"
+   
+   repeat for each key hKey in hkeyArray
+      put hkeyArray [hKey] into hkeyCalls
+      --
+      if hkeyCalls is an array then
+         repeat for each key hkeyCall in hkeyCalls
+            dispatch "hkey_Rename" to processObject with hkeyCall
+            if it is not "handled" then return false
+            put the result into renamedHkey
+            if renamedHkey is empty then
+               delete variable hkeyCalls [hkeyCall]
+            else
+               put renamedHkey into hkeyCalls [hkeyCall]
+            end if
+         end repeat
+      else
+         repeat for each line hkeyCall in hkeyCalls
+            dispatch "hkey_Rename" to processObject with hkeyCall
+            if it is not "handled" then return false
+            put the result into renamedHkey
+            if renamedHkey is not empty then
+               put renamedHkey & CR after newCalls
+            end if
+         end repeat
+         delete char -1 of newCalls
+         put newCalls into hkeyCalls
+         delete variable newCalls
+      end if
+      --
+      put hkeyCalls into hkeyArray [hKey]
+   end repeat
+   
+   -- may already be a hkeyArray [newHkey]
+   -- put _HkeyRename (hKey) into newHkey
+   dispatch "hkey_Rename" to processObject with hkeyCall
+   if it is not "handled" then return false
+   put the result into newHkey
+   
+   delete variable hkeyArray [hKey] -- think it is alright to delete now (test all cases)
+   put hkeyArray [newHkey] into oldNewCalls
+   if oldNewCalls is an array then
+      union hkeyCalls with oldNewCalls
+      put hkeyCalls into hkeyArray [newHkey]
+   else
+      line_Add hkeyCalls, oldNewCalls
+      put oldNewCalls into hkeyArray [newHkey]
+   end if
+   --
+   return true
+end hkeyArray_Process
+
+command graph_FilterProcessedArray @processedCalls, someKeyCall
+   -- "graph_TidyLinkArray" is called once, I think this is called every time
+   -- take a look at "Global | Script | Dep | Menu"
+   -- use "hkeyArray_Process" to simplify
+   -- traps and filters hKeyArray for "display_IndexScriptAndDisplaySVG"
+   breakpoint
+   
+   hkey_Deconstruct someKeyCall, hName, hType, hObject, hNum
+   if hObject = "missing" then
+      switch
+         case hName is among the items of "jsonExport,jsonImport"
+            -- skip (remove from missing)
+            break
+         case char 1 to 3 of hName = "rig"
+            put "revIgniter" into item 3 of someKeyCall
+            put someKeyCall & CR after processedCalls
+            break
+         default
+            put someKeyCall & CR after processedCalls
+      end switch
+   else
+      put someKeyCall & CR after processedCalls
+   end if
+end graph_FilterProcessedArray
+
+function overlay_GetHkeyHash hKey, pOverlayName
+   put hkey_FetchOverlayData (hKey) into overlayData
+   put overlayData_GetArray (overlayData, pOverlayName) into overlayArray
+   -- put overlay_GetArray (overlayFolder, pOverlayName) into overlayArray
+   put overlayArray_GetGraphProperty (overlayArray, "overlay_Hash") into storedOverlayHash
+   return storedOverlayHash
+end overlay_GetHkeyHash
+
+getprop overlay_IsNew [pOverlayName]
+   -- script object overlay
+   put the long id of the target into scriptObject
+   
+   put the script of scriptObject into someScript
+   put sha1_Hash (someScript) into hashNow
+   
+   put the overlay_Folder of scriptObject into overlayFolder
+   put overlay_GetGraphValue (overlayFolder, "sha1 of script when overlay created", pOverlayName) into hashWhenCreated
+   return hashNow = hashWhenCreated
+end overlay_IsNew
+
+setprop overlay_IsNew [pOverlayName] someBoolean
+   put the long id of the target into scriptObject
+   put "sha1 of script when overlay created" into pKey
+   
+   if someBoolean is true then
+      put the script of scriptObject into someScript
+      put sha1_Hash (someScript) into hashWhenCreated
+      
+      -- set the hdb_ObjectMetaData [pKey] of scriptObject to hashWhenCreated
+      -- set the overlay_GraphProperty [pKey] of scriptObject to hashWhenCreated
+      
+      put the overlay_Folder of scriptObject into overlayFolder
+      overlay_SetGraphValue overlayFolder, pKey, hashWhenCreated, pOverlayName, false
+      
+      return hashWhenCreated
+   else
+      -- don't really need to do anything as it will return false when the script hash changes
+      -- so may as well keep old hash
+      -- set the hdb_ObjectMetaData [pKey] of scriptObject to empty ???
+   end if
+end overlay_IsNew
+
+function overlay_TestGraph overlayFolder, pOverlayName
+   put overlay_GetHash (overlayFolder, pOverlayName) into storedOverlayHash
+   if storedOverlayHash is empty then return false
+   
+   put overlayArray_GetGraphProperty (overlayArray, "image_File") into shortImageFile
+   folder_Format overlayFolder
+   put overlayFolder & shortImageFile into imageFile
+   put file_Hash (imageFile) into imageHash
+   
+   return imageHash = storedOverlayHash
+end overlay_TestGraph
+
+function overlay_GetHash overlayFolder, pOverlayName
+   put overlay_GetArray (overlayFolder, pOverlayName) into overlayArray
+   put overlayArray_GetGraphProperty (overlayArray, "overlay_Hash") into storedOverlayHash
+   return storedOverlayHash
+end overlay_GetHash
+
+
 --> Graph | Filters
 -
 command dot_ConstructLabel hKey
@@ -76,31 +218,12 @@ command overlayArray_FixOld @overlayArray
    put idArray into overlayArray ["data"]["idArray"]
 end overlayArray_FixOld
 
-command graph_FilterProcessedArray @processedCalls, someKeyCall
-   -- traps and filters hKeyArray for "display_IndexScriptAndDisplaySVG"
-   
-   hkey_Deconstruct someKeyCall, hName, hType, hObject, hNum
-   if hObject = "missing" then
-      switch
-         case hName is among the items of "jsonExport,jsonImport"
-            -- skip (remove from missing)
-            break
-         case char 1 to 3 of hName = "rig"
-            put "revIgniter" into item 3 of someKeyCall
-            put someKeyCall & CR after processedCalls
-            break
-         default
-            put someKeyCall & CR after processedCalls
-      end switch
-   else
-      put someKeyCall & CR after processedCalls
-   end if
-end graph_FilterProcessedArray
-
 
 --> Working on
 -
 command overlay_CreateGraph overlayFolder, hKeyArray, pOverlayName, pOverlayOf, pGraphStyle, pDotCluster, pMainstackHash, pImageFormat, pProcessObject
+   put "hName" into pKeyStyle -- hName, number, short hkey
+   --
    if pProcessObject is empty then
       put the long id of the target into pProcessObject
    end if
@@ -112,13 +235,18 @@ command overlay_CreateGraph overlayFolder, hKeyArray, pOverlayName, pOverlayOf, 
       return empty
    end if
    
-   # Recreate graph with old values if not passed directly
+   # Recreate graph from stored overlayArray
    put overlay_GetArray (overlayFolder, pOverlayName) into overlayArray
    if pOverlayOf is empty then put overlayArray_GetGraphProperty (overlayArray, "overlay_Of")  into pOverlayOf
    if pGraphStyle is empty then put overlayArray_GetGraphProperty (overlayArray, "overlay_Style")  into pGraphStyle
    
-   put overlayArray_FromLinkArray (hKeyArray) into overlayArray
-   dispatch "graph_TidyOverlayArray" to pProcessObject with overlayArray
+   put empty into pDotHeaderArray
+   put empty into pGraphPropertyArray
+   
+   -- create graph arrays with local messages for processing
+   dispatch "graph_TidyLinkArray" to pProcessObject with hKeyArray -- use "graph_TidyLinkArray @hKeyArray"
+   put overlayArray_FromLinkArray (hKeyArray, pDotHeaderArray, pGraphPropertyArray, pKeyStyle) into overlayArray
+   dispatch "graph_TidyOverlayArray" to pProcessObject with overlayArray -- use "graph_TidyOverlayArray @overlayArray"
    
    if pDotCluster is not empty then overlayArray_SetHeaderProperty overlayArray, "dot_ClusterRank", pDotCluster
    -- if pOverlayHash is not empty then overlayArray_SetGraphProperty overlayArray, "overlay_Hash", pOverlayHash
@@ -132,12 +260,15 @@ command overlay_CreateGraph overlayFolder, hKeyArray, pOverlayName, pOverlayOf, 
    overlayArray_CreateFilesAndSetGeometry overlayArray, pMainstackHash, pImageFormat
    if token 1 of the result = "error" then return the result
    
+   /*
    put overlayArray_GetGraphProperty (overlayArray, "image_File") into shortImageFile
    folder_Format overlayFolder
    put overlayFolder & shortImageFile into imageFile
-   put file_Hash (imageFile) into pOverlayHash
-   overlayArray_SetGraphProperty overlayArray, "overlay_Hash", pOverlayHash
+   put file_Hash (imageFile) into pMainstackHash
+   */
    
+   -- we change to mainstack_Hash rather than hash the image
+   overlayArray_SetGraphProperty overlayArray, "overlay_Hash", pMainstackHash
    overlay_SetArray overlayFolder, overlayArray, pOverlayName
    return overlayArray
 end overlay_CreateGraph
@@ -207,17 +338,6 @@ end overlay_CreateDotFiles
 
 --> Props
 -
-getprop overlay_IsNew [pOverlayName]
-   put the long id of the target into scriptObject
-   
-   put the script of scriptObject into someScript
-   put sha1_Hash (someScript) into hashNow
-   
-   put the overlay_Folder of scriptObject into overlayFolder
-   put overlay_GetGraphValue (overlayFolder, "sha1 of script when overlay created", pOverlayName) into hashWhenCreated
-   return hashNow = hashWhenCreated
-end overlay_IsNew
-
 getprop overlay_Array [pOverlayName]
    put the overlay_Folder of the target into overlayFolder
    if pOverlayName is empty then put the overlay_Name of the target into pOverlayName
@@ -470,7 +590,9 @@ end overlay_GetHkeyLinks
 command overlay_SetHkeyLinks hKey, hKeyCalls, pOverlayName
    put hkey_GetLinkArray (hKey, pOverlayName) into hkeyArray
    put hKeyCalls into hkeyArray [hKey]
-   hkey_SetLinkArray hKey, hkeyArray, pOverlayName
+   -- hkey_SetLinkArray hKey, hkeyArray, pOverlayName
+   put library_HandlerFile (hKey, empty, false) into overlayFolder
+   overlay_SetLinkArray overlayFolder, hkeyArray, pOverlayName
    return hkeyArray
 end overlay_SetHkeyLinks
 
@@ -550,46 +672,11 @@ command overlay_Delete overlayFolder, overlayName, pDeleteFiles, pImageFormat
    end if
 end overlay_Delete
 
-function overlay_TestGraph overlayFolder, pOverlayName
-   put overlay_GetArray (overlayFolder, pOverlayName) into overlayArray
-   put overlayArray_GetGraphProperty (overlayArray, "overlay_Hash") into storedOverlayHash
-   if storedOverlayHash is empty then return false
-   
-   put overlayArray_GetGraphProperty (overlayArray, "image_File") into shortImageFile
-   folder_Format overlayFolder
-   put overlayFolder & shortImageFile into imageFile
-   put file_Hash (imageFile) into imageHash
-   
-   return imageHash = storedOverlayHash
-end overlay_TestGraph
-
 function overlay_GetObjectFromFolder overlayFolder, pOverlayName
    put overlay_GetGraphValue (overlayFolder, "overlay_Of", pOverlayName) into hKeyOrObject
    if exists(hKeyOrObject) is false then return empty
    return hKeyOrObject
 end overlay_GetObjectFromFolder
-
-setprop overlay_IsNew [pOverlayName] someBoolean
-   put the long id of the target into scriptObject
-   put "sha1 of script when overlay created" into pKey
-   
-   if someBoolean is true then
-      put the script of scriptObject into someScript
-      put sha1_Hash (someScript) into hashWhenCreated
-      
-      -- set the hdb_ObjectMetaData [pKey] of scriptObject to hashWhenCreated
-      -- set the overlay_GraphProperty [pKey] of scriptObject to hashWhenCreated
-      
-      put the overlay_Folder of scriptObject into overlayFolder
-      overlay_SetGraphValue overlayFolder, pKey, hashWhenCreated, pOverlayName, false
-      
-      return hashWhenCreated
-   else
-      -- don't really need to do anything as it will return false when the script hash changes
-      -- so may as well keep old hash
-      -- set the hdb_ObjectMetaData [pKey] of scriptObject to empty ???
-   end if
-end overlay_IsNew
 
 
 --> Overlay | To Sort

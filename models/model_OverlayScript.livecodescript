@@ -41,7 +41,7 @@ end script_Markdown
 getprop script_Help
    put the script_HelpFile of the target into someFile
    if there is not a file someFile then return empty
-   put script_FetchRaw (someFile) into someHelp
+   put text_Get (someFile) into someHelp
    return someHelp
 end script_Help
 

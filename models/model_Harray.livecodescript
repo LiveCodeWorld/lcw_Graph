@@ -82,7 +82,7 @@ command script_UpdateHarrayAndExport scriptObject, pExportHandlersAndCalls
    This does the older full version of updating hArray
    */
    menu_DeleteActiveArray
-   
+
    if pExportHandlersAndCalls is empty then put false into pExportHandlersAndCalls
    put pExportHandlersAndCalls is true into createHashArray
    put false into forceIndexHandlerCalls
@@ -91,13 +91,13 @@ command script_UpdateHarrayAndExport scriptObject, pExportHandlersAndCalls
    catch e
       return merge ("error, [[scriptObject]] is probably a locked stack so can't index script.")
    end try
-   
+
    -- update the extensive metadata stored in gLCW
    lcw_ExportAndAddScriptToHarray gLCW, scriptObject, someScript, createHashArray, forceIndexHandlerCalls, pExportHandlersAndCalls
    put the result into scriptFile
    set the menu_Update of scriptObject to true
    put the result into mTitleTableArray
-   
+
    -- let's set the uRipArray (this will be lost for script-only stacks)
    script_UpdateUrip scriptObject, someScript
    return scriptFile
@@ -122,7 +122,7 @@ command lcw_ExportAndAddScriptToHarray @hArray, someObject, someScript, pCreateH
       put the dataObject_Folder [true] of someObject into dataFolder
       put textStack_ScriptFile (dataFolder) into scriptFile
    end if
-   
+
    -- this add to hArray without exporting anything
    lcw_AddScriptToHarray hArray, someObject, someScript, scriptFile, pCreateHashArray, pForceIndexHandlerCalls, pExportHandlersAndCalls
 end lcw_ExportAndAddScriptToHarray
@@ -133,26 +133,26 @@ command lcw_AddScriptToHarray @hArray, someObject, someScript, scriptFile, pCrea
    if pCreateHashArray is not true then
       delete variable hArray ["handlerHashArray"]
    end if
-   
+
    put the stack_Object of someObject into stackObject
    put the mainstack of stackObject into mainStackName
    put the name of stack mainStackName into ruggedMainStack
    put the filename of stack mainStackName into stackFile
    file_SetHomeRelative stackFile
-   
+
    put the rugged_ID of someObject into ruggedObject
-   
+
    put the ticks into indexTime
    put sha1_Hash (someScript) into scriptHash
-   
+
    put script_GetMetadataArray (someScript) into objectMetaData
    put the customproperties ["uRIP"] of someObject into uRipArray
    union objectMetaData with uRipArray
-   
+
    -- first let's delete any old entries for this object
    hArray_RemoveObjectFromArray ruggedObject, hArray, uRipArray
    delete variable hArray ["scriptArray"][ruggedObject]
-   
+
    -- now let's index object types
    put objectMetaData ["type"] into uRipType
    if uRipType is not empty then
@@ -162,31 +162,31 @@ command lcw_AddScriptToHarray @hArray, someObject, someScript, scriptFile, pCrea
       if uRipType = "view" and the view_IsTemplate of someObject is true then
          put "view template" into uRipType
       end if
-      put scriptHash into hArray ["objectType"][uRipType][ruggedObject]["scriptHash"] 
-      put objectMetaData ["name"] into hArray ["objectType"][uRipType][ruggedObject]["uRipName"] 
+      put scriptHash into hArray ["objectType"][uRipType][ruggedObject]["scriptHash"]
+      put objectMetaData ["name"] into hArray ["objectType"][uRipType][ruggedObject]["uRipName"]
    end if
-   
+
    -- Add script details to object metadata
    put scriptHash into hArray ["scriptArray"][ruggedObject]["metadata"]["sha1"]
-   
+
    put objectMetaData into hArray ["scriptArray"][ruggedObject]["metadata"]["uripArray"]
    put scriptFile into hArray ["scriptArray"][ruggedObject]["metadata"]["scriptFile"]
    put stackFile into hArray ["scriptArray"][ruggedObject]["metadata"]["stackFile"]
    put ruggedMainStack into hArray ["scriptArray"][ruggedObject]["metadata"]["main stack object"]
    put indexTime into hArray ["scriptArray"][ruggedObject]["metadata"]["indexTime"]
-   
+
    -- index any behaviors
    put the behavior of someObject into behaviorObject
    if behaviorObject is not empty then
       put scriptHash into hArray ["behaviorArray"][behaviorObject]["data"]["object"][ruggedObject]["scriptHash"]
    end if
-   
+
    -- fast and simple (to get comments and metadata will need to process later
    put false into pIsExpanded
    local suiteTitle
    put 1 into indexNum
    put 1 into lineNum
-   
+
    -- same logic as "the script_Array"
    put false into commentBlock
    repeat with lineNum = 1 to the number of lines of someScript
@@ -202,26 +202,26 @@ command lcw_AddScriptToHarray @hArray, someObject, someScript, scriptFile, pCrea
                put false into commentBlock
             end if
             break
-         case word 1 of scriptLine = "-->" 
+         case word 1 of scriptLine = "-->"
             put word 2 to -1 of scriptLine into suiteTitle
-            
+
             put "t" into hArray ["scriptArray"][ruggedObject]["data"]["script_DataArray"][indexNum]["lineType"]
             put lineNum into hArray ["scriptArray"][ruggedObject]["data"]["script_DataArray"][indexNum]["startLineNum"]
             put suiteTitle into hArray ["scriptArray"][ruggedObject]["data"]["script_DataArray"][indexNum]["scriptLine"]
             put pIsExpanded into hArray ["scriptArray"][ruggedObject]["data"]["script_DataArray"][indexNum]["isExpanded"]
-            
+
             add 1 to indexNum
-            break    
+            break
          case word 1 of scriptLine is among the items of "command,on,function,getprop,setprop,private"
             put true into indexingHandler
-            
+
             if word 1 of scriptLine is "private" then
                put "p" into pBit
                delete word 1 of scriptLine
             else
                put empty into pBit
             end if
-            
+
             get char 1 of scriptLine
             if it = "o" then
                put true into isOnMessage
@@ -230,37 +230,37 @@ command lcw_AddScriptToHarray @hArray, someObject, someScript, scriptFile, pCrea
                put false into isOnMessage
                put pBit & it into lineType
             end if
-            
+
             put word 2 of scriptLine into hName
-            
+
             put countArray [hName][lineType] into hNum
             add 1 to hNum
             put hNum into countArray [hName][lineType]
-            
+
             put hName,lineType into shortHKey
             put shortHKey,ruggedObject,hNum into hKey
             put lineNum into startLineNum
-            
+
             put hKey into hArray ["scriptArray"][ruggedObject]["data"]["script_DataArray"][indexNum]["hKey"]
             put lineType into hArray ["scriptArray"][ruggedObject]["data"]["script_DataArray"][indexNum]["lineType"]
             put suiteTitle into hArray ["scriptArray"][ruggedObject]["data"]["script_DataArray"][indexNum]["suiteTitle"]
             put pIsExpanded is true into hArray ["scriptArray"][ruggedObject]["data"]["script_DataArray"][indexNum]["isExpanded"]
             put startLineNum into hArray ["scriptArray"][ruggedObject]["data"]["script_DataArray"][indexNum]["startLineNum"]
-            
+
             put scriptLine into startScriptLine
             put startScriptLine into hArray ["scriptArray"][ruggedObject]["data"]["script_DataArray"][indexNum]["handlerLine"]
-            
+
             break
          case word 1 of scriptLine = "end" and word 2 of scriptLine = hName and indexingHandler is true
             put false into indexingHandler
             put lineNum into endLineNum
-            
+
             put endLineNum into hArray ["scriptArray"][ruggedObject]["data"]["script_DataArray"][indexNum]["endLineNum"]
-            
+
             put line startLineNum to endLineNum of someScript into someHandler
             put sha1_Hash (someHandler) into handlerHash
             put handlerHash into hArray ["scriptArray"][ruggedObject]["data"]["script_DataArray"][indexNum]["sha1"]
-            
+
             -- too slow
             if pCreateHashArray is true then
                -- this is slow
@@ -268,35 +268,35 @@ command lcw_AddScriptToHarray @hArray, someObject, someScript, scriptFile, pCrea
                -- this only happens if hArray ["handlerHashArray"] is added to hArray before walking
                -- this can be initialised by adding a previously stored handlerHashArray from disk
                -- or simply doing something like 'put empty into hArray ['"handlerHashArray"]["new"]'
-               
+
                hArray_AddHandlerHash hArray, hKey, someHandler, handlerHash, indexTime, pForceIndexHandlerCalls
                put the result into handlerCallArray
                handler_ExportCalls shortHkey, scriptFile, handlerCallArray, pCreateHashArray, pForceIndexHandlerCalls
-               
+
                put empty into hArray ["handlerHashArray"]["actual"][handlerHash]
             end if
-            
+
             -- now index unique global suites
             if word -1 of suiteTitle = "Menu" and word -2 of suiteTitle = "|" then
                -- it's a menu
                _addMenuToHarray hArray, suiteTitle, shortHkey, ruggedObject, ruggedMainStack, isOnMessage, lineType, handlerHash, scriptHash, shortkeySuiteArray, thisScriptsMenuArray
             end if
-            
+
             -- now index first (not last!) hKeys of object
             if hArray ["scriptArray"][ruggedObject]["data"]["firstHKeyArray"][shortHKey]["sha1"] is empty then
                -- only index first handler with this array
                put handlerHash into hArray ["scriptArray"][ruggedObject]["data"]["firstHKeyArray"][shortHKey]["sha1"]
-               
+
                -- only firstHkeys can ever get called so only these go in handlerArray
                put startScriptLine into hArray ["handlerArray"][shortHKey][hKey]["scriptLine"]
                put handlerHash into hArray ["handlerArray"][shortHKey][hkey]["handlerHash"]
                put startLineNum into hArray ["handlerArray"][shortHKey][hKey]["startLineNum"]
                put endLineNum into hArray ["handlerArray"][shortHKey][hkey]["endLineNum"]
-               
+
                -- now let's extract keywords and index shortHkey against each (no point doing it for non first Hkeys
                -- hkey_AddToKeyWordArray hArray, hKey, handlerHash -- could index twice with same hash in different places
             end if
-            
+
             add 1 to indexNum
             break
          case token 1 of scriptLine is empty
@@ -310,11 +310,11 @@ command lcw_AddScriptToHarray @hArray, someObject, someScript, scriptFile, pCrea
             */
       end switch
    end repeat
-   
+
    -- having gone through every line of the script we can do something like
    -- put the script_MenuTitleTableArray of stackObject into mTitleTableArray
    -- menu_SetTitleTableArrayGlobal stackObject, mTitleTableArray, suiteTitle
-   
+
    return scriptFile
 end lcw_AddScriptToHarray
 
@@ -322,14 +322,14 @@ private command handler_ExportCalls shortHkey, scriptFile, handlerCallArray, pCr
    if pCreateHashArray is true or pForceIndexHandlerCalls is true then
       -- put handlerCallArray ["filteredCalls"] into shortCalls
       put handlerCallArray ["hkeyCalls"] into shortCalls
-      
+
       -- /lcw_User/lcw_Metadata/lib_Update/data/objects/stack/script.txt
       put scriptFile into dataFolder
       set the itemdelimiter to slash
       put empty into item -1 of dataFolder
       put textStack_ConstructCallsFile (shortHkey, dataFolder) into callsFile
-      script_SaveRaw callsFile, shortCalls
-      
+      text_Set callsFile, shortCalls
+
       _DisplayIndexedCallsComment shortHkey, shortCalls
    end if
 end handler_ExportCalls
@@ -338,34 +338,34 @@ command hArray_AddHandlerHash @hArray, hKey, someHandler, handlerHash, indexTime
    -- does not export handlers
    -- uses "handler_ConstructCallArray" and "lcw_Notify" and "outline_IncreaseIndent" for progress monitoring
    -- we could add to an hKeyArray here? But can't use hArray to find calls in hierarchy as it is in progress of being built
-   
+
    put hArray ["handlerHashArray"]["cached"][handlerHash]["hashTime"] is not empty into alreadyIndexed
-   
+
    -- let's get the old handler hash and delete the old entry
    put hArray_GetHandlerHash (hKey, hArray) into oldHandlerHash
    if oldHandlerHash is not handlerHash then
       delete variable hArray ["handlerHashArray"]["cached"][oldHandlerHash]
       delete variable hArray ["handlerHashArray"]["new"][oldHandlerHash]
    end if
-   
+
    -- add hKey to list of hkeys with same handler(hash)
    put empty into hArray ["handlerHashArray"]["cached"][handlerHash]["hKey"][hKey]
-   
+
    if alreadyIndexed is false or pForceindex is true then
       -- if new (handlerHash) entry extract calls and add to index
       put indexTime into hArray ["handlerHashArray"]["cached"][handlerHash]["hashTime"]
-      
+
       -- now let's extract keywords and index shortHkey against each (no point doing it for non first Hkeys
       hkey_AddToKeyWordArray hArray, hKey, handlerHash
-      
+
       -- this is VERY slow
       put handler_ConstructCallArray (someHandler) into handlerCallArray
       put handlerCallArray ["filteredCalls"] into shortCalls
       put handlerCallArray ["hkeyCalls"] into allShortCalls
-      
+
       put shortCalls into hArray ["handlerHashArray"]["cached"][handlerHash]["shortCalls"]
       put allShortCalls into hArray ["handlerHashArray"]["cached"][handlerHash]["allShortCalls"]
-      
+
       return handlerCallArray
    else
       -- put "Already Indexed" && kwote (hKey) into someComment
@@ -390,7 +390,7 @@ private command _addMenuToHarray @hArray, suiteTitle, shortHkey, ruggedObject, r
    -- here we want to look at automatically indexing and creating global menu_Table / array
    -- and then
    -- menu_SetTitleTableArrayGlobal stackObject, mTitleTableArray, suiteTitle
-   
+
    switch
       case word 1 of suiteTitle = "Global" and word 2 of suiteTitle = "|"
          menu_AddGlobalHarray suiteTitle, shortHkey, ruggedObject, handlerHash, isOnMessage, lineType, thisScriptsMenuArray, hArray
@@ -402,15 +402,15 @@ end _addMenuToHarray
 
 private command menu_AddLocalHarray suiteTitle, shortHkey, ruggedObject, ruggedMainStack, handlerHash, scriptHash, isOnMessage, lineType, @thisScriptsMenuArray, @hArray
    -- store local menu with the mainstack section of the array
-   
+
    if ruggedMainStack is not among the keys of thisScriptsMenuArray then
       delete variable hArray ["scriptArray"][ruggedMainStack]["data"]["menu_SuiteArray"]
       put empty into thisScriptsMenuArray [ruggedMainStack]
    end if
-   
+
    put ruggedObject into hArray ["scriptArray"][ruggedMainStack]["data"]["menu_SuiteArray"][suiteTitle]["mController"]
    put scriptHash into hArray ["scriptArray"][ruggedMainStack]["data"]["menu_SuiteArray"][suiteTitle]["scriptHash"]
-   
+
    if isOnMessage is true and lineType = "c" then
       put hArray ["scriptArray"][ruggedMainStack]["data"]["menu_SuiteArray"][suiteTitle]["item"] into shortkeySuiteArray
       if shortkeySuiteArray is not an array then
@@ -418,20 +418,20 @@ private command menu_AddLocalHarray suiteTitle, shortHkey, ruggedObject, ruggedM
       else
          put (the number of elements of shortkeySuiteArray) + 1 into itemNum
       end if
-      
+
       put shortHkey into hArray ["scriptArray"][ruggedMainStack]["data"]["menu_SuiteArray"][suiteTitle]["item"][itemNum]["shortHkey"]
       put handlerHash into hArray ["scriptArray"][ruggedMainStack]["data"]["menu_SuiteArray"][suiteTitle]["item"][itemNum]["sha1"]
-   end if            
+   end if
 end menu_AddLocalHarray
 
 private command menu_AddGlobalHarray suiteTitle, shortHkey, ruggedObject, handlerHash, isOnMessage, lineType, @thisScriptsMenuArray, @hArray
    -- updates hArray ["Global Menus"][suiteTitle]
-   
+
    if suiteTitle is not among the keys of thisScriptsMenuArray then  -- a new global menu for this script
       delete variable hArray ["Global Menus"][suiteTitle]
       put empty into thisScriptsMenuArray [suiteTitle]
    end if
-   
+
    put ruggedObject into hArray ["Global Menus"][suiteTitle]["mController"]
    if isOnMessage is true and lineType = "c" then
       put hArray ["Global Menus"][suiteTitle]["item"] into shortkeySuiteArray
@@ -503,7 +503,7 @@ end ide_ExportAndIndex
 
 --> hArray | Old
 -
-function scriptEditor_GetBehaviorButton bName   
+function scriptEditor_GetBehaviorButton bName
    put hArray_GetNamedObjectType (bName, "behavior") into behaviorButton
    return behaviorButton
 end scriptEditor_GetBehaviorButton
@@ -543,7 +543,7 @@ function hArray_ConstructHkeySuiteArray mainstackHarray
    put mainstackHarray ["scriptArray"] into rObjectArray
    repeat for each key rObject in rObjectArray
       put rObjectArray [rObject]["data"]["script_DataArray"] into scriptDataArray
-      
+
       repeat for each key indexNum in scriptDataArray
          put scriptDataArray [indexNum]["hkey"] into hKey
          if hKey is empty then next repeat
@@ -571,7 +571,7 @@ function hArray_GetHandler hKey, pHarray, pCheckHash
       lcw_Notify (hObject && "script is locked!"), true
       return empty
    end try
-   
+
    put hArray_GetObjectData (hObject, "script_DataArray", pHarray) into scriptArray
    repeat for each key indexNum in scriptArray
       put scriptArray [indexNum]["hkey"] into testHkey
@@ -662,7 +662,7 @@ end hArray_GetNamedObjectType
 function hArray_ConstructTypeNameObjectArray
    local typeNameObjectArray
    put hArray_GetObjectTypeData() into objectTypeData
-   
+
    repeat for each key objectType in objectTypeData
       put objectTypeData [objectType] into objectTypeArray
       repeat for each key rObject in objectTypeArray
@@ -689,7 +689,7 @@ function hArray_ConstructNameObjectArray objectType
       if uripName is empty then
          delete variable objectTypeArray [rObject]
          hArray_SetObjectTypeArray objectType, objectTypeArray
-         
+
          put the mobile_Name of rObject into mObject
          put mObject && "has no uRIP ['name']." & CR & CR & "Removed it from gLCW!" into someMessage
          lcw_Notify someMessage, true
@@ -767,7 +767,7 @@ function hArray_ObjectIsIndexStatus rObject, pHarray
 end hArray_ObjectIsIndexStatus
 
 function hArray_GetObjectData rObject, pKey, pHarray
-   put hArray_GetObjectArray (rObject, pHarray) into objectArray  
+   put hArray_GetObjectArray (rObject, pHarray) into objectArray
    if pKey is empty then
       return objectArray ["data"]
    else
@@ -785,7 +785,7 @@ function hArray_GetUripArray rObject, pKey, pHarray
 end hArray_GetUripArray
 
 function hArray_GetObjectMetaData rObject, pKey, pHarray
-   put hArray_GetObjectArray (rObject, pHarray) into objectArray  
+   put hArray_GetObjectArray (rObject, pHarray) into objectArray
    if pKey is empty then
       return objectArray ["metadata"]
    else
@@ -794,7 +794,7 @@ function hArray_GetObjectMetaData rObject, pKey, pHarray
 end hArray_GetObjectMetaData
 
 command hArray_SetObjectMetaData rObject, arrayOrValue, pKey
-   put hArray_GetObjectArray (rObject) into objectArray  
+   put hArray_GetObjectArray (rObject) into objectArray
    if pKey is empty then
       put arrayOrValue into objectArray ["metadata"]
    else
@@ -843,13 +843,13 @@ end hArray_GetHkeyDataArray
 function hArray_FindHkey shortHkey, pHandlerHash
    -- a fast lookup that ignores hierarchy
    put item 1 to 2 of shortHkey into shortHkey
-   
+
    put hArray_GetFoundHkeyArray (shortHkey) into hkeyArray
    if hkeyArray is not an array and char 1 of item 2 of shortHkey is not "p" then
       put "p" before char 1 of item 2 of shortHkey
       put hArray_GetFoundHkeyArray (shortHkey) into hkeyArray
    end if
-   
+
    if pHandlerHash is empty then
       put line 1 of the keys of hkeyArray into foundHKey
       return foundHKey
@@ -882,7 +882,7 @@ end hArray_ShortKeyHash
 
 function hArray_GetKeywordArray pKWord
    global gLCW
-   
+
    if pKWord is empty then
       return gLCW ["keywordArray"]
    else
@@ -925,7 +925,7 @@ function hArray_GetObjectArray rObject, pHarray
          return pHarray ["scriptArray"][rObject]
       end if
    else
-      global gLCW   
+      global gLCW
       if rObject is empty then
          return gLCW ["scriptArray"]
       else
@@ -943,8 +943,8 @@ command hArray_SetObjectArray rObject, objectArray, pHarray
       put objectArray into gLCW ["scriptArray"][rObject]
       return gLCW
    end if
-end hArray_SetObjectArray 
-   
+end hArray_SetObjectArray
+
 function hArray_GetHandlerArray pHkey
    global gLCW
    put item 1 to 2 of pHkey into shortHkey
@@ -982,7 +982,7 @@ end hArray_ListHkeys
 function hArray_ConstructHkeyArray
    global gLCW
    local bigHKeyArray
-   
+
    put gLCW ["handlerArray"] into handlerArray
    repeat for each key shortHkey in handlerArray
       if shortHkey = "_,c" then next repeat
@@ -1018,11 +1018,11 @@ end hArray_ListDifferentHkeys
 
 command hArray_SetHkeyDifferences hKey, @identicalHkeys, @anotherHashArray
    global gLCW
-   
-   put item 1 to 2 of hKey into shortHkey 
+
+   put item 1 to 2 of hKey into shortHkey
    put gLCW ["handlerArray"][shortHkey] into hKeyArray
    put hKeyArray [hKey]["handlerHash"] into handlerHash
-   
+
    repeat for each key anotherHkey in hKeyArray
       put hKeyArray [anotherHkey]["handlerHash"] into anotherHash
       if anotherHash = handlerHash then
@@ -1043,7 +1043,7 @@ end hArray_ListHandlerHashes
 
 function hArray_ConstructHkeyHashArray
    global gLCW
-   
+
    -- timer_Start "hArray_ConstructHkeyHashArray"
    put gLCW ["handlerArray"] into handlerArray
    repeat for each key shortHkey in handlerArray
@@ -1051,14 +1051,14 @@ function hArray_ConstructHkeyHashArray
       put handlerArray [shortHkey] into hKeyArray
       repeat for each key hKey in hKeyArray
          put hKeyArray [hKey]["handlerHash"] into handlerHash
-         
+
          -- can get anything, could get info from objectArray?
          put hKeyArray [hKey]["scriptLine"] into scriptLine
          put scriptLine into hkeyHashArray [handlerHash][hKey]
       end repeat
    end repeat
    -- timer_Stop "hArray_ConstructHkeyHashArray"
-   
+
    return hkeyHashArray
 end hArray_ConstructHkeyHashArray
 
@@ -1073,18 +1073,18 @@ end hArray_KeywordHkeys
 function hArray_KeywordHkeyArray pKeyWordList
    -- see also "hArray_ListShortKeys"
    global gLCW
-   
+
    if pKeyWordList is empty then
       -- put hArray_GetHandlerArray() into handlerArray
       put gLCW ["handlerArray"] into handlerArray
       put keys(handlerArray) into shortHKeys
    else
       replace CR with comma in pKeyWordList -- hack to allow passing lines not just lists
-      
+
       put word 1 to -1 of item 1 of pKeyWordList into firstKeyWord
       delete item 1 of pKeyWordList
       put gLCW ["keywordArray"][firstKeyWord] into keywordArray
-      
+
       repeat for each key shortHkey in keywordArray
          put keywordArray [shortHkey]["rugged_ID"] into ruggedID
          put keywordArray [shortHkey]["sha1"] into handlerHash
@@ -1097,24 +1097,24 @@ end hArray_KeywordHkeyArray
 
 function hArray_ListShortKeys pKeyWordList
    global gLCW
-   
+
    if pKeyWordList is empty then
       -- put hArray_GetHandlerArray() into handlerArray
       put gLCW ["handlerArray"] into handlerArray
       put keys(handlerArray) into shortHKeys
    else
       replace CR with comma in pKeyWordList -- hack to allow passing lines not just lists
-      
+
       put word 1 to -1 of item 1 of pKeyWordList into firstKeyWord
       delete item 1 of pKeyWordList
       put gLCW ["keywordArray"][firstKeyWord] into intersectArray
-      
+
       repeat for each item pKeyword in pKeyWordList
          put word 1 to -1 of pKeyword into pKeyword
          put gLCW ["keywordArray"][pKeyword] into keywordArray
          intersect intersectArray with keywordArray
       end repeat
-      
+
       put keys (intersectArray) into shortHkeys
    end if
    sort shortHkeys by item 1 of each
@@ -1141,7 +1141,7 @@ function hArray_ListUniqueHkeys
    put keys (bigHKeyArray) into hkeys
    sort hkeys by item 1 of each
    -- timer_Stop
-   
+
    return hkeys
 end hArray_ListUniqueHkeys
 
@@ -1163,7 +1163,7 @@ command hArray_ConstructDuplicateHkeyArray @duplicateShortKeyArray, @duplicateHk
       put hkeyHashArray [handlerHash] into hkeyArray
       if the number of elements of hkeyArray > 1 then
          union duplicateHKeyArray with hkeyArray
-         
+
          repeat for each key hKey in hkeyArray
             put item 1 to 2 of hKey into shortHkey
             -- put handlerHash into duplicateShortKeyArray [shortHkey][hKey]
@@ -1172,12 +1172,12 @@ command hArray_ConstructDuplicateHkeyArray @duplicateShortKeyArray, @duplicateHk
          end repeat
       end if
    end repeat
-   
+
    put keys (duplicateHKeyArray) into duplicateHkeys
    sort duplicateHkeys by item 1 of each
    --
    timer_Stop "hArray_ConstructDuplicateHkeyArray"
-   
+
    return duplicateHkeys
 end hArray_ConstructDuplicateHkeyArray
 
@@ -1190,7 +1190,7 @@ command hArray_ConstructDuplicateHkeyArray @duplicateShortKeyArray, @duplicateHk
       put hkeyHashArray [handlerHash] into hkeyArray
       if the number of elements of hkeyArray > 1 then
          union duplicateHKeyArray with hkeyArray
-         
+
          repeat for each key hKey in hkeyArray
             put item 1 to 2 of hKey into shortHkey
             -- put handlerHash into duplicateShortKeyArray [shortHkey][hKey]
@@ -1199,12 +1199,12 @@ command hArray_ConstructDuplicateHkeyArray @duplicateShortKeyArray, @duplicateHk
          end repeat
       end if
    end repeat
-   
+
    put keys (duplicateHKeyArray) into duplicateHkeys
    sort duplicateHkeys by item 1 of each
    --
    timer_Stop "hArray_ConstructDuplicateHkeyArray"
-   
+
    return duplicateHkeys
 end hArray_ConstructDuplicateHkeyArray
 
@@ -1213,12 +1213,12 @@ end hArray_ConstructDuplicateHkeyArray
 -
 command hArray_FindAndRemoveMissingObjects pDontNotify
    global gLCW
-   
+
    put hArray_ListMissingObjects() into missingObjects
    repeat for each line rObject in missingObjects
-      hArray_RemoveObjectFromArray rObject, gLCW 
+      hArray_RemoveObjectFromArray rObject, gLCW
    end repeat
-   
+
    if pDontNotify is true then return missingObjects
    if missingObjects is empty then
       lcw_Notify "Did not find any missing objects in the global gLCW array!"
@@ -1249,7 +1249,7 @@ command hArray_RemoveObject someObject
       put someObject into rObject -- assume it is in the right format (won't do anythign if it is not)
       put empty into uRipArray -- won;t strip same name / type objects
    end if
-   
+
    global gLCW
    hArray_RemoveObjectFromArray rObject, gLCW, uRipArray
 end hArray_RemoveObject
@@ -1285,7 +1285,7 @@ command hArray_RemoveObjectFromHandlerArray rObject, @hArray, pSlowClean
       repeat for each key indexNum in scriptData
          put scriptData [indexNum]["hKey"] into hKey
          if hKey is empty then next repeat
-         
+
          put item 1 to 2 of hKey into shortHKey
          put hArray ["handlerArray"][shortHKey] into shortKeyArray
          if shortKeyArray is an array then -- not sure if we really need to check this for speed reasons
@@ -1298,7 +1298,7 @@ command hArray_RemoveObjectFromHandlerArray rObject, @hArray, pSlowClean
       end repeat
    end if
 end hArray_RemoveObjectFromHandlerArray
-   
+
 command hArray_RemoveObjectFromTypeArray rObject, @hArray
    put hArray ["objectType"] into objectTypeArray
    repeat for each key objectType in objectTypeArray
@@ -1310,13 +1310,13 @@ command hArray_RemoveObjectFromTypeArray rObject, @hArray
    end repeat
 end hArray_RemoveObjectFromTypeArray
 
-command hArray_RemoveSameNameTypeObjects rObject, @hArray, uRipArray 
+command hArray_RemoveSameNameTypeObjects rObject, @hArray, uRipArray
    put uRipArray ["name"] into uripName
    put uRipArray ["type"] into objectType
    if objectType is "view" and the view_IsTemplate of rObject is true then
       put "view template" into objectType
    end if
-   
+
    -- only for the particular type
    -- an object with the same uRipName can have different "types"
    -- but the uripName / type cobination must be unique
@@ -1344,30 +1344,30 @@ These handlers have been place here in order to encourage this migration :)
 command view_RenameTemplate oldViewName, newViewName
    view_NormalizeName oldViewName
    view_NormalizeName newViewName
-   
+
    put view_GetTemplateObject (oldViewName) into templateObject
    if exists (templateObject) is false then return "error, cannot locate view tempate for stack" && kwote (oldViewName)
-   
+
    put there is a stack oldViewName and oldViewName begins with "View|" into oldViewStack
    if oldViewStack is false then
       -- lets not rename the stack - but just update the view metadata
       set the view_NewName of templateObject to newViewName
    else
       put the filename of stack oldViewName into oldFile
-      
+
       if there is a stack newViewName then return "error, there is already a stack" && kwote (newViewName)
       put view_NameToFile (newViewName) into newFile
-      
+
       put the short id of templateObject into newTemplateID
       put "control id" && newTemplateID && "of stack" && kwote (newViewName) into newTemplateObject
       put the stack_SubName ["OPN Stack Menus"] of templateObject into subStackName
-      
+
       set the object_IsIndexed of templateObject to false
-      
+
       put the behavior of templateObject into templateBehavior
       if exists (templateBehavior) then
          set the object_IsIndexed of templateBehavior to false
-         
+
          put the stack_Name of templateBehavior into templateStackName
          put the short id of templateBehavior into newBehaviorID
          switch templateStackName
@@ -1387,7 +1387,7 @@ command view_RenameTemplate oldViewName, newViewName
       else
          put empty into newTemplateBehavior
       end if
-      
+
       if exists (stack subStackName) then
          -- lets rename the substack first
          -- first a quick safety check
@@ -1396,14 +1396,14 @@ command view_RenameTemplate oldViewName, newViewName
             -- should not be let's exit
             return "error, for some strange reason there is already a sub-stack" && kwote (newSubStackName)
          end if
-         
+
          -- now rename the substack
-         
+
          set the object_IsIndexed of stack newSubStackName to false
          set the stack_IsKnown of stack subStackName to false
          set the name of stack subStackName to newSubStackName
       end if
-      
+
       -- now rename the mainstack, it's file on disk (keeping it in the same folder), and set the new mainstacks fileName
       set the object_IsIndexed of stack oldViewName to false
       set the stack_IsKnown of stack oldViewName to false
@@ -1413,12 +1413,12 @@ command view_RenameTemplate oldViewName, newViewName
       rename file oldFile to newFile
       set the stack_IsKnown of stack newViewName to true
       set the object_IsIndexed of stack newViewName to true
-      
+
       if exists (stack newSubStackName) then
          set the stack_IsKnown of stack newSubStackName to true
          set the object_IsIndexed of stack newSubStackName to true
       end if
-      
+
       -- done renaming, lets fix the uRip properties, and update hArray
       set the view_NewName of newTemplateObject to newViewName
    end if
@@ -1432,7 +1432,7 @@ command view_DeleteTemplate vName
    else
       put view_NameToFile (vName) into someFile
    end if
-   
+
    if there is a file someFile then delete file someFile
    view_DeleteMetaData vName
    view_DeleteHelpText vName
@@ -1446,20 +1446,20 @@ command view_CreateIcon libraryView, pIconView
       lcw_Notify "Library (mTarget) view does not exist!"
       exit to top
    end if
-   
+
    get the mobile_Name of libraryView
    put the rect of libraryView into someRect
    put rect_SubtractMargin (-2, someRect) into someRect
-   
+
    put the stack_Name of libraryView into stackName
    put the windowid of stack stackName into someWindowID
-   
+
    put the view_IconFile [false] of libraryView into imageFile
-   
+
    set the wholeMatches to true
    put stackName is among the lines of the openstacks into stackOpen
    if stackOpen is false then object_GoTo libraryView
-   
+
    if pIconView is empty then
       export snapshot from rect someRect of window someWindowID to file imageFile as PNG
    else
@@ -1469,7 +1469,7 @@ command view_CreateIcon libraryView, pIconView
       put resizedImage into url ("binfile:" & imageFile)
       set the image_File of pIconView to imageFile
    end if
-   
+
    if stackOpen is false then close stack stackName
    return imageFile
 end view_CreateIcon
