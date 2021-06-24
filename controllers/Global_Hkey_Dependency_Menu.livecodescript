@@ -70,7 +70,7 @@ on menu_DependencyScriptFromArray hKey, overlayName
    put the strip_HkeyComponents of me is true into stripComponents
    put the strip_HkeyProps of me into stripProps
    -- put the include_HandlersFrom of me into includeHandlersFrom
-   put item 3 of hKey of scriptObject
+   put item 3 of hKey into scriptObject
    put empty into pStripObjects
    
    display_HkeyArrayDependencyScript hkeyArray, scriptObject, pStripObjects, stripProps, false
@@ -114,7 +114,7 @@ end submenu_Dev
 -
 on menu_FetchHkeyLinkArray hKey, oldFetchHow
    put hkey_FetchLinkArray (hKey, fetchHow) into hKeyArray
-   display_HKeyArray hKeyArray, hkey
+   display_HKeyArray hkey, hKeyArray
 end menu_FetchHkeyLinkArray
 
 on menu_DepsFromStoredHkeyLinkArray hKey
@@ -141,7 +141,7 @@ on menu_AllDepsFromObjects hKey
    --
    timer_Stop "library_HkeyFolder", true
    
-   display_HKeyArray hKeyArray, hkey
+   display_HKeyArray hkey, hKeyArray
 end menu_AllDepsFromObjects
 
 

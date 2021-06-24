@@ -378,50 +378,6 @@ function script_NodeSectionFromLinkKeys linkKeys, allKeys, someScript, cluster, 
 end script_NodeSectionFromLinkKeys
 
 
---> Hkey
--
-command hkey_SetHandlerTypeProperties handlerType, @nodeColour, @nodeFillColour, @nodeShape, @nodeStyle
-    put "filled" into nodeStyle
-    put "" into nodeShape
-     
-    switch handlerType
-        case "m"
-            if scriptObject is "Missing" then
-                put "white" into nodeColour
-                put "white" into nodeFillColour
-            else
-                put "red" into nodeColour
-                put "red" into nodeFillColour
-            end if
-            break
-        case "c"
-            put "Green4" into nodeColour
-            put "GreenYellow" into nodeFillColour
-            break
-        case "f"
-            put "blue" into nodeColour
-            put "LightBlue" into nodeFillColour
-            break
-        case "g"
-            put "white" into nodeColour
-            put "grey" into nodeFillColour
-            break
-        case "s"
-            put "white" into nodeColour
-            put "grey50" into nodeFillColour
-            break
-        default
-            -- put "yellow" into nodeColour
-            -- put "yellow" into nodeFillColour
-            put "" into nodeColour
-            put "" into nodeFillColour
-            break
-    end switch
-    -- linkArray_SetgraphPropertyArray "default_Node", "nodeColour", nodeColour, graphPropertyArray
-    -- linkArray_SetgraphPropertyArray "default_Node", "nodeFillColour", nodeFillColour, graphPropertyArray
-end hkey_SetHandlerTypeProperties
-
-
 --> HkeyArray | Dot
 -
 function hkeyArray_FromStoredCalls hKey
@@ -473,82 +429,6 @@ function hKeyArray_DotNestedObjectClusters hIdArray, hLinkArray, graphNodeType
     return clusterDefs
 end hKeyArray_DotNestedObjectClusters
       
-function hKeyArray_XmlToClusters someXml, objectOutline, hIdArray, graphNodeType
-    put word 1 to -1 of someXml into someXml
-    delete line 1 to 3 of someXml
-    delete line -1 of someXml
-    put outline_DecreaseIndent(someXml, 1) into someXml
-     
-    put object_IndexFromOutline(objectOutline) into linkObjects
-    repeat with objectNum = 1 to the number of lines of linkObjects
-        put line objectNum of linkObjects into linkObject
-        put "n" & objectNum into linkONodeID
-        
-        put hKeyArray_ReplaceOpeningTag(objectNum, someXml) into someXml
-         
-        put "subgraph cluster" & objectNum && "{}" into emptyDef
-        put "<" & linkONodeID & "[ ]*/>" into someReg
-        put replacetext (someXml, someReg, emptyDef) into someXml
-        
-        put "<contents nodeID=" & kwote (linkONodeID) & "></contents>" into subContentsTag
-        put outline_LineOffset (subContentsTag, someXml) into lineNum
-        if lineNum = 0 then next repeat
-        
-        put line lineNum of someXml into someLine
-        put outline_TabLevel (someLine) into indentLevel
-        
-        put hKeyArray_SubGraphContents (linkONodeID, indentLevel, linkObject, hIdArray, graphNodeType) into subSection
-        -- replace subContentsTag with subSection in someXml
-        put subSection into line lineNum of someXml
-    end repeat
-     
-    -- put CR & "}" & CR into closingDef
-    put "}" into closingDef
-    put replacetext (someXml, "</n.+>", closingDef)  into someXml
-    return someXml
-end hKeyArray_XmlToClusters
-
-function hKeyArray_SubGraphContents linkONodeID, indentLevel, linkObject, hIdArray, graphNodeType
-   -- but this is hKeys and not nodeIDs ??? 
-   -- put linkArray_HkeysInObject(linkObject, hIdArray) into nodeSection
-   
-   -- should depend on the dot_NodeType
-   put hKeyArray_NodeIdsInObject (linkObject, hIdArray) into nodeSection
-   replace CR with "; " in nodeSection
-   
-   if exists(linkObject) then
-      put the name of linkObject into subGraphLabel
-   else
-      put linkObject into subGraphLabel
-   end if
-   
-   if subGraphLabel = "Missing" then
-      put "orange" into fillColour
-      put "red" into someColour
-   else
-      put "grey60" into someColour
-      if math_IsOdd (indentLevel) is true then
-         put "grey60" into fillColour
-      else
-         put "grey90" into fillColour
-      end if
-   end if
-   
-   put empty into someRank
-   get dot_SubGraphContents (subGraphLabel, nodeSection, someRank, "filled", someColour, fillColour)
-   
-   put outline_IncreaseIndent (it, indentLevel) into subGraphContents
-   return subGraphContents
-end hKeyArray_SubGraphContents
-
-function hKeyArray_ReplaceOpeningTag tagNumber, someXml
-    put "subgraph cluster" & tagNumber && "{" into subHeader
-    -- put CR after subHeader
-    put "<n" & tagNumber & ">" into openingTag
-    put replacetext(someXml, openingTag, subHeader) into someXml
-    return someXml
-end hKeyArray_ReplaceOpeningTag
-
 
 --> HkeyArray | Clusters | Object
 -
@@ -610,6 +490,7 @@ function hKeyArray_ConstructStackIdArray idArray
 end hKeyArray_ConstructStackIdArray
 
 function hKeyArray_ConstructObjectIdArray hIdArray, hIDs
+   -- complicated with XML and nesting
    local objectIdArray
    if hIDs is empty then put keys(hIdArray) into hIDs
    repeat for each line nodeID in hIDs
@@ -639,7 +520,7 @@ end hKeyArray_DotNodeSubGraphDefs
 
 function hKeyArray_ConstructSubGraph nodeIDs, idArray, handlerType, modelObject
    -- was "linkArray_ConstructSubGraph"
-   hkey_SetHandlerTypeProperties handlerType, nodeColour, nodeFillColour, nodeShape, nodeStyle
+   dot_SetHandlerProps handlerType, nodeColour, nodeFillColour, nodeShape, nodeStyle
    put dot_ConstructDefaultNodeDefs (nodeShape, nodeStyle, nodeColour, nodeFillColour) into defaultNodeDefs
    
    put "{" & CR into subGraph
@@ -670,7 +551,7 @@ end hKeyArray_ConstructIdTypeArray
 function hKeyArray_ConstructNodeDefLine nodeID, idArray, graphPropertyArray
     put idArray [nodeID] into hKey
     hkey_Deconstruct hKey, handlerName, handlerType, scriptObject, handlerNum
-    hkey_SetHandlerTypeProperties handlerType, nodeColour, nodeFillColour, nodeShape, nodeStyle
+    dot_SetHandlerProps handlerType, nodeColour, nodeFillColour, nodeShape, nodeStyle
     put dot_ConstructDefaultNodeDefs(nodeShape, nodeStyle, nodeColour, nodeFillColour) into defaultNodeDefs
     
     put handlerName into nodeLabel
@@ -876,16 +757,3 @@ end graph_GetTemplate
 
 --> Deps
 -
-function math_IsOdd someNumber
-    -- was "isOdd"
-    return someNumber mod 2 = 1
-end math_IsOdd
-
-function outline_LineOffset osTitle, someOutline
-   -- was "whichOsLine"
-   replace tab with empty in someOutline
-   replace tab with empty in osTitle
-   set the wholematches to true
-   put lineoffset (osTitle, someOutline) into lineNum
-   return lineNum
-end outline_LineOffset

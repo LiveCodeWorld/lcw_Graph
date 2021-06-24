@@ -104,7 +104,7 @@ on menu_DotTextFromArray scriptObject, overlayName
    put the overlay_Folder of scriptObject into overlayFolder
    --
    put overlay_GetArray (overlayFolder, overlayName) into overlayArray
-   put dot_FromArray (overlayArray) into dotText
+   put dot_FromOverlayArray (overlayArray) into dotText
    
    display_Text dotText, "overlayArray_FromLinkArray"
 end menu_DotTextFromArray

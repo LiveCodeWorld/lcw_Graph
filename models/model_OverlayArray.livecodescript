@@ -9,7 +9,52 @@ version: 0.3
 
 --> Working on
 -
-command dot_NormalizeArray @overlayArray
+function overlayArray_ConstructClusterSection overlayArray, pFlatCluster
+   -- general function to construct a cluster section from a overlayArray
+   -- start with non-recursive
+   overlayArray_DeconstructData overlayArray, linkArray, idArray, idLinkArray, reverseIdLinkArray, dotClusterArray
+   
+   if pFlatCluster is not true then
+      put overlayArray_DotNestedObjectClusters (idArray, linkArray, graphNodeType) into clusterSection
+      return clusterSection
+   else
+      put 1 into clusterNum
+      repeat for each key someObject in dotClusterArray -- clusterNames are objects
+         put overlayArray_ConstructFlatSubCluster (dotClusterArray, someObject, idArray) into nodeSection
+         
+         if pNotIfEmpty is not false and nodeSection is empty then next repeat
+         
+         put "" into someRank
+         put "" into someStyle
+         if clusterNum is even then
+            put "grey60" into someColour
+            put "grey60" into fillColour
+         else
+            put "grey60" into someColour
+            put "grey90" into fillColour
+         end if
+         
+         if exists(someObject) then
+            put the name of someObject into subGraphName
+            -- put the short name of someObject into subGraphName
+         else
+            put someObject into subGraphName
+         end if
+         
+         get dot_ConstructCluster (subGraphName, clusterNum, nodeSection, someRank, someStyle, someColour, fillColour)
+         put it & CR after clusterSection
+         
+         add 1 to clusterNum
+      end repeat
+      delete char -1 of clusterSection
+      return clusterSection
+   end if
+end overlayArray_ConstructClusterSection
+
+
+--> OverlayArray
+-
+command overlayArray_DotNormalize @overlayArray
    local dotPropertyArray, graphPropertyArray
    
    put overlayArray ["metadata"]["graph_PropertyArray"] into graphPropertyArray
@@ -23,7 +68,7 @@ command dot_NormalizeArray @overlayArray
    -- if dotPropertyArray ["concentrate"] is empty then put true into dotPropertyArray ["concentrate"]
    if dotPropertyArray ["shape"] is "none" then delete local dotPropertyArray ["shape"]
    if dotPropertyArray is an array then put dotPropertyArray into overlayArray ["metadata"]["dot_PropertyArray"] 
-end dot_NormalizeArray
+end overlayArray_DotNormalize
 
 function overlay_GetDefaultArray
    return empty
@@ -43,7 +88,7 @@ function overlayArray_FromLinkArray linkArray, pDotHeaderArray, pGraphPropertyAr
    
    put overlay_GetDefaultArray() into dotDefaultArray -- not working
    overlayArray_AddDefaultUnion overlayArray, dotDefaultArray
-   dot_NormalizeArray overlayArray -- should not be needed if overlay_GetDefaultArray() gets somethign sensible
+   overlayArray_DotNormalize overlayArray -- should not be needed if overlay_GetDefaultArray() gets somethign sensible
    
    return overlayArray
 end overlayArray_FromLinkArray
@@ -55,7 +100,7 @@ if pOverlayName is empty then put "hierarchical" into pOverlayName
 
 put the uOPN_OverlayData of the target into overlayData
 put overlayData [pOverlayName] into overlayArray
-dot_NormalizeArray overlayArray
+overlayArray_DotNormalize overlayArray
 return overlayArray
 end overlay_Array
 
@@ -111,59 +156,6 @@ function overlayArray_ConstructFlatSubCluster dotClusterArray, someObject, idArr
    delete char -1 of nodeSection
    return nodeSection
 end overlayArray_ConstructFlatSubCluster
-
-function overlayArray_ConstructClusterSection overlayArray, pFlatCluster
-   -- general function to construct a cluster section from a overlayArray
-   -- start with non-recursive
-   overlayArray_DeconstructData overlayArray, linkArray, idArray, idLinkArray, reverseIdLinkArray, dotClusterArray
-   
-   if pFlatCluster is not true then
-      put overlayArray_DotNestedObjectClusters (idArray, linkArray, graphNodeType) into clusterSection
-      return clusterSection
-   else
-      put 1 into clusterNum
-      repeat for each key someObject in dotClusterArray -- clusterNames are objects
-         put overlayArray_ConstructFlatSubCluster (dotClusterArray, someObject, idArray) into nodeSection
-         
-         if pNotIfEmpty is not false and nodeSection is empty then next repeat
-         
-         put "" into someRank
-         put "" into someStyle
-         if clusterNum is even then
-            put "grey60" into someColour
-            put "grey60" into fillColour
-         else
-            put "grey60" into someColour
-            put "grey90" into fillColour
-         end if
-         
-         if exists(someObject) then
-            put the name of someObject into subGraphName
-            -- put the short name of someObject into subGraphName
-         else
-            put someObject into subGraphName
-         end if
-         
-         get dot_ConstructCluster (subGraphName, clusterNum, nodeSection, someRank, someStyle, someColour, fillColour)
-         put it & CR after clusterSection
-         
-         add 1 to clusterNum
-      end repeat
-      delete char -1 of clusterSection
-      return clusterSection
-   end if
-end overlayArray_ConstructClusterSection
-
-function overlayArray_DotNestedObjectClusters hIdArray, hLinkArray, graphNodeType
-   -- put linkarray_FilterIdArray (hIdArray, hLinkArray) into hIdArray
-   put hKeyArray_ConstructObjectIdArray (hIdArray) into linkObjectIdArray
-   put keys(linkObjectIdArray) into linkObjects
-   sort linkObjects
-   put object_OutlineFromIndex (linkObjects) into objectOutline
-   put outline_ToXmlStructure (objectOutline)into structureXml
-   put hKeyArray_XmlToClusters (structureXml, objectOutline, hIdArray, graphNodeType) into clusterDefs
-   return clusterDefs
-end overlayArray_DotNestedObjectClusters
 
 function overlayArray_ConstructDotClusters objectIDArray, idArray, pNotIfEmpty
    -- was "hKeyArray_ConstructDotClusters"   
@@ -224,33 +216,6 @@ command overlayArray_ReconstructAndCreateFiles linkArray, overlayName, overlayFo
    return overlayArray
 end overlayArray_ReconstructAndCreateFiles
 
-command overlayArray_CreateFilesAndSetGeometry @overlayArray, pMainstackHash, pImageFormat
-   -- does not save overlay array
-   if overlayArray is not an array then return empty
-   put overlayArray_GetLinkArray (overlayArray) into hkeyArray
-   if hkeyArray is not an array then return empty
-   
-   -- creates all the dot and image files (but does not save the array files)
-   overlay_CreateDotFiles overlayArray, empty, pImageFormat
-   put the result into gvResult
-   if token 1 of gvResult = "error" then
-      lcw_Notify gvResult, true
-      return gvResult
-   end if
-   
-   put overlayArray_GetGraphProperty (overlayArray, "overlay_Folder") into overlayFolder
-   put overlayArray_GetGraphProperty (overlayArray, "overlay_Name") into overlayName
-   
-   ## now set geometry by using dot to recreate files and then extract geometry array
-   put overlay_GetCmapText (overlayFolder, overlayName) into cmapText
-   put imagemap_ParseMap (cmapText) into geometryArray
-   overlayArray_SetGeometryArray overlayArray, geometryArray
-   
-   ## Store overlayArray in case not already stored
-   overlay_SetArray overlayFolder, overlayArray, overlayName, pMainstackHash
-   return geometryArray
-end overlayArray_CreateFilesAndSetGeometry
-
 function overlayArray_Construct metadataArray, linkArray, pOverlayName
    local overlayArray
    overlayArray_SetMetadataArray overlayArray, metadataArray, pOverlayName
@@ -303,7 +268,7 @@ end overlayArray_DeconstructGroupStyleArray
 -
 command overlayArray_SetData @overlayArray, linkArray, pKeyStyle
    linkArray_IdConstruct linkArray, nodeLinkArray, nodeIdArray, pKeyStyle
-   put linkArray_ConstructDataArray (linkArray, nodeLinkArray, nodeIdArray) into dataArray
+   put linkArray_ConstructGraphData (linkArray, nodeLinkArray, nodeIdArray) into dataArray
    put dataArray into overlayArray ["data"]
 end overlayArray_SetData
 
@@ -555,7 +520,7 @@ end overlayArray_DeconstructMetadata
 command overlayArray_DeconstructData overlayArray, @linkArray, @idArray, @idLinkArray, @reverseIdArray, @dotClusterArray
    -- overlayArray_DeconstructData overlayArray, linkArray, idArray, idLinkArray, reverseIdArray, dotClusterArray
    put overlayArray ["data"] into dataArray
-   linkArray_DeconstructDataArray dataArray, linkArray, idLinkArray, idArray, reverseIdArray
+   linkArray_DeconstructGraphData dataArray, linkArray, idLinkArray, idArray, reverseIdArray
    put dataArray ["dot_ClusterArray"] into dotClusterArray
    -- put dataArray ["linkArray"] into linkArray
    -- put dataArray ["idArray"] into idArray
@@ -614,6 +579,6 @@ function imagemap_ParseMap someXml
       put tagArray ["coords"] into dgArray [indexNum]["rev"][someShape]
       add 1 to indexNum
    end repeat
-   revDeleteXMLTree treeID
+   revXMLDeleteTree treeID
    return dgArray
 end imagemap_ParseMap

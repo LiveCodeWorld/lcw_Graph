@@ -6,32 +6,66 @@ name: lib_DisplayHkeyArray
 type: library
 version: 0.3
 
-/*
-command display_ScriptHkeyArray hkeyArray, scriptObject
-put hkeyArray_ConstructObjectArray (hkeyArray) into objectHKeyArray
---
-put hkeyArray_TidyObjectArray (objectHKeyArray) into objectTreeArray
-put "script" into hName
-put hName,scriptObject into displayTitle
 
-put "mDouble_DisplayObjectHkeyArray" into pDoubleUpCommand
-put empty into mUpCommand
+--> Display | Events
+-
+command mDouble_DisplayHkeyArray displayView, someValue, sPath
+   if the optionKey is "Down" then breakpoint
+   --
+   switch 
+      case line 1 of sPath = "Missing"
+         --  put line 4 of sPath into hKey
+         put someValue into hKey
+         break
+      default
+         put line 3 of sPath into hKey
+   end switch
+   --
+   hkey_Edit hKey
+end mDouble_DisplayHkeyArray
 
-put "Global | HkeyArray | Script | Tree | Menu" into treeMenu
-put "Global | HkeyArray | Script | Tree | Line | Menu" into lineMenu
--- put "Global | HkeyArray | Menu" into treeMenu
--- put "Global | HkeyArray | Line | Menu" into lineMenu
+command mDouble_DisplayHkeyTreeArray displayView, someValue, hKey
+   hkey_Edit hKey
+end mDouble_DisplayHkeyTreeArray
 
-display_Array objectTreeArray, displayTitle, treeMenu, lineMenu, mUpCommand, pDoubleUpCommand
-put the result into treeView
+on mDouble_DisplayObjectHkeyArray displayView, someValue, pathItems
+   put 1 into hNum
+   set the itemdelimiter to slash
+   put item 1 of pathItems into hObject
+   put item 2 of pathItems into shortHkey
+   put hKeyLine_AddObject (shortHkey, hObject) into hKey
+   
+   hkey_Edit hKey
+end mDouble_DisplayObjectHkeyArray
 
-set the displayed_Object of treeView to scriptObject
-set the displayed_HkeyArray of treeView to hKeyArray
-set the displayed_ObjectHKeyArray of treeView to objectTreeArray
 
-return treeview
+--> Display | HkeyArray
+-
+command display_HKeyArray hKey, pHkeyArray, pLabel
+   if pHkeyArray is not an array then
+      put walk_GetHkeyArray (hKey) into pHkeyArray
+   end if
+   if pLabel is empty then put "hKeyArray" into pLabel
+   --
+   display_Data pHkeyArray, hKey, pLabel
+   put the result into displayView
+   display_SetInteractions displayView, "HkeyArray", "mDouble_DisplayHkeyArray"
+   --
+   set the displayed_Hkey of displayView to hKey
+   set the displayed_HkeyArray of displayView to pHkeyArray
+   --
+   return displayView
+end display_HKeyArray
+
+command display_ScriptHkeyArray hKeyArray, sObject
+   display_Data hKeyArray, hKey, "hKeyArray"
+   put the result into displayView
+   --
+   display_SetInteractions displayView, "HkeyArray | Script | Tree", "mDouble_DisplayHkeyTreeArray"
+   --
+   set the displayed_Object of displayView to hObject
+   return displayView
 end display_ScriptHkeyArray
-*/
 
 
 --> Display | Deps
@@ -58,7 +92,7 @@ command display_ObjectDepArray hObject, hkeyArray
       put the projectOverlay_Array ["processedHkey.array"] of hObject into hkeyArray
    end if
    
-   put hkeyArray_ConstructObjectArray (hkeyArray) into objectHKeyArray
+   put hkeyArray_GetDepArray (hkeyArray) into objectHKeyArray
    put hkeyArray_TidyObjectArray (objectHKeyArray) into objectTreeArray
    --
    display_HkeyTreeArray objectTreeArray, hObject, "mDouble_DisplayObjectHkeyArray"
@@ -67,41 +101,6 @@ command display_ObjectDepArray hObject, hkeyArray
    set the view_Data of treeView to hKeyArray
    return treeview
 end display_ObjectDepArray
-
-command display_HkeyTreeArray treeArray, hkeyOrObject, pDoubleUpCommand
-   -- _setObjectTitleHkey hkeyOrObject, hKey, hObject, displayTitle
-   switch
-      case exists (hkeyOrObject)
-         put "script" into hName
-         put hkeyOrObject into hObject
-         put empty into hKey
-         put hName,hObject into displayTitle
-         break
-      case the number of items of hkeyOrObject = 4
-         put hkeyOrObject into hKey
-         put item 1 of hKey into hName
-         put item 3 of hKey into hObject
-         put hName,hObject into displayTitle
-         break
-      default
-         put "hKeyArray" into displayTitle
-         put empty into hKey
-         put empty into hObject
-   end switch
-   
-   if pDoubleUpCommand is empty then put "mDouble_DisplayHkeyTreeArray" into pDoubleUpCommand
-   put "Global | HkeyArray | Menu"into treeMenu
-   put "Global | HkeyArray | Line | Menu" into lineMenu
-   -- may want to use "Global | HkeyArray | Tree | Filter | Menu"
-   put empty into mUpCommand
-   
-   display_Array treeArray, displayTitle, treeMenu, lineMenu, mUpCommand, pDoubleUpCommand
-   put the result into treeView
-   
-   set the displayed_Object of treeView to hObject
-   set the displayed_Hkey of treeView to hKey
-   return treeview
-end display_HkeyTreeArray
 
 command display_HkeyArrayDependencyScript hkeyArray, pScriptObject, pStripObjects, pStripProps, pMakePrivate
    local depSuite, missingHkeys
@@ -147,51 +146,6 @@ end display_Dot
 
 --> Display | Graph | Array
 -
-command display_HKeyArray hKeyArray, hkeyOrObject
-   local pDoubleUpCommand
-   
-   put hkeyArray_ConstructTreeArray (hkeyArray) into treeArray
-   display_HkeyTreeArray treeArray, hkeyOrObject, pDoubleUpCommand
-   put the result into treeView
-   set the view_Data of treeView to hKeyArray
-   return treeview
-end display_HKeyArray
-
-command display_HkeyTreeArray treeArray, hkeyOrObject, pDoubleUpCommand
-   -- _setObjectTitleHkey hkeyOrObject, hKey, hObject, displayTitle
-   switch
-      case exists (hkeyOrObject)
-         put "script" into hName
-         put hkeyOrObject into hObject
-         put empty into hKey
-         put hName,hObject into displayTitle
-         break
-      case the number of items of hkeyOrObject = 4
-         put hkeyOrObject into hKey
-         put item 1 of hKey into hName
-         put item 3 of hKey into hObject
-         put hName,hObject into displayTitle
-         break
-      default
-         put "hKeyArray" into displayTitle
-         put empty into hKey
-         put empty into hObject
-   end switch
-   
-   if pDoubleUpCommand is empty then put "mDouble_DisplayHkeyTreeArray" into pDoubleUpCommand
-   put "Global | HkeyArray | Menu"into treeMenu
-   put "Global | HkeyArray | Line | Menu" into lineMenu
-   -- may want to use "Global | HkeyArray | Tree | Filter | Menu"
-   put empty into mUpCommand
-   
-   display_Array treeArray, displayTitle, treeMenu, lineMenu, mUpCommand, pDoubleUpCommand
-   put the result into treeView
-   
-   set the displayed_Object of treeView to hObject
-   set the displayed_Hkey of treeView to hKey
-   return treeview
-end display_HkeyTreeArray
-
 command display_OverlayData overlayFolder, pTitle
    put overlay_GetData (overlayFolder) into overlayData 
    
@@ -201,30 +155,55 @@ command display_OverlayData overlayFolder, pTitle
    set the displayed_OverlayName of treeView to pOverlayName
 end display_OverlayData
 
-command mDouble_DisplayHkeyTreeArray treeWidget, someValue, pathItems
-   put item 1 of pathItems into someThing
-   replace slash with comma in someThing
-   switch
-      case exists (someThing)
-         edit the script of someThing
-         break
-      case the number of items of someThing = 4
-         hkey_Edit someThing
-         break
-      default
-         put someThing
-   end switch
-end mDouble_DisplayHkeyTreeArray
 
-on mDouble_DisplayObjectHkeyArray treeWidget, someValue, pathItems
-   put 1 into hNum
-   set the itemdelimiter to slash
-   put item 1 of pathItems into hObject
-   put item 2 of pathItems into shortHkey
-   put hkeyLine_Construct (shortHkey, hObject) into hKey
+--> Display | Script
+-
+command display_Script sObject
+   put the script_SuiteArray of sObject into scriptArray
+   --
+   put the name of sObject into someTitle
+   display_Data scriptArray, someTitle, "Script"
+   put the result into displayView
+   --
+   set the displayed_Object of displayView to sObject
+   display_SetInteractions displayView, "Script | Tree", "mDoubleUp_DisplayShortHkey"
+   --   
+   return displayView
+end display_Script
+
+command display_ScriptArray scriptObject
+   put the walk_HkeyArray of scriptObject into hKeyArray
+   --
+   graph_CreateScriptObjectHkeyArray hkeyArray, scriptObject
+   put the result into imageFile
+   display_HandlerSVG imageFile
+   --
+   put the name of scriptObject into objectName
+   put merge ("[[objectName]],display_ScriptArray") into someTitle
+   --
+   _DisplayHkeyArray hKeyArray, someTitle, stackObject
+   return indexView
+end display_ScriptArray
+
+command display_StackDeps stackObject
+   -- Not fully working
+   put the project_Name of stackObject into projectName
+   put merge ("[[stackObject]],[[projectName]]") into someTitle
    
-   hkey_Edit hKey
-end mDouble_DisplayObjectHkeyArray
+   put the walk_HkeyArray of stackObject into depArray
+   --
+   _DisplayHkeyArray depArray, someTitle, stackObject
+   return indexView
+end display_StackDeps
+
+private command _DisplayHkeyArray depArray, someTitle, displayedObject
+   put "Global | HkeyArray | Tree | Deps | Menu" into mTitle
+   put "Global | HkeyArray | Menu" into mLineTitle
+   display_Array depArray, someTitle, mTitle, mLineTitle, "mouse_EditHkey", "mouse_EditHkey"
+   put the result into treeView
+   set the displayed_Object of treeView to displayedObject
+   return treeView
+end _DisplayHkeyArray
 
 
 --> Deps
@@ -277,7 +256,7 @@ end hkeyArray_ConstructDependencySuite
 
 function hkey_ConstructDepArray allCalls, pMakePrivate
    local depScript, missingHkeys
-
+   
    sort allCalls
    hkey_StripDuplicates allCalls
    put the result into duplicateHkeyArray

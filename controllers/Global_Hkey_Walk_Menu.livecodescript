@@ -1,8 +1,8 @@
-﻿script "Global_Hkey_Walk_Menu"
+﻿script "Global | Hkey | Walk | Menu"
 --> MetaData
 -
 license: GPLv3
-name: Global_Hkey_Walk_Menu
+name: Global | Hkey | Walk | Menu
 type: controller
 version: 0.3
 
@@ -13,12 +13,17 @@ version: 0.3
 -
 local LocalArray
 
+getprop menu_Target
+   put scriptEditor_GetHkey() into hKey
+   return hKey 
+end menu_Target
+
 
 --> Global | Hkey | Walk | Menu
 -
-on menu_GraphHandler hKey
-   display_CreateHandlerGraph hKey
-end menu_GraphHandler
+on menu_DisplayHkeyArray hKey
+   display_HkeyArray hKey
+end menu_DisplayHkeyArray
 
 on menu_DisplaySvg hKey
    display_HkeyGraph hKey, true
@@ -27,6 +32,24 @@ end menu_DisplaySvg
 on menu_DisplayDot hKey
    display_HkeyDot hKey
 end menu_DisplayDot
+
+on _
+end _
+
+on menu_GraphHandler hKey
+   display_CreateHandlerGraph hKey -- doesn't use lib_HkeyWalk
+end menu_GraphHandler
+
+on menu_FastGraphHandler hKey
+   display_CreateFastHandlerGraph hKey
+end menu_FastGraphHandler
+
+on _
+end _
+
+on menu_DisplayHandlerDeps hkey
+   display_HandlerDeps hkey
+end menu_DisplayHandlerDeps
 
 on _
 end _

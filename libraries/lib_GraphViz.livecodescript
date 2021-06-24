@@ -178,16 +178,6 @@ function dot_OutputStrangeFormats
 end dot_OutputStrangeFormats
 
 
---> Dot | Overlay
--
-function dot_ConstructOverlayArray dotText, graphStyle, pTextFile
-   put dot_Render (dotText, graphStyle, pTextFile, "cmapx") into cmapxText
-   put imagemap_ParseMap (cmapxText) into dgArray
-   put dgArray into graphArray ["data"]
-   return graphArray
-end dot_ConstructOverlayArray
-
-
 --> Dot
 -
 function dot_TestDataFolder shortFile, pDontCreate
@@ -236,13 +226,6 @@ on dot_NormalizeNode @someNode
         put kwote(someNode) into someNode
     end if
 end dot_NormalizeNode
-
-function dot_Construct graphName, nodeSection, graphHeader
-   put graphHeader into dotText
-   line_Insert nodeSection, dotText
-   put "digraph" && kwote(graphName) && "{" & CR & outline_IncreaseIndent (dotText) & CR & "}" into dotText
-   return dotText
-end dot_Construct
 
 function dot_ConstructCluster someLabel, clusterNum, nodeSection, someRank, someStyle, someColour, fillColour
     put "cluster" & clusterNum into subGraphName
@@ -531,18 +514,6 @@ function dot_NodeDefLineFromArray nodeID, defLineArray
    return defLine
 end dot_NodeDefLineFromArray
 
-on dot_AddParamToNodeDef paramTitle, paramContent, @nodeLine, kwoted
-    if paramContent is empty then return false
-     
-    if nodeLine is not empty then put "," & space after nodeLine
-    if kwoted is not false then 
-        put paramTitle & "=" & kwote(paramContent) after nodeLine
-    else
-        put paramTitle & "=" & paramContent after nodeLine
-    end if
-    return true
-end dot_AddParamToNodeDef
-
 function dot_ConstructDefLine nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile
     -- was "node_ConstructParamLine"
     local nodeLine
@@ -793,14 +764,13 @@ command dot_DoImageMapShell dotCommand, dotFile, imageFile, pCmapFile, pXdotFile
    -- dot foo.gv -Tpng -o foo.png -Tcmapx -o foo.cmapx
    dot_NormalizeDotCommand dotCommand -- converts a graphStyle to a dotCommand
    if pImageFormat is empty then put "png" into pImageFormat
-   put graphViz_GetShellPath() into gvPath
-   
    shell_BashParamEscape dotFile
    shell_BashParamEscape imageFile
    shell_BashParamEscape pCmapFile
    shell_BashParamEscape pXdotFile
    
-   put gvPath & dotCommand into someShell
+   -- put gvPath & dotCommand into someShell
+   put dotCommand into someShell
    -- put space & quote & dotFile & quote after someShell
    put space & dotFile after someShell
    

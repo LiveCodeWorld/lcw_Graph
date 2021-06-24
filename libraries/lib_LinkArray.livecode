@@ -16,71 +16,6 @@ See also hkeyArray, and overlayArray for related structures.
 
 --> Working on
 -
-function linkarray_RenameKeys someKeyArray, @idArray, @keyArray, pKeyStyle
-   -- modified to use nested someKeyArray instead of just an index of keys
-   -- a general technique for building incremental unique ids and their translations (as in a database id)
-   -- for a single key this returns the (new) or existing simlified translation
-   -- while building the two way arrays
-   -- will also add multiple keys if needed (as with childNodes)
-   
-   if someKeyArray is an array then -- quick hack
-      put keys (someKeyArray) into someKeys
-   else
-      put someKeyArray into someKeys
-   end if
-   
-   repeat for each line someKey in someKeys
-      -- at moment someKey is an old stylye hKey
-      put keyArray [someKey] into simpleID
-      if simpleID is empty then
-         -- not already indexed (work out new incremental ID and add to idArray and keyArray)
-         put the number of lines of keys(idArray) + 1 into keyNumber
-         switch pKeyStyle
-            case "hName"
-               hkey_Deconstruct someKey, hName, hType, hObject, hNum
-               put hName into simpleID
-               break
-            case "short hkey"
-               hkey_Deconstruct someKey, hName, hType, hObject, hNum
-               put quote & hType && hName & quote into simpleID
-               break
-            case "number"
-               put keyNumber into simpleID
-               break
-            default
-               put "n" & keyNumber into simpleID
-         end switch
-         put simpleID into keyArray [someKey]
-         put someKey into idArray [simpleID]
-      end if
-      put simpleID & CR after simpleIDs
-   end repeat
-   delete char -1 of simpleIDs
-   return simpleIDs
-end linkarray_RenameKeys
-
-
---> LinkArray | Construct | ID
--
-command linkArray_IdConstruct linkArray, @nodeLinkArray, @nodeIdArray, pKeyStyle
-   -- usefull to create simple arrays from complex data.
-   -- that is it creates simple numbered nodes 1, 2 etc and stores references to these in arrays.
-   local nodeBackArray
-   repeat for each key someKey in linkArray
-      put linkArray [someKey] into frontLinkArray
-      linkArray_Add frontLinkArray, someKey, nodeLinkArray, nodeIdArray, nodeBackArray, pKeyStyle
-   end repeat
-   return allLinks
-end linkArray_IdConstruct
-
-private command linkArray_Add newLinkArray, someNode, @hLinkArray, @hIdArray, @backArray, pKeyStyle
-   -- modified to work with nested newLinkArray
-   put linkarray_RenameKeys (someNode, hIdArray, backArray, pKeyStyle) into nodeID
-   put linkarray_RenameKeys (newLinkArray, hIdArray, backArray, pKeyStyle) into linkIDs   
-   array_AddToIndex linkIDs, nodeID, hLinkArray
-   return the result
-end linkArray_Add
-
 
 --> LinkArray | Processing
 -
@@ -116,27 +51,6 @@ command linkarray_ExtractRandomNodes @nodeIdArray, someNumber
    delete char -1 of nodeIDs
    return nodeIDs
 end linkarray_ExtractRandomNodes
-
-
---> Dot | MetaData | Array | Deps
--
-function linkArray_ConstructDataArray linkArray, idLinkArray, idArray
-   put linkArray into dataArray ["linkArray"]
-   put idLinkArray into dataArray ["idLinkArray"]
-   put idArray into dataArray ["idArray"]
-   put array_ConstructReverseDictionary (idArray) into reversedIdArray
-   put reversedIdArray into dataArray ["reverseIdArray"]
-   return dataArray
-end linkArray_ConstructDataArray
-
-command linkArray_DeconstructDataArray dataArray, @linkArray, @idLinkArray, @idArray, @reversedIdArray
-   -- same structure used by overlay_View (stored as local property)
-   -- overlayArray = dataArray
-   put dataArray ["linkArray"] into linkArray
-   put dataArray ["idLinkArray"] into idLinkArray
-   put dataArray ["idArray"] into idArray
-   put dataArray ["reverseIdArray"] into reversedIdArray
-end linkArray_DeconstructDataArray
 
 
 --> LinkArray | Filter
@@ -252,83 +166,6 @@ function linkArray_ConstructSkipArray linkArray
    return keyToKeyArray
 end linkArray_ConstructSkipArray
 
-
---> LinkArray | Display
--
-
--- command display_LinkArray linkArray, pGraphPropertyArray, pDotPropertyArray, pImageView, pGraphController
-local graphPropertyModel, pGraphSize, dotFile
-linkArray_RedrawOverlayMap linkArray, dotFile, graphPropertyModel, pGraphController, pImageView, pGraphStyle, pGraphSize, pOverlayName
-return pImageView
-
-overlay_SetImage imageView, linkArray, idLinkArray, idArray, geometryArray, imageFile, dotFile, xdotFile, cmapFile 
-return imageView
-
-put view_GetTemplateObject ("View|Image|OPN Image") into pImageView
-dot_DrawDependencyGraph hIdLinkArray, hIdArray, pImageView, pGraphController, dotFile, pGraphStyle, pGraphSize
-object_GoTo pImageView
-
--- linkArray_DrawGraph linkArray, pImageView, pGraphController, pGraphStyle, pOverlayName
-put the result into pImageView
-return pImageView
-end display_LinkArray
-
-
---> LinkArray | DotText
--
-function linkArray_ConstructDot linkArray, pDotMetadataArray, pDefSection, pGraphController
-   set the cursor to watch
-   put pDotMetadataArray ["dot_HeaderArray"] into dotPropertyArray
-   put pDotMetadataArray ["graph_PropertyArray"] into graphPropertyArray
-   
-   put graphPropertyArray ["overlay_Name"] into graphName
-   if graphName is empty then put "linkArray_ConstructDot" into graphName
-   put graphPropertyArray ["overlay_Size"] into graphSize
-   put graphPropertyArray ["overlay_Style"] into graphStyle
-   put graphPropertyArray ["overlay_UseInches"] into graphUseInches
-   
-   put dot_ConstructHeader (graphSize, dotPropertyArray, graphStyle, graphUseInches) into graphHeader
-   
-   put linkArray_DotNodeLinks (linkArray) into linkSection
-   put linkArray_ConstructLinkSection (linkArray, pNodeTypeArray, pClusterArray, pGraphController) into nodeSection
-   
-   if pDefSection is empty then
-      put linkSection into nodeSection
-   else
-      put pDefSection & CR & CR & linkSection into nodeSection
-   end if
-   put dot_Construct (graphName, nodeSection, graphHeader) into dotText
-   return dotText
-end linkArray_ConstructDot
-
-function linkArray_ConstructLinkSection linkArray, pNodeTypeArray, pClusterArray, pGraphController
-   -- all from arrays (with an optional script override in pGraphController)
-   -- cloned from "hKeyArray_ConstructNodeSection", see also "hKeyArray_DotNestedObjectClusters"
-   
-   -- node defs
-   if pNodeTypeArray is an array then put linkArray_ConstructDefSection (nodeTypeArray, pGraphController) into nodeDefs
-   if pClusterArray is an array then put linkArray_ConstructClusterDefs (clusterArray, pGraphController) into clusterDefs  -- specific (construct object clusters)
-   put nodeDefs & CR & CR & clusterDefs into defSection
-   
-   -- node links
-   put linkArray_DotNodeLinks (linkArray) into linkSection
-   if defSection is empty then
-      return linkSection
-   else
-      return defSection & CR & CR & linkSection
-   end if
-end linkArray_ConstructLinkSection
-
-function linkArray_ConstructClusterDefs clusterArray, pGraphController
-   -- cloned from "hKeyArray_DotNestedObjectClusters"
-   -- needs a recursive function to turn a nested array into a nested cluster def in dot
-   
-   return empty
-   
-   put array_ToXml 
-   return clusterDefs
-end linkArray_ConstructClusterDefs
-
 command linkArray_RecurseClusters nodeID, nodeTypeArray, @clusterSection
    put nodeTypeArray [nodeID] into sectionArray
    -- put keys(
@@ -337,46 +174,6 @@ end linkArray_RecurseClusters
 
 --> LinkArray | DotText | Node Links
 -
-function linkArray_DotNodeLinks linkArray, pNodeIDs
-   if pNodeIDs is not empty then
-      breakpoint -- not done
-   end if
-   
-   -- this version uses nested array values
-   repeat for each key someKey in linkArray
-      put linkArray [someKey] into someLinkArray
-      if the number of words of someKey > 1 then put kwote(someKey) into someKey
-      
-      if someLinkArray is an array then
-         repeat for each key someLink in someLinkArray
-            if the number of words of someLink > 1 then put kwote(someLink) into someLink
-            put someKey && "->" && someLink & ";" & CR after linkSection
-         end repeat
-      else
-         put someLinkArray into someLinks
-         repeat for each line someLink in someLinks
-            if the number of words of someLink > 1 then put kwote(someLink) into someLink
-            put someKey && "->" && someLink & ";" & CR after linkSection
-         end repeat
-      end if
-   end repeat
-   delete char -1 of linkSection
-   return linkSection
-end linkArray_DotNodeLinks
-
-function linkArray_DotNodeLinks linkArray, pNodeIDs
-   -- without translating ids
-   if pNodeIDs is empty then put keys(linkArray) into pNodeIDs
-   repeat for each line someKey in pNodeIDs
-      put linkArray [someKey] into someLinks
-      repeat for each line someLink in someLinks
-         put someKey && "->" && someLink & ";" & CR after linkSection
-      end repeat
-   end repeat
-   delete char -1 of linkSection
-   return linkSection
-end linkArray_DotNodeLinks
-
 function linkArray_NodeIdsToHkeys nodeIDs
    put the linkArray_Model of me into modelObject
    linkArray_Get modelObject, hLinkArray, hIdArray
@@ -574,7 +371,7 @@ function linkArray_Xml linkArray, propertyArray
       linkArray_ConstructXml firstLevelNode, linkArray, treeID, propertyArray
    end repeat
    put revXMLText(treeID, "", true) into someXml
-   revDeleteXMLTree treeID
+   revXMLDeleteTree treeID
    return someXml
 end linkArray_Xml
 
@@ -634,84 +431,8 @@ on linkArray_ConstructXml someNode, linkArray, treeID, @propertyArray
 end linkArray_ConstructXml
 
 
---> Outline | XML
--
-/*
-See also OPML section in libOPN_Data
-*/
-
-function outline_ToXmlStructure tabbedOutline
-   put outline_Simplify (tabbedOutline, idArray, keyArray) into simpleOutline
-   put outline_ToXML (simpleOutline) into someXml
-   put xml_Nodes (someXml) into allNodes
-   
-   put revCreateXMLTree (someXml, true, true, false) into treeID
-   set the itemdelimiter to "/"
-   repeat for each line someNode in allNodes
-      revAddXMLNode treeID, someNode, "contents", "", "before"
-      put the result into createdNode
-      
-      set the itemdelimiter to "/"
-      put item -1 of someNode into attributeValue
-      revSetXMLAttribute treeID, createdNode, "nodeID", attributeValue
-   end repeat
-   put revXMLText (treeID, "", true) into someXml
-   revDeleteXMLTree treeID
-   xml_TidySpace someXML
-   return someXml
-end outline_ToXmlStructure
-
-function outline_ToXML tabbedOutline, propertyArray
-   -- local lineNumber
-   -- outline_RecurseToXML someOutline, someXml, 0, lineNumber, "Test XML"
-   
-   outline_ToXMLRecurse tabbedOutline, propertyArray
-   put the result into treeID
-   put revXMLText (treeID, "", true) into someXml
-   revDeleteXMLTree treeID
-   return someXml
-end outline_ToXML
-
-function outline_Simplify tabbedOutline, @idArray, @keyArray, pKeyStyle
-   repeat for each line someLine in tabbedOutline
-      put word 1 to -1 of someLine into someText
-      put linkarray_RenameKeys(someText, idArray, keyArray, pKeyStyle) into nodeID
-      put nodeID into word 1 to -1 of someLine
-      put someLine & CR after simpleOutline
-   end repeat
-   delete char -1 of simpleOutline
-   return simpleOutline
-end outline_Simplify
-
-
 --> Private
 -
-private command outline_ToXMLRecurse tabbedOutline, propertyArray, treeNode, treeID
-   put propertyArray [treeNode] into nodeContents
-   
-   put "tree" into rootNode
-   if treeNode is empty then
-      -- can do a header here?
-      xml_CreateTree rootNode, treeID
-   else
-      put rootNode & "/" & treeNode into someNode
-      
-      set the itemdelimiter to "/"
-      put item -1 of someNode into nodeName
-      put item 1 to -2 of someNode into parentPath
-      
-      put propertyArray [someNode] into nodeContents
-      revAddXMLNode treeID, parentPath, nodeName, nodeContents
-      put the result into createdNode
-   end if
-   
-   put outline_PathChildren(treeNode, tabbedOutline) into childNodes
-   repeat for each line childNode in childNodes
-      outline_ToXMLRecurse tabbedOutline, propertyArray, childNode, treeID
-   end repeat
-   return treeID
-end outline_ToXMLRecurse
-
 private command _ConstructPropertyArray pDotPropertyArray, @overlap, @concentrate, @splines, @cluster, @direction, @dotOrder, @defaultShape, @defaultUrl
    -- see also dot_ConstructPropertyArray
    put pDotPropertyArray ["graphRect"] into graphRect

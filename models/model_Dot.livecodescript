@@ -579,31 +579,6 @@ setprop dot_ClusterArray [pOverlayName] propertyArray
 end dot_ClusterArray
 
 
-command dot_ConstructPropertyArray @propertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
-   -- wa "dot_ConstructHeaderArray"
-   put overlap into propertyArray ["overlap"]
-   put concentrate into propertyArray ["concentrate"]
-   put splines into propertyArray ["splines"]
-   put cluster into propertyArray ["cluster"]
-   put direction into propertyArray ["direction"]
-   put dotOrder into propertyArray ["dotOrder"]
-   put defaultShape into propertyArray ["defaultShape"]
-   put defaultUrl into propertyArray ["defaultUrl"]
-end dot_ConstructPropertyArray
-
-on dot_DeconstructPropertyArray pDotPropertyArray, @overlap, @concentrate, @splines, @cluster, @direction, @dotOrder, @defaultShape, @defaultUrl
-   put pDotPropertyArray ["graphRect"] into graphRect
-   put pDotPropertyArray ["overlap"] into overlap
-   put pDotPropertyArray ["concentrate"] into concentrate
-   put pDotPropertyArray ["splines"] into splines
-   put pDotPropertyArray ["cluster"] into cluster
-   put pDotPropertyArray ["direction"] into direction
-   put pDotPropertyArray ["dotOrder"] into dotOrder
-   put pDotPropertyArray ["defaultShape"] into defaultShape
-   put pDotPropertyArray ["defaultUrl"] into defaultUrl
-end dot_DeconstructPropertyArray
-
-
 --> Dot | Model | Files
 -
 /*

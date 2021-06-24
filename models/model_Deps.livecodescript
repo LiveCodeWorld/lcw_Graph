@@ -461,7 +461,7 @@ command behavior_CreateStackButton someObject, bName, pUripName, pBehaviorType
    create button bName
    put it into createdButton
    
-   put metadata_ConstructUripArray (pUripName, pBehaviorType) into uRipArray
+   put metadata_ConstructArray (pUripName, pBehaviorType) into uRipArray
    set the object_Metadata of createdButton to uRipArray
    return createdButton
 end behavior_CreateStackButton
@@ -490,17 +490,6 @@ command behavior_CreateSubStackCard someObject
          end if
    end switch
 end behavior_CreateSubStackCard
-
--- function library_ConstructDefaultDepBehaviorScript libraryName, pAuthorName
-   put scaffold_GetTemplate ("Library Behavior Deps") into scriptTemplate
-   if pAuthorName is empty then
-      put pref_GetValue ("userName") into authorName
-   else
-      put pAuthorName into authorName
-   end if
-   put merge (scriptTemplate) into someScript
-   return someScript
-end library_ConstructDefaultDepBehaviorScript
 
 
 --> Private

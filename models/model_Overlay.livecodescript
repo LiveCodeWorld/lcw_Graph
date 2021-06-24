@@ -8,19 +8,12 @@ version: 0.4
 
 /*
 You can alter the way the graph is constructed by placing a "graph_FilterProcessedArray" handler
-at the same level as the "display_IndexScriptAndDisplaySVG"
 
 Puts everything in the project_OverlayFolder.
 Could / should change this to 
 
 A library to do with overlays, creating them from folders of data (overlay_Folder)
 and providing a set of custom properties that can be used to manipulate them.
-
-Essentially it draws graphs using the data stored in arrays created by "deps_SaveMainstackAndExportArrays".
-The main guts of the code is in "hkey_ObjectWalk", which uses "project_ConstructWalkArray" (a hArray walk which uses hArray_FindHkeyInHierarchy)
-This is complicated hacked code with various filtering going on.
-
-Then it walks missing handlers using "hkey_ObjectWalk"
 
 Previously there were many intefaces and libraries - overlayData, overlayFolder, overlayArray, linkArray etc
 This library is designed to provide a standard way to interface with these handlers, 
@@ -39,7 +32,7 @@ The data structure should perhaps be changed to the usual data/metadata arrangem
 --> Working on
 -
 command hkeyArray_Process @hkeyArray, processObject
-   -- utility to allow renaming of nadlers in hkeyArray
+   -- utility to allow renaming of handlers in hkeyArray
    -- designed to be used with "graph_TidyLinkArray" dispatches from "overlay_CreateGraph"
    
    repeat for each key hKey in hkeyArray
@@ -75,9 +68,13 @@ command hkeyArray_Process @hkeyArray, processObject
    
    -- may already be a hkeyArray [newHkey]
    -- put _HkeyRename (hKey) into newHkey
-   dispatch "hkey_Rename" to processObject with hkeyCall
-   if it is not "handled" then return false
-   put the result into newHkey
+   if exists (processObject) then
+      dispatch "hkey_Rename" to processObject with hkeyCall
+      if it is not "handled" then return false
+      put the result into newHkey
+   else
+      put hKey into newHkey
+   end if
    
    delete variable hkeyArray [hKey] -- think it is alright to delete now (test all cases)
    put hkeyArray [newHkey] into oldNewCalls
@@ -96,8 +93,6 @@ command graph_FilterProcessedArray @processedCalls, someKeyCall
    -- "graph_TidyLinkArray" is called once, I think this is called every time
    -- take a look at "Global | Script | Dep | Menu"
    -- use "hkeyArray_Process" to simplify
-   -- traps and filters hKeyArray for "display_IndexScriptAndDisplaySVG"
-   breakpoint
    
    hkey_Deconstruct someKeyCall, hName, hType, hObject, hNum
    if hObject = "missing" then
@@ -217,123 +212,6 @@ command overlayArray_FixOld @overlayArray
    end repeat
    put idArray into overlayArray ["data"]["idArray"]
 end overlayArray_FixOld
-
-
---> Working on
--
-command overlay_CreateGraph overlayFolder, hKeyArray, pOverlayName, pOverlayOf, pGraphStyle, pDotCluster, pMainstackHash, pImageFormat, pProcessObject
-   put "hName" into pKeyStyle -- hName, number, short hkey
-   --
-   if pProcessObject is empty then
-      put the long id of the target into pProcessObject
-   end if
-   
-   --
-   file_ReplaceHome overlayFolder
-   if hKeyArray is not an array then
-      overlay_Delete overlayFolder, pOverlayName
-      return empty
-   end if
-   
-   # Recreate graph from stored overlayArray
-   put overlay_GetArray (overlayFolder, pOverlayName) into overlayArray
-   if pOverlayOf is empty then put overlayArray_GetGraphProperty (overlayArray, "overlay_Of")  into pOverlayOf
-   if pGraphStyle is empty then put overlayArray_GetGraphProperty (overlayArray, "overlay_Style")  into pGraphStyle
-   
-   put empty into pDotHeaderArray
-   put empty into pGraphPropertyArray
-   
-   -- create graph arrays with local messages for processing
-   dispatch "graph_TidyLinkArray" to pProcessObject with hKeyArray -- use "graph_TidyLinkArray @hKeyArray"
-   put overlayArray_FromLinkArray (hKeyArray, pDotHeaderArray, pGraphPropertyArray, pKeyStyle) into overlayArray
-   dispatch "graph_TidyOverlayArray" to pProcessObject with overlayArray -- use "graph_TidyOverlayArray @overlayArray"
-   
-   if pDotCluster is not empty then overlayArray_SetHeaderProperty overlayArray, "dot_ClusterRank", pDotCluster
-   -- if pOverlayHash is not empty then overlayArray_SetGraphProperty overlayArray, "overlay_Hash", pOverlayHash
-   
-   file_ReplaceHome overlayFolder
-   overlayArray_SetGraphProperty overlayArray, "overlay_Folder", overlayFolder
-   overlayArray_SetGraphProperty overlayArray, "overlay_Style", pGraphStyle
-   overlayArray_SetGraphProperty overlayArray, "overlay_Name", pOverlayName
-   overlayArray_SetGraphProperty overlayArray, "overlay_Of", pOverlayOf
-   
-   overlayArray_CreateFilesAndSetGeometry overlayArray, pMainstackHash, pImageFormat
-   if token 1 of the result = "error" then return the result
-   
-   /*
-   put overlayArray_GetGraphProperty (overlayArray, "image_File") into shortImageFile
-   folder_Format overlayFolder
-   put overlayFolder & shortImageFile into imageFile
-   put file_Hash (imageFile) into pMainstackHash
-   */
-   
-   -- we change to mainstack_Hash rather than hash the image
-   overlayArray_SetGraphProperty overlayArray, "overlay_Hash", pMainstackHash
-   overlay_SetArray overlayFolder, overlayArray, pOverlayName
-   return overlayArray
-end overlay_CreateGraph
-
-command overlay_CreateDotFiles @overlayArray, pOverlayFolder, pImageFormat
-   -- creates all the dot and image files (but does not save the array files)
-   if pImageFormat is empty then put "png" into pImageFormat
-   
-   put overlayArray_GetLinkArray (overlayArray) into hkeyArray
-   if hkeyArray is not an array then return empty
-   
-   put dot_FromArray (overlayArray) into dotText
-   
-   if pOverlayFolder is not empty then
-      folder_CreateNested pOverlayFolder
-      overlayArray_SetGraphProperty overlayArray, "overlay_Folder", pOverlayFolder
-   else
-      put overlayArray_GetGraphProperty (overlayArray, "overlay_Folder") into pOverlayFolder
-      if pOverlayFolder is empty then
-         put the tempname & "/" into pOverlayFolder
-         folder_CreateNested pOverlayFolder
-         overlayArray_SetGraphProperty overlayArray, "overlay_Folder", pOverlayFolder
-      end if
-   end if
-   
-   put overlayArray_GetGraphProperty (overlayArray, "overlay_Style") into graphStyle
-   if graphStyle is empty then
-      put "hierarchical" into graphStyle
-      overlayArray_SetGraphProperty overlayArray, "overlay_Style", graphStyle
-   end if
-   
-   put overlayArray_GetGraphProperty (overlayArray, "overlay_Name") into overlayName
-   if overlayName is empty then
-      put graphStyle into overlayName
-      overlayArray_SetGraphProperty overlayArray, "overlay_Name", overlayName
-   end if
-   
-   overlay_Files pOverlayFolder, dotFile, imageFile, cmapxFile, xdotFile, dotArrayFile, overlayName, pImageFormat
-   -- put dotFile & CR & dotText
-   dot_SaveTemporaryFile dotText, dotFile
-   
-   if graphStyle = "hierarchical" then -- lets flatten it ?
-      put overlayArray_GetGraphProperty (overlayArray, "overlay_FlattenNum") into overlayFlattenNum
-      if overlayFlattenNum is a number and overlayFlattenNum > 0 then
-         put dot_UnFlatten (dotFile, overlayFlattenNum) into unFlatDotText
-         if word 1 of unFlatDotText is among the items of "digraph,graph" then
-            file_CreateText unFlatDotText, dotFile
-         end if
-      end if
-   end if
-   
-   dot_DoImageMapShell graphStyle, dotFile, imageFile, cmapxFile, xdotFile, pImageFormat
-   put the result into gvResult
-   if word 1 of gvResult = "Error" then
-      return gvResult
-   end if
-   
-   -- now set relative files
-   overlay_SetAndStoreFileRelative overlayArray, "dot_File", dotFile
-   overlay_SetAndStoreFileRelative overlayArray, "image_File", imageFile
-   overlay_SetAndStoreFileRelative overlayArray, "cmapx_File", cmapxFile
-   overlay_SetAndStoreFileRelative overlayArray, "xdot_File", xdotFile
-   
-   return gvResult
-end overlay_CreateDotFiles
 
 
 --> Props
@@ -954,12 +832,6 @@ end overlay_AllStyles
 
 --> Overlay | File | Bits
 -
-private command overlay_SetAndStoreFileRelative @overlayArray, filePropName, someFile
-   put overlayArray_GetGraphProperty (overlayArray, "overlay_Folder") into overlayFolder
-   overlay_SetFileRelative someFile, overlayFolder
-   overlayArray_SetGraphProperty overlayArray, filePropName, someFile
-end overlay_SetAndStoreFileRelative
-
 command overlay_SetFileRelative @someFile, overlayFolder
    set the itemdelimiter to "/"
    put the number of items of overlayFolder into itemNum 

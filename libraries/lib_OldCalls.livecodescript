@@ -23,11 +23,11 @@ getprop hkey_InHierarchy [hKey]
    return foundArray ["foundHkey"]
 end hkey_InHierarchy
 
-function hkey_FindInHierarchy shortHKey, tObject, pProjectName
-   -- use "hkey_Find" instead
+function hkey_FindUsingFoundArray shortHKey, tObject, pProjectName
+   -- use "hkey_Find" instead -- was "hkey_FindInHierarchy")
    put hkey_FoundArray (shortHKey, tObject, pProjectName) into foundArray 
    return foundArray ["foundHkey"]
-end hkey_FindInHierarchy
+end hkey_FindUsingFoundArray
 
 function hkey_FoundArray shortHKey, tObject, pProjectName
    hkey_Deconstruct shortHKey, hName, hType, xObject, xNum
@@ -86,7 +86,7 @@ function hkey_FindExternalObjectArray hName, hType, externalObjects
             put hTable into foundArray [foundObject]["handlerTable"]
             put word 3 of someLine into foundArray [foundObject]["startLineNum"]
             put word 4 of someLine into foundArray [foundObject]["endLineNum"]
-            put hKeyLine_FromTripple (hName, hType, hObject) into foundArray [foundObject]["foundHkey"]
+            put hKeyLine_Construct (hName, hType, hObject) into foundArray [foundObject]["foundHkey"]
             exit repeat
          end if
       end repeat
@@ -135,95 +135,6 @@ command hkey_FindScriptLine hKey, someScript, @scriptLine, @lineNum
    end repeat
    return false
 end hkey_FindScriptLine
-
-function hkey_FindAndAdd shortHKey, tObject, @foundStackArray, pProjectName
-   hkey_Deconstruct shortHKey, hName, hType, xObject, xNum
-   
-   -- let's just add used (forget behaviors of libs for now)
-   put the object_Hierarchy of tObject into objectHierarchy
-   
-   --  put project_ListUsedStacks (pProjectName) into usedProjectStacks
-   if pProjectName is empty then
-      repeat for each line stackName in the stacksinUse
-         put the name of stack stackName & CR after usedProjectDepStacks
-      end repeat
-      delete char -1 of usedProjectDepStacks
-   else
-      put project_ListUsedDeps (pProjectName) into usedProjectDepStacks
-   end if
-   put keys (foundStackArray) into foundStacks
-   
-   put objectHierarchy into searchHierarchy
-   
-   -- let's add the ones already found first
-   if foundStacks is not empty then
-      -- should delete duplicate lines in searchHierarchy
-      put foundStacks & CR before searchHierarchy
-   end if
-   
-   if usedProjectDepStacks is not empty then
-      -- should delete duplicate lines in searchHierarchy
-      put usedProjectDepStacks & CR before searchHierarchy
-   end if
-   
-   -- put searchHierarchy
-   
-   put hkey_FoundArrayFromSearchHierarchy (hName, hType, shortHKey, tObject, searchHierarchy) into foundArray
-   put foundArray ["foundHkey"] into foundHkey
-   
-   if foundHkey is not empty then
-      -- let's add it to found stacks to be added to hierarchy
-      hkey_Deconstruct foundHkey, fName, fType, fObject, fNum
-      if word 1 of fObject = "stack" then
-         put the project_Name of fObject into foundProjectName
-         put foundProjectName into foundStackArray [fObject]
-      else
-         -- breakpoint
-      end if
-   end if
-   return foundHkey
-end hkey_FindAndAdd
-
-function hkey_FoundArrayFromSearchHierarchy hName, hType, shortHKey, tObject, searchHierarchy
-   put the long id of tObject into tObject
-   repeat with lineNum = the number of lines of searchHierarchy down to 1
-      put line lineNum of searchHierarchy into hierarchyObject
-      put the revAvailableHandlers of hierarchyObject into handlerTable
-      
-      if the long id of hierarchyObject = tObject and char 1 of hType is not "p" then -- if looking for private skip
-         -- look for private handlers first (ideally should get the first version?)
-         put "p" & hType into privateHype
-         put hName,privateHype into privateShortKey
-         hTable_FlexibleLineOffsets privateShortKey, handlerTable, startLineNum, endLineNum
-         if the result is true then
-            put handlerTable into foundArray ["handlerTable"]
-            put startLineNum into foundArray ["startLineNum"]
-            put endLineNum into foundArray ["endLineNum"]
-            put hkey_Construct (hName, privateHype, hierarchyObject) into foundArray ["foundHkey"]
-            return foundArray
-         else
-            hTable_FlexibleLineOffsets shortHkey, handlerTable, startLineNum, endLineNum
-            if the result is true then
-               put handlerTable into foundArray ["handlerTable"]
-               put startLineNum into foundArray ["startLineNum"]
-               put endLineNum into foundArray ["endLineNum"]
-               put hkey_Construct (hName, hType, hierarchyObject) into foundArray ["foundHkey"]
-               return foundArray
-            end if
-         end if
-      else
-         hTable_FlexibleLineOffsets shortHkey, handlerTable, startLineNum, endLineNum
-         if the result is true then
-            put handlerTable into foundArray ["handlerTable"]
-            put startLineNum into foundArray ["startLineNum"]
-            put endLineNum into foundArray ["endLineNum"]
-            put hkey_Construct (hName, hType, hierarchyObject) into foundArray ["foundHkey"]
-            return foundArray
-         end if
-      end if
-   end repeat
-   return empty
-end hkey_FoundArrayFromSearchHierarchy
 
 
 --> Handler | Calls | Old

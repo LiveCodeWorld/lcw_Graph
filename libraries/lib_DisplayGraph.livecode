@@ -10,12 +10,6 @@ version: 0.2
 A library to do with displaying overlays, creating them from folders of data (overlay_Folder)
 and providing a set of custom properties that can be used to manipulate them.
 
-Essentially it draws graphs using the data stored in arrays created by "deps_SaveMainstackAndExportArrays".
-The main guts of the code is in "hkey_ObjectWalk", which uses "project_ConstructWalkArray" (a hArray walk which uses hArray_FindHkeyInHierarchy)
-This is complicated hacked code with various filtering going on.
-
-Then it walks missing handlers using "hkey_ObjectWalk"
-
 Previously there were many intefaces and libraries - overlayData, overlayFolder, overlayArray, linkArray etc
 This library is designed to provide a standard way to interface with these handlers, 
 using overlay_Folder and overlay_Name to refer to graph overlays uniquely.
@@ -32,26 +26,76 @@ The data structure should perhaps be changed to the usual data/metadata arrangem
 
 --> Working On
 -
-command display_ObjectGraph hObject, pProjectName, pGraphStyle, pProcessObject, pForceCreate
+on mDoubleUp_SVG displayView, shortSvgFile
+   put the displayed_URL of displayView into someURL
+   put url_FromShortFile (shortSvgFile, someURL) into svgURL
+   --
+   display_SVG svgURL
+   put svgURL
+end mDoubleUp_SVG
+
+function url_FromShortFile shortSvgFile, someURL
+   --
+   -- set the itemdelimiter to slash
+   put someURL into svgURL
+   if char -1 of svgURL is not slash then put slash after svgURL
+   put shortSvgFile after svgURL
+   return svgURL
+end url_FromShortFile
+
+command display_HtmlSvgLinks someURL
+   put url someURL into someHTML
+   put html_ExtractAllLinks (someHTML) into svgLinks
+   filter svgLinks with "*.svg"
+   --
+   display_Data svgLinks, "Found Links", "SVG"
+   put the result into displayView
+   --
+   display_SetInteractions displayView, "SVG | Tree", "mDoubleUp_SVG"
+   --
+   set the displayed_URL of displayView to someURL
+   return displayView
+end display_HtmlSvgLinks
+
+
+
+--> Display | Media
+-
+command display_Image someImage, pStackLabel, pCloneName
+   if pCloneName is empty then put "Image" into pCloneName
+   --
+   stack_CloneInvisible "View|Image|Fit Inside", pCloneName, true
+   put the result into cloneStackName
+   put the long id of control 1 of stack cloneStackName into displayView
+   --
+   set the image_Contents of displayView to someImage
+   --
+   show stack cloneStackName
+   if pStackLabel is not empty then set the label of stack cloneStackName to pStackLabel
+   --
+   return displayView
+end display_Image
+
+command display_CreateScriptObjectGraph sObject, pGraphStyle, pProcessObject
    /*
    You can alter the way the graph is constructed by placing a "graph_FilterProcessedArray" handler
-   at the same level as the "display_ObjectGraph"
+   at the same level as the "display_CreateScriptObjectGraph"
    
    Puts everything in the project_OverlayFolder.
    Could / should change this to 
    */
+   
    if exists (pProcessObject) is false then
-      -- put script_CallingObject() into pProcessObject
       put item 1 of line -2 of the executioncontexts into pProcessObject
    end if
    
-   graph_Project hObject, pProjectName, pGraphStyle, pProcessObject, pForceCreate
+   graph_CreateScriptObject sObject, pGraphStyle, pProcessObject
    put the result into imageFile
    --
-   display_ScriptSVG hObject
+   display_ScriptSVG sObject
    --
    return imageFile
-end display_ObjectGraph
+end display_CreateScriptObjectGraph
 
 
 --> Display | SVG
@@ -68,13 +112,17 @@ command display_ScriptEditorSvg svgFile, pTabName
 end display_ScriptEditorSvg
 
 command display_SVG svgFile, pStackLabel
-   put the "View|Image|SVG" into viewName
-   
-   stack_CloneInvisible viewName, "Display SVG"
+   stack_CloneInvisible "View|Image|SVG", "Display SVG"
    put the result into cloneStackName
    put the long id of widget 1 of cd 1 of stack cloneStackName into displayView
    --
-   set the svg_File [true] of displayView to svgFile
+   if svgFile begins with "http" then
+      set the svg_URL [true] of displayView to svgFile
+      -- put url svgFile into svgXML
+      -- set the svg_XML of displayView to svgXML
+   else
+      set the svg_File [true] of displayView to svgFile
+   end if
    
    -- show and go
    if pStackLabel is empty then
@@ -92,7 +140,7 @@ end display_SVG
 -
 /*
 These handlers handle events from display views that are created from the code in this library.
-They do not have to be here, as you can change their location by setting the "event_Target" property of the display_View.
+They do not have to be here, as you can change their location by setting the "mouse_Target" property of the display_View.
 */
 
 command display_HkeyArrayGraph hkeyArray, pGraphStyle

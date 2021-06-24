@@ -14,13 +14,16 @@ These arrays are know as linkArrays or in the context of hKeys hkeyArrays.
 This library processes hkeyArrays.
 */
 
+--> Working on
+-
+
 --> Props
 -
 getprop hKeyArray_ConstructNodeSection [hKey]
    put the long id of the target into graphController
    
    put hkey_FetchOverlayData (hKey) into graphData
-   linkArray_DeconstructDataArray graphData, hLinkArray, hIdLinkArray, hIdArray, reversedIdArray
+   linkArray_DeconstructGraphData graphData, hLinkArray, hIdLinkArray, hIdArray, reversedIdArray
    put graphData ["geometry"] into geometryArray
    
    put the node_TypeArray of graphController into nodeTypeArray
@@ -29,21 +32,59 @@ getprop hKeyArray_ConstructNodeSection [hKey]
 end hKeyArray_ConstructNodeSection
 
 
+--> Working on
+-
+function hKeyArray_ConstructNodeSection hIdArray, hLinkArray, pGraphController, pNodeTypeArray
+   repeat for each key handlerType in pNodeTypeArray
+      put pNodeTypeArray [handlerType] into nodeIDs
+      if nodeIDs is not empty then
+         put hKeyArray_ConstructSubGraph (nodeIDs, hIdArray, handlerType, pGraphController) & CR after colourDefs
+      end if
+   end repeat
+   
+   -- node defs
+   put hKeyArray_DotNestedObjectClusters (hIdArray, hLinkArray) into clusterDefs  -- specific (construct object clusters)
+   put colourDefs & CR & CR & clusterDefs into defSection
+   
+   -- node links
+   put linkArray_DotNodeLinks (hLinkArray, empty) into linkSection
+   if defSection is empty then
+      return linkSection
+   else
+      return defSection & CR & CR & linkSection
+   end if
+end hKeyArray_ConstructNodeSection
+
+function hkeyArray_ShortToLong hkeyShortArray, pSearchObjects
+   -- could be something else as a default?
+   if pSearchObjects is empty then put stack_ListUsed() into pSearchObjects
+   --
+   repeat for each key hkey in hkeyShortArray
+      put hkeyShortArray [hkey] into shortHkeyLine
+      --
+      put hkey_PublicFind (shortHkeyLine, pSearchObjects) into externalHkey
+      if externalHkey is empty then
+         put shortHkeyLine into hKeyArray [hkey]
+      else
+         put externalHkey into hKeyArray [hkey]
+      end if
+      --
+   end repeat
+   return hKeyArray
+end hkeyArray_ShortToLong
+
+
 --> HkeyArray | Children
 -
-on testIt
-   put display_FindView ("Object Array") into dView
-   put the title_Text of dView into hKey
-   put hkey_GetLinkArray (hKey) into hkeyArray
-   --
-   put the selected_Path of dView into pItems -- Missing,F pageArray_ConstructJournal of Missing,
-   put item 1 of pItems into dObject
-   put item 2 of pItems into dHkey
-   --
-   put hkeyArray_ExtractParentKeys (dHkey, hKeyArray) into parentKeys
-   display_HkeyLines parentKeys, "Parent Hkeys"
-end testIt
+function hkeyArray_ExtractSubArray hKey, hkeyArray
+   local subArray
+   hkeyArray_ConstructSubArray hKey, hkeyArray, subArray
+   return subArray
+end hkeyArray_ExtractSubArray
 
+
+--> HkeyArray | Parents
+-
 function hkeyArray_ExtractParentKeys hKey, hKeyArray
    hkey_Normalize hKey
    put the result into shortHkey
@@ -63,21 +104,11 @@ function hkeyArray_ExtractParentKeys hKey, hKeyArray
    return parentKeys
 end hkeyArray_ExtractParentKeys
 
--- function hkeyArray_ExtractParentKeys hKey, hKeyArray
-repeat for each key parentKey in hKeyArray
-   if hkey is among the lines of hKeyArray [parentKey] then
-      put parentKey & CR after parentKeys
-   end if
-end repeat
-delete char -1 of parentKeys
-return parentKeys
-end hkeyArray_ExtractParentKeys
-
-function hkeyArray_ExtractSubArray hKey, hkeyArray
-   local subArray
-   hkeyArray_ConstructSubArray hKey, hkeyArray, subArray
-   return subArray
-end hkeyArray_ExtractSubArray
+function hkeyArray_ExtractParentArray hKey, hkeyArray
+   local parentArray
+   hkeyArray_ConstructParentArray hKey, hkeyArray, parentArray
+   return parentArray
+end hkeyArray_ExtractParentArray
 
 function hkeyArray_ExtractParentHkeys hKey, hkeyArray
    repeat for each key parentHkey in hkeyArray
@@ -90,47 +121,19 @@ function hkeyArray_ExtractParentHkeys hKey, hkeyArray
    return parentHkeys
 end hkeyArray_ExtractParentHkeys
 
-function hkeyArray_ExtractParentsAndChildrenArray hKey, hkeyArray
-   local subArray
-   hkeyArray_ConstructSubArray hKey, hkeyArray, subArray
-   hkeyArray_ConstructParentArray hKey, hkeyArray, subArray
-   return subArray
-end hkeyArray_ExtractParentsAndChildrenArray
-
-function hkeyArray_ExtractParentArray hKey, hkeyArray
-   local parentArray
-   hkeyArray_ConstructParentArray hKey, hkeyArray, parentArray
-   return parentArray
-end hkeyArray_ExtractParentArray
-
-command hkeyArray_ConstructParentArray hKey, hkeyArray, @parentArray
-   set the wholematches to true
-   repeat for each key maybeParentKey in hkeyArray 
-      put hkeyArray [maybeParentKey] into childKeys
-      if hKey is among the lines of childKeys then
-         -- beware circular recursion (has hKey already been indexed?)
-         if maybeParentKey is among the keys of parentArray then
-            next repeat
-         end if
-         
-         array_AddToIndex hKey, maybeParentKey, parentArray
-         hkeyArray_ConstructParentArray maybeParentKey, hkeyArray, parentArray
-      end if
-   end repeat
-end hkeyArray_ConstructParentArray
-
 command hkeyArray_ConstructSubArray hKey, hkeyArray, @subArray
    -- see also "linkArray_WalkKeys"
-   put hkeyArray [hKey] into childKeys
-   if childKeys is empty then return hkeyArray
    
-   put childKeys into subArray [hKey]
-   
-   repeat for each line childKey in childKeys
-      put keys(subArray) into indexedSoFar
-      if childKey is among the lines of indexedSoFar then
+   put hkeyArray [hKey] into childKeyArray
+   if childKeyArray is empty then return hkeyArray
+   --
+   put childKeyArray into subArray [hKey]
+   --
+   repeat for each key childKey in childKeyArray
+      if childKey is among the keys of subArray then
          next repeat -- a recursive hKey that is already added to subArray
       end if
+      
       hkeyArray_ConstructSubArray childKey, hkeyArray, subArray
    end repeat
 end hkeyArray_ConstructSubArray
@@ -266,43 +269,6 @@ function hkeyArray_ExtractObjects hkeyLinkArray
    return scriptObjects
 end hkeyArray_ExtractObjects
 
-function hkeyArray_ConstructObjectArray hkeyArray
-   -- works on array only without checks (so handles "missing")
-   local hkeyObjectArray
-   hkeyArray_SetObjectArray hkeyObjectArray, hkeyArray
-   return hkeyObjectArray
-end hkeyArray_ConstructObjectArray
-
-command hkeyArray_SetObjectArray @hkeyObjectArray, hkeyArray
-   repeat for each key hKey in hkeyArray
-      set the cursor to busy
-      
-      -- add toplevel hKey to objectArray
-      hkey_Deconstruct hKey, hName, hType, hObject, hNum
-      if exists (hObject) then put revRuggedID (hObject) into hObject -- let's tidy stack names
-      put empty into hkeyObjectArray [hObject][hKey]
-      
-      -- look at calls
-      put hkeyArray [hKey] into hkeyCalls
-      if hkeyCalls is an array then
-         -- new faster array format for calls
-         repeat for each key hkeyCall in hkeyCalls
-            hkey_Deconstruct hkeyCall, cName, cType, cObject, cNum
-            if exists (cObject) then put revRuggedID (cObject) into cObject -- let's tidy stack names
-            --
-            put empty into hkeyObjectArray [cObject][hkeyCall]
-         end repeat
-      else
-         repeat for each line hkeyCall in hkeyCalls
-            hkey_Deconstruct hkeyCall, cName, cType, cObject, cNum
-            if exists (cObject) then put revRuggedID (cObject) into cObject -- let's tidy stack names
-            --
-            put empty into hkeyObjectArray [cObject][hkeyCall]
-         end repeat
-      end if
-   end repeat
-end hkeyArray_SetObjectArray
-
 function hKeyArray_ObjectArray someObject, hKeyLinkArray
    local objectArray
    put the rugged_Id of someObject into someObject
@@ -420,26 +386,6 @@ command hkeyArray_ConstructLongSubArray shortHKey, hObject, shortHkeyArray, @lon
    end repeat
 end hkeyArray_ConstructLongSubArray
 
-function hkeyArray_ShortToLong hkeyShortArray, pSearchObjects
-   -- could be something else as a default?
-   if pSearchObjects is empty then put stack_ListUsed() into pSearchObjects
-   --
-   repeat for each key hkey in hkeyShortArray
-      put hkeyShortArray [hkey] into shortHkeyLine
-      --
-      -- put hkey_GetPlace (shortCall, pHkeyPlaceArray) into cObject
-      put hkeyLine_FindInObjects (shortHkeyLine, pSearchObjects) into externalHkey
-      
-      if externalHkey is empty then
-         put shortHkeyLine into hKeyArray [hkey]
-      else
-         put externalHkey into hKeyArray [hkey]
-      end if
-      --
-   end repeat
-   return hKeyArray
-end hkeyArray_ShortToLong
-
 
 --> HkeyArray | External
 -
@@ -473,18 +419,6 @@ end hkeyArray_FilterOutExternalObjects
 
 --> HkeyArray | Tree
 -
-function hkeyArray_ConstructTreeArray hKeyArray
-   local treeArray
-   
-   put keys (hKeyArray) into sortedHkeys
-   sort sortedHkeys by item 1 of each
-   
-   repeat for each line sortedHkey in sortedHkeys
-      _addToDepKeyArray treeArray, sortedHkey, hKeyArray
-   end repeat
-   return treeArray
-end hkeyArray_ConstructTreeArray
-
 function hKeyArray_ObjectAndParentArray someObject, hKeyLinkArray
    -- extracts all object hKeys and their parents outside the object.
    local objectArray
@@ -923,27 +857,6 @@ end hKeyArray_DotNodeLinks
 
 --> Hkey | Array | Not Tested
 -
-function hKeyArray_ConstructNodeSection hIdArray, hLinkArray, pGraphController, nodeTypeArray
-   repeat for each key handlerType in nodeTypeArray
-      put nodeTypeArray [handlerType] into nodeIDs
-      if nodeIDs is not empty then
-         put hKeyArray_ConstructSubGraph (nodeIDs, hIdArray, handlerType, pGraphController) & CR after colourDefs
-      end if
-   end repeat
-   
-   -- node defs
-   put hKeyArray_DotNestedObjectClusters (hIdArray, hLinkArray) into clusterDefs  -- specific (construct object clusters)
-   put colourDefs & CR & CR & clusterDefs into defSection
-   
-   -- node links
-   put linkArray_DotNodeLinks (hLinkArray, empty) into linkSection
-   if defSection is empty then
-      return linkSection
-   else
-      return defSection & CR & CR & linkSection
-   end if
-end hKeyArray_ConstructNodeSection
-
 function hkeyArray_ExtractEventKeys hkeyArray
    put keys(hkeyArray) into hKeys
    put rev_MessageNames() into revMessageNames
@@ -1113,25 +1026,6 @@ private command recurse_FilterOutExternalObjects hKey, hKeyArray, originalObject
       -- put empty into filteredLinkArray [hKey]
    end if
 end recurse_FilterOutExternalObjects
-
-private command _addToDepKeyArray @treeArray, sortedHkey, hKeyArray
-   put hKeyArray [sortedHkey] into depHkeys
-   sort depHkeys by item 1 of each
-   put empty into depKeyArray
-   repeat for each line depHkey in depHkeys
-      -- put empty into parentHkey -- here we should dig into reversed array
-      put item 1 of depHkey into hName
-      put item 2 of depHkey into hType
-      put hName & "_" & hType into displayName
-      
-      put hName into depKeyArray [displayName]["hName"]
-      put hType into depKeyArray [displayName]["hType"]
-      put item 3 of depHkey into depKeyArray [displayName]["hObject"]
-      put item 4 of depHkey into depKeyArray [displayName]["hNum"]
-   end repeat
-   replace comma with slash in sortedHkey
-   put depKeyArray into treeArray [sortedHkey]
-end _addToDepKeyArray
 
 
 --> Deps

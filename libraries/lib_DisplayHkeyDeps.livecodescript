@@ -7,6 +7,69 @@ type: library
 version: 0.3
 
 
+--> Working on
+-
+function hkey_SearchHierarchyDependencyArray hKeys, searchHierarchy, pAllCalls
+   -- from objects. See also "hkey_DependencyArrayFromObjects"
+   local hKeyLinkArray
+   try  
+      repeat for each line hKey in hkeys
+         put handler_Get (hKey) into someHandler
+         if pAllCalls is true then
+            put handler_ExtractCalls (someHandler) into shortCalls
+         else
+            put handler_ExtractFilteredCalls (someHandler) into shortCalls
+         end if
+         
+         repeat for each line shortCall in shortCalls
+            hkey_ObjectWalkSearchHierarchy shortCall, hKey, hKeyLinkArray, searchHierarchy, pAllCalls
+         end repeat
+      end repeat
+      return hKeyLinkArray
+   catch e -- script is locked
+      return empty
+   end try
+end hkey_SearchHierarchyDependencyArray
+
+command hkey_ObjectWalkSearchHierarchy shortCall, hKey, @hKeyLinkArray, searchHierarchy, pAllCalls
+   -- same as "hkey_ObjectWalk" but uses fixed searchHierarchy
+   
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   hkey_Deconstruct shortCall, callName, callType, emptyCallObject, emptyCallNum
+   
+   put hkey_FindShortHkey (shortCall, hObject, searchHierarchy) into foundCall
+   
+   switch
+      case foundCall is empty
+         put hkey_Construct (callName, callType, "missing", 1) into foundCall
+         array_AddToIndex foundCall, hKey, hKeyLinkArray
+         return empty
+      case foundCall is among the keys of hKeyLinkArray
+         -- already indexed so no need to recurse
+         return empty
+   end switch
+   
+   -- add it to the array
+   array_AddToIndex foundCall, hKey, hKeyLinkArray
+   
+   -- now lets repeat and recurse for each call found
+   put handler_Get (foundCall) into callHandler
+   if callHandler is empty then breakPoint
+   
+   if pAllCalls is true then
+      put handler_ExtractCalls (callHandler) into shortCalls
+   else
+      put handler_ExtractFilteredCalls (callHandler) into shortCalls
+   end if
+   
+   repeat for each line shortCall in shortCalls
+      set the cursor to busy
+      hkey_ObjectWalkSearchHierarchy shortCall, foundCall, hKeyLinkArray, searchHierarchy, pAllCalls
+   end repeat
+   return empty
+end hkey_ObjectWalkSearchHierarchy
+
+
 --> Display
 -
 command display_ClusterDepGraph hkey, searchHierarchy, pClusterBoolean, pProcessObject  
@@ -46,7 +109,7 @@ end display_HkeyDot
 
 command display_HkeySVG hkey
    put hkey_SvgFile (hKey) into svgFile
-   
+   --
    put hkey into stackLabel
    if scriptEditor_PaneExists ("Deps") then
       display_ScriptEditorSvg svgFile
@@ -55,7 +118,10 @@ command display_HkeySVG hkey
    end if
    put the result into displayView
    --
-   set the displayed_Hkey of displayView to hkey
+   if exists (displayView) then
+      -- could be empty if the svg does nto exist
+      set the displayed_Hkey of displayView to hkey
+   end if
    return displayView
 end display_HkeySVG
 
@@ -179,219 +245,10 @@ command hkey_CreateSearchHierarchyGraph hKey, searchHierarchy, pGraphStyle, pClu
 end hkey_CreateSearchHierarchyGraph
 
 
---> Hkey | DepArray
--
-function hkey_DepArrayFromObjects hKeys, pExternalObjects, pAllCalls
-   local hKeyLinkArray, pFoundStackArray
-   try  
-      repeat for each line hKey in hkeys
-         put handler_Get (hKey) into someHandler
-         if pAllCalls is true then
-            -- returns modern format
-            put handler_ExtractCalls (someHandler) into shortCalls
-         else
-            put handler_ExtractFilteredCalls (someHandler) into shortCalls
-         end if
-         
-         repeat for each line shortCall in shortCalls
-            hkey_ObjectWalkDeps shortCall, hKey, hKeyLinkArray, pExternalObjects, pAllCalls, pFoundStackArray
-         end repeat
-      end repeat
-      return hKeyLinkArray
-   catch e -- script is locked
-      return empty
-   end try
-end hkey_DepArrayFromObjects
-
-command hkey_ObjectWalkDeps shortCall, hKey, @hKeyLinkArray, pExternalObjects, pAllCalls, pFoundStackArray
-   -- same as "hkey_ObjectWalk" but with deps instead of projectName
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   hkey_Deconstruct shortCall, callName, callType, emptyCallObject, emptyCallNum
-   
-   put hkey_Find (shortCall, hObject, pExternalObjects) into foundHkey
-   --
-   switch
-      case foundCall is empty
-         put merge ("Call '[[shortCall]]' for handler '[[hKey]]' is missing!") into someMessage
-         lcw_Notify someMessage, true
-         
-         put hkey_Construct (callName, callType, "missing", 1) into foundCall
-         array_AddToIndex foundCall, hKey, hKeyLinkArray
-         return empty
-      case foundCall is among the keys of hKeyLinkArray
-         -- already indexed so no need to recurse
-         return empty
-   end switch
-   
-   -- add it to the array
-   put merge ("Added [[foundCall]] to hKeyArray!") into someMessage
-   lcw_Notify someMessage
-   array_AddToIndex foundCall, hKey, hKeyLinkArray
-   
-   -- now lets repeat and recurse for each call found
-   put handler_Get (foundCall) into callHandler
-   if callHandler is empty then breakPoint
-   
-   if pAllCalls is true then
-      put handler_ExtractCalls (callHandler) into shortCalls
-   else
-      put handler_ExtractFilteredCalls (callHandler) into shortCalls
-   end if
-   
-   repeat for each line shortCall in shortCalls
-      set the cursor to busy
-      hkey_ObjectWalkDeps shortCall, foundCall, hKeyLinkArray, pExternalObjects, pAllCalls, pFoundStackArray
-   end repeat
-   return empty
-end hkey_ObjectWalkDeps
-
-
---> Deps
--
-function hkey_SearchHierarchyDependencyArray hKeys, searchHierarchy, pAllCalls
-   -- from objects
-   local hKeyLinkArray
-   try  
-      repeat for each line hKey in hkeys
-         put handler_Get (hKey) into someHandler
-         if pAllCalls is true then
-            -- returns modern format
-            put handler_ExtractCalls (someHandler) into shortCalls
-         else
-            put handler_ExtractFilteredCalls (someHandler) into shortCalls
-         end if
-         
-         repeat for each line shortCall in shortCalls
-            hkey_ObjectWalkSearchHierarchy shortCall, hKey, hKeyLinkArray, searchHierarchy, pAllCalls
-         end repeat
-      end repeat
-      return hKeyLinkArray
-   catch e -- script is locked
-      return empty
-   end try
-end hkey_SearchHierarchyDependencyArray
-
-command hkey_ObjectWalkSearchHierarchy shortCall, hKey, @hKeyLinkArray, searchHierarchy, pAllCalls
-   -- same as "hkey_ObjectWalk" but uses fixed searchHierarchy
-   
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   hkey_Deconstruct shortCall, callName, callType, emptyCallObject, emptyCallNum
-   
-   -- put hkey_FindAndAdd (shortCall, hObject, pFoundStackArray, pProjectName) into foundCall
-   put hkey_FoundArrayFromSearchHierarchy (callName, callType, shortCall, hObject, searchHierarchy) into foundArray
-   put foundArray ["foundHkey"] into foundCall
-   
-   switch
-      case foundCall is empty
-         /*
-         put merge ("Call '[[shortCall]]' for handler '[[hKey]]' is missing!") into someMessage
-         lcw_Notify someMessage, true
-         */
-         put hkey_Construct (callName, callType, "missing", 1) into foundCall
-         array_AddToIndex foundCall, hKey, hKeyLinkArray
-         return empty
-      case foundCall is among the keys of hKeyLinkArray
-         -- already indexed so no need to recurse
-         return empty
-   end switch
-   
-   -- add it to the array
-   /*
-   put merge ("Added [[foundCall]] to hKeyArray!") into someMessage
-   lcw_Notify someMessage
-   */
-   array_AddToIndex foundCall, hKey, hKeyLinkArray
-   
-   -- now lets repeat and recurse for each call found
-   put handler_Get (foundCall) into callHandler
-   if callHandler is empty then breakPoint
-   
-   if pAllCalls is true then
-      put handler_ExtractCalls (callHandler) into shortCalls
-   else
-      put handler_ExtractFilteredCalls (callHandler) into shortCalls
-   end if
-   
-   repeat for each line shortCall in shortCalls
-      set the cursor to busy
-      hkey_ObjectWalkSearchHierarchy shortCall, foundCall, hKeyLinkArray, searchHierarchy, pAllCalls
-   end repeat
-   return empty
-end hkey_ObjectWalkSearchHierarchy
-
-function hkey_DependencyArrayFromObjects hKeys, pProjectName, pAllCalls
-   local hKeyLinkArray, pFoundStackArray
-   try  
-      repeat for each line hKey in hkeys
-         put handler_Get (hKey) into someHandler
-         if pAllCalls is true then
-            -- returns modern format
-            put handler_ExtractCalls (someHandler) into shortCalls
-         else
-            put handler_ExtractFilteredCalls (someHandler) into shortCalls
-         end if
-         
-         repeat for each line shortCall in shortCalls
-            hkey_ObjectWalk shortCall, hKey, hKeyLinkArray, pProjectName, pAllCalls, pFoundStackArray
-         end repeat
-      end repeat
-      return hKeyLinkArray
-   catch e -- script is locked
-      return empty
-   end try
-end hkey_DependencyArrayFromObjects
-
-command hkey_ObjectWalk shortCall, hKey, @hKeyLinkArray, pProjectName, pAllCalls, pFoundStackArray
-   -- new version that incrementally adds stacks to search using "hkey_FindAndAdd"
-   -- see "lib_HarrayWalk"
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   hkey_Deconstruct shortCall, callName, callType, emptyCallObject, emptyCallNum
-   
-   put hkey_FindAndAdd (shortCall, hObject, pFoundStackArray, pProjectName) into foundCall
-   
-   -- this could be filtered out at the end
-   -- if _foundUselessCall (foundCall) is true then return empty -- should do something else
-   
-   switch
-      case foundCall is empty
-         put merge ("Call '[[shortCall]]' for handler '[[hKey]]' is missing!") into someMessage
-         lcw_Notify someMessage, true
-         
-         put hkey_Construct (callName, callType, "missing", 1) into foundCall
-         array_AddToIndex foundCall, hKey, hKeyLinkArray
-         return empty
-      case foundCall is among the keys of hKeyLinkArray
-         -- already indexed so no need to recurse
-         return empty
-   end switch
-   
-   -- add it to the array
-   put merge ("Added [[foundCall]] to hKeyArray!") into someMessage
-   lcw_Notify someMessage
-   array_AddToIndex foundCall, hKey, hKeyLinkArray
-   
-   -- now lets repeat and recurse for each call found
-   put handler_Get (foundCall) into callHandler
-   if callHandler is empty then breakPoint
-   
-   if pAllCalls is true then
-      put handler_ExtractCalls (callHandler) into shortCalls
-   else
-      put handler_ExtractFilteredCalls (callHandler) into shortCalls
-   end if
-   
-   repeat for each line shortCall in shortCalls
-      set the cursor to busy
-      hkey_ObjectWalk shortCall, foundCall, hKeyLinkArray, pProjectName, pAllCalls, pFoundStackArray
-   end repeat
-   return empty
-end hkey_ObjectWalk
-
-
 --> Private 
 -
 private function hkeyLine_FromHandlerFile handlerPath
-   -- used by "display_SpotlightHandler" amd therefore "hkey_Find" ???
+   -- used by "display_SpotlightHandler" amd therefore "hkey_FindShortHkey" ???
    -- lcw_User/lcw_Metadata/lib_Display/data/objects/stack/handlers/M display_SpotlightHandler/lcw_handler.txt
    
    set the itemdelimiter to slash
@@ -400,7 +257,6 @@ private function hkeyLine_FromHandlerFile handlerPath
    put item 1 to -4 of of handlerPath into somePath
    
    put script_ExportedRootToObject (somePath) into hObject
-   put hKeyLine_Construct (shortHkeyLine, hObject) into hkeyLine
+   put hKeyLine_AddObject (shortHkeyLine, hObject) into hkeyLine
    return hkeyLine
 end hkeyLine_FromHandlerFile
-

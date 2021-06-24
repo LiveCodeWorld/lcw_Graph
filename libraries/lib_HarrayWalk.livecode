@@ -74,7 +74,7 @@ function hkey_SmartFind shortCall, hKey, pSetName
       put item 1 of shortCall into callName
       put item 2 of shortCall into callType
       
-      put hkey_Find (shortCall, hObject) into foundCall
+      put hkey_FindShortHkey (shortCall, hObject) into foundCall
       if foundCall is empty then
          put item 1 of shortCall into callName
          put item 2 of shortCall into callType
@@ -113,7 +113,7 @@ command hkey_SimpleWalk shortCall, hKey, @hKeyLinkArray, pSetName, pTestExceptio
    
    try
       -- put hArray_FindHkeyInHierarchy (shortCall, hObject) into foundCall
-      put hkey_Find (shortCall, hObject) into foundCall
+      put hkey_FindShortHkey (shortCall, hObject) into foundCall
       if foundCall is empty then
          put hkey_FindAndIndex (callName, callType, hObject, pSetName) into foundCall
       end if
@@ -238,7 +238,7 @@ function project_ConstructHkeyArray hArray, pDepObject, pSetName
             set the cursor to busy
             put hArray_FindHkeyInHierarchy (shortHkey, rObject, hArray, pSetName) into hkeyCall
             if hkeyCall is empty then
-               put hkey_Find (shortHKey, rObject) into hkeyCall
+               put hkey_FindShortHkey (shortHKey, rObject) into hkeyCall
                if hkeyCall is empty then
                   put shortHkey,"missing",1 into hkeyCall
                end if
@@ -283,7 +283,7 @@ function project_ConstructWalkArray hArray, pDepObject, pSetName
             
             if foundCall is empty then
                -- put hArray_FindHkeyInHierarchy (shortHkey, rObject, empty, pSetName) into foundCall
-               put hkey_Find (shortCall, rObject) into foundCall
+               put hkey_FindShortHkey (shortCall, rObject) into foundCall
                if foundCall is empty then
                   put shortCall,"missing",1 into missingCall
                   put missingCall into walkArray ["missing"][shortCall][hKey]
