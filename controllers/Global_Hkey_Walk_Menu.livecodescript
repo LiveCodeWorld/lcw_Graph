@@ -18,6 +18,11 @@ getprop menu_Target
    return hKey 
 end menu_Target
 
+getprop displaySvg_Params [hKey]
+   put hkey_ListSvgFiles (hKey) into shortFiles
+   return shortFiles
+end displaySvg_Params
+
 
 --> Global | Hkey | Walk | Menu
 -
@@ -25,8 +30,8 @@ on menu_DisplayHkeyArray hKey
    display_HkeyArray hKey
 end menu_DisplayHkeyArray
 
-on menu_DisplaySvg hKey
-   display_HkeyGraph hKey, true
+on menu_DisplaySvg hKey, shortFile
+   display_HkeySvg hKey, svgFile
 end menu_DisplaySvg
 
 on menu_DisplayDot hKey
@@ -61,16 +66,16 @@ end submenu_Dev
 
 --> Dev | Menu
 -
-on menu_WalkExportedHkeyDeps hKey
+on _WalkExportedHkeyDeps hKey
    display_HandlerDeps hKey
-end menu_WalkExportedHkeyDeps
+end _WalkExportedHkeyDeps
 
-on menu_HkeyArrayFromExported hKey
+on _HkeyArrayFromExported hKey
    put hkeyArray_FromExported (hKey) into hkeyArray
    display_Array hkeyArray
-end menu_HkeyArrayFromExported
+end _HkeyArrayFromExported
 
-on menu_TestFindAndAdd hKey
+on _TestFindAndAdd hKey
    put "lcw_Wiki" into projectName
    -- put empty into projectName
    
@@ -81,7 +86,7 @@ on menu_TestFindAndAdd hKey
    put "json_FromArray,f" into shortHKey
    put empty into foundStackArray
    put hkey_FindAndAdd (shortHKey, hObject, foundStackArray, projectName)
-end menu_TestFindAndAdd
+end _TestFindAndAdd
 
 
 --> Global | Hkey | Walk | Menu | Props

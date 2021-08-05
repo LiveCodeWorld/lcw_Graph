@@ -9,103 +9,23 @@ version: 0.3
 
 --> Working on
 -
-function hkey_SearchHierarchyDependencyArray hKeys, searchHierarchy, pAllCalls
-   -- from objects. See also "hkey_DependencyArrayFromObjects"
-   local hKeyLinkArray
-   try  
-      repeat for each line hKey in hkeys
-         put handler_Get (hKey) into someHandler
-         if pAllCalls is true then
-            put handler_ExtractCalls (someHandler) into shortCalls
-         else
-            put handler_ExtractFilteredCalls (someHandler) into shortCalls
-         end if
-         
-         repeat for each line shortCall in shortCalls
-            hkey_ObjectWalkSearchHierarchy shortCall, hKey, hKeyLinkArray, searchHierarchy, pAllCalls
-         end repeat
-      end repeat
-      return hKeyLinkArray
-   catch e -- script is locked
-      return empty
-   end try
-end hkey_SearchHierarchyDependencyArray
-
-command hkey_ObjectWalkSearchHierarchy shortCall, hKey, @hKeyLinkArray, searchHierarchy, pAllCalls
-   -- same as "hkey_ObjectWalk" but uses fixed searchHierarchy
-   
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   hkey_Deconstruct shortCall, callName, callType, emptyCallObject, emptyCallNum
-   
-   put hkey_FindShortHkey (shortCall, hObject, searchHierarchy) into foundCall
-   
-   switch
-      case foundCall is empty
-         put hkey_Construct (callName, callType, "missing", 1) into foundCall
-         array_AddToIndex foundCall, hKey, hKeyLinkArray
-         return empty
-      case foundCall is among the keys of hKeyLinkArray
-         -- already indexed so no need to recurse
-         return empty
-   end switch
-   
-   -- add it to the array
-   array_AddToIndex foundCall, hKey, hKeyLinkArray
-   
-   -- now lets repeat and recurse for each call found
-   put handler_Get (foundCall) into callHandler
-   if callHandler is empty then breakPoint
-   
-   if pAllCalls is true then
-      put handler_ExtractCalls (callHandler) into shortCalls
-   else
-      put handler_ExtractFilteredCalls (callHandler) into shortCalls
-   end if
-   
-   repeat for each line shortCall in shortCalls
-      set the cursor to busy
-      hkey_ObjectWalkSearchHierarchy shortCall, foundCall, hKeyLinkArray, searchHierarchy, pAllCalls
-   end repeat
-   return empty
-end hkey_ObjectWalkSearchHierarchy
-
 
 --> Display
 -
-command display_ClusterDepGraph hkey, searchHierarchy, pClusterBoolean, pProcessObject  
-   graph_HkeyCreateCluster hkey, searchHierarchy, pClusterBoolean, pProcessObject
-   display_HkeySVG hkey
-   put the result into displayView
-   return displayView
-end display_ClusterDepGraph
-
-command graph_HkeyCreateCluster hkey, searchHierarchy, pClusterBoolean, pProcessObject
-   -- good for checking deps are what you think
-   -- only searches and displays deps found in sepcific script objects
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   put the mainstack_Hash of hObject into mainstackHash
-   put hkey_Construct (hName, hType, hObject) into hkey -- fixes and badly formatted hKyes
-   hkey_CreateSearchHierarchyGraph hkey, searchHierarchy, "hierarchical", pClusterBoolean, mainstackHash, pProcessObject
-   put the result into imageFile
-   return imageFile
-end graph_HkeyCreateCluster
-
-
---> Display | Handler
--
-command display_HkeyGraph hKey, pRevealFinder
-   put hkey_SvgFile (hKey) into svgFile
-   display_HkeySVG hkey
+command display_HkeySvg hKey, svgFile
+   -- display_HkeyGraph hKey, true
+   put hkey_MetadataFolder (hKey) into mFolder
+   put mFolder & shortFile into svgFile
    --
-   if pRevealFinder is true then
-      finder_Reveal svgFile
-   end if
-end display_HkeyGraph
-
-command display_HkeyDot hkey
-   put hkey_DotFile (hKey) into dotFile
-   display_TextFile dotFile
-end display_HkeyDot
+   -- if scriptEditor_PaneExists ("Deps") then
+   -- display_ScriptEditorSvg svgFile
+   -- else
+   display_Svg svgFile, "Hkey Deps"
+   -- end if
+   put the result into displayView
+   set the displayed_Hkey of displayView to hkey
+   return displayView
+end display_HkeySvg
 
 command display_HkeySVG hkey
    put hkey_SvgFile (hKey) into svgFile
@@ -124,6 +44,27 @@ command display_HkeySVG hkey
    end if
    return displayView
 end display_HkeySVG
+
+command display_ClusterDepGraph hkey, searchHierarchy, pClusterBoolean, pProcessObject  
+   graph_HkeyCreateCluster hkey, searchHierarchy, pClusterBoolean, pProcessObject
+   display_HkeySVG hkey
+   put the result into displayView
+   return displayView
+end display_ClusterDepGraph
+
+command display_HkeyGraph hKey, pRevealFinder
+   put hkey_SvgFile (hKey) into svgFile
+   display_HkeySVG hkey
+   --
+   if pRevealFinder is true then
+      finder_Reveal svgFile
+   end if
+end display_HkeyGraph
+
+command display_HkeyDot hkey
+   put hkey_DotFile (hKey) into dotFile
+   display_TextFile dotFile
+end display_HkeyDot
 
 command display_HandlerCalls hKey
    put hkey_FetchCalls (hKey) into shortCalls
@@ -243,6 +184,77 @@ command hkey_CreateSearchHierarchyGraph hKey, searchHierarchy, pGraphStyle, pClu
    put hkey_SvgFile (hKey, pGraphStyle) into svgFile
    return svgFile
 end hkey_CreateSearchHierarchyGraph
+
+function hkey_SearchHierarchyDependencyArray hKeys, searchHierarchy, pAllCalls
+   -- from objects. See also "hkey_DependencyArrayFromObjects"
+   local hKeyLinkArray
+   try  
+      repeat for each line hKey in hkeys
+         put handler_Get (hKey) into someHandler
+         if pAllCalls is true then
+            put handler_ExtractCalls (someHandler) into shortCalls
+         else
+            put handler_ExtractFilteredCalls (someHandler) into shortCalls
+         end if
+         
+         repeat for each line shortCall in shortCalls
+            hkey_ObjectWalkSearchHierarchy shortCall, hKey, hKeyLinkArray, searchHierarchy, pAllCalls
+         end repeat
+      end repeat
+      return hKeyLinkArray
+   catch e -- script is locked
+      return empty
+   end try
+end hkey_SearchHierarchyDependencyArray
+
+command hkey_ObjectWalkSearchHierarchy shortCall, hKey, @hKeyLinkArray, searchHierarchy, pAllCalls
+   -- same as "hkey_ObjectWalk" but uses fixed searchHierarchy
+   
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   hkey_Deconstruct shortCall, callName, callType, emptyCallObject, emptyCallNum
+   
+   put hkey_FindShortHkey (shortCall, hObject, searchHierarchy) into foundCall
+   
+   switch
+      case foundCall is empty
+         put hkey_Construct (callName, callType, "missing", 1) into foundCall
+         array_AddToIndex foundCall, hKey, hKeyLinkArray
+         return empty
+      case foundCall is among the keys of hKeyLinkArray
+         -- already indexed so no need to recurse
+         return empty
+   end switch
+   
+   -- add it to the array
+   array_AddToIndex foundCall, hKey, hKeyLinkArray
+   
+   -- now lets repeat and recurse for each call found
+   put handler_Get (foundCall) into callHandler
+   if callHandler is empty then breakPoint
+   
+   if pAllCalls is true then
+      put handler_ExtractCalls (callHandler) into shortCalls
+   else
+      put handler_ExtractFilteredCalls (callHandler) into shortCalls
+   end if
+   
+   repeat for each line shortCall in shortCalls
+      set the cursor to busy
+      hkey_ObjectWalkSearchHierarchy shortCall, foundCall, hKeyLinkArray, searchHierarchy, pAllCalls
+   end repeat
+   return empty
+end hkey_ObjectWalkSearchHierarchy
+
+command graph_HkeyCreateCluster hkey, searchHierarchy, pClusterBoolean, pProcessObject
+   -- good for checking deps are what you think
+   -- only searches and displays deps found in sepcific script objects
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put the mainstack_Hash of hObject into mainstackHash
+   put hkey_Construct (hName, hType, hObject) into hkey -- fixes and badly formatted hKyes
+   hkey_CreateSearchHierarchyGraph hkey, searchHierarchy, "hierarchical", pClusterBoolean, mainstackHash, pProcessObject
+   put the result into imageFile
+   return imageFile
+end graph_HkeyCreateCluster
 
 
 --> Private 
