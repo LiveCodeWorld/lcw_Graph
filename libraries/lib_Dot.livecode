@@ -15,12 +15,56 @@ See also older library libOPN_GraphViz
 
 --> Working on
 -
+private command overlayArray_DeconstructGroupStyleArray @nodeIds, @nodeStyleArrayOrName, dotGroupStyleArray
+   put dotGroupStyleArray ["nodeIds"] into nodeIds
+   if the number of lines of nodeIds = 1 then
+      -- hack for overlay which uses items
+      replace comma with CR in nodeIDs
+   end if
+   put dotGroupStyleArray ["node_StyleArray"] into nodeStyleArrayOrName
+end overlayArray_DeconstructGroupStyleArray
+
 function dot_ConstructOverlayArray dotText, graphStyle, pTextFile
    put dot_Render (dotText, graphStyle, pTextFile, "cmapx") into cmapxText
    put imagemap_ParseMap (cmapxText) into dgArray
    put dgArray into graphArray ["data"]
    return graphArray
 end dot_ConstructOverlayArray
+
+function dot_ConstructDefSection dotGroupStyleArray, nodeIdArray
+   local defSection
+   repeat for each key numOrName in dotGroupStyleArray
+      put dotGroupStyleArray [numOrName] into groupStyleArray
+      overlayArray_DeconstructGroupStyleArray nodeIds, nodeStyleArray, groupStyleArray
+      put dot_StyleArrayToParams (nodeStyleArray) into styleParams
+      
+      if numOrName is not a number then
+         put "subgraph" && kwote (numOrName) & space after defSection
+      end if
+      put "{" & CR after defSection
+      put tab & "node [" & styleParams & "];" & CR after defSection
+      put CR after defSection
+      
+      repeat for each line nodeID in nodeIDs
+         put dot_ConstructDefaultDefLine (nodeID, nodeIdArray) into nodeDefLine
+         put tab & nodeDefLine & CR after defSection
+      end repeat
+      
+      put "}"  & CR after defSection
+      put CR after defSection
+   end repeat
+   delete char -2 to -1 of defSection
+   return defSection
+end dot_ConstructDefSection
+
+function dot_DefSectionFromArray overlayArray, pOverlayName
+   local defSection
+   overlayArray_DeconstructMetadata overlayArray, graphPropertyArray, dotHeaderArray, nodePropertyArray, edgePropertyArray, dotGroupStyleArray, pOverlayName
+   overlayArray_DeconstructData overlayArray, linkArray, idArray, idLinkArray, reverseIdLinkArray, dotClusterArray
+   
+   put dot_ConstructDefSection (dotGroupStyleArray, idArray) into defSection
+   return defSection
+end dot_DefSectionFromArray
 
 
 --> Dot | Label
@@ -214,7 +258,6 @@ function dot_FromOverlayArray overlayArray, pOverlayName
    
    put overlayArray_GetHeaderProperty (overlayArray, "dot_ClusterRank") into dotCluster
    if dotClusterArray is an array and dotCluster is not "none" then
-      -- put overlayData_ConstructClusterSection (overlayArray, pOverlayName) into clusterSection
       put overlayArray_ConstructClusterSection (overlayArray, pOverlayName) into clusterSection
    end if
    
@@ -242,7 +285,9 @@ function dot_TextFromSections dotHeader, defSection, clusterSection, linkSection
    
    put "digraph" into dotText
    if pOverlayName is not empty then put space & kwote(pOverlayName) after dotText
-   put space & "{" & CR & outline_IncreaseIndent (dotSection) & CR & "}" after dotText
+   --
+   line_Indent dotSection
+   put space & "{" & CR & dotSection & CR & "}" after dotText
    
    return dotText
 end dot_TextFromSections
@@ -253,42 +298,6 @@ function dot_NewTemporaryFilePath dotText
    put dotFolder & "dot.txt" into dotFile
    return dotFile
 end dot_NewTemporaryFilePath
-
-function dot_DefSectionFromArray overlayArray, pOverlayName
-   local defSection
-   overlayArray_DeconstructMetadata overlayArray, graphPropertyArray, dotHeaderArray, nodePropertyArray, edgePropertyArray, dotGroupStyleArray, pOverlayName
-   overlayArray_DeconstructData overlayArray, linkArray, idArray, idLinkArray, reverseIdLinkArray, dotClusterArray
-   
-   put dot_ConstructDefSection (dotGroupStyleArray, idArray) into defSection
-   return defSection
-end dot_DefSectionFromArray
-
-function dot_ConstructDefSection dotGroupStyleArray, nodeIdArray
-   local defSection
-   repeat for each key numOrName in dotGroupStyleArray
-      put dotGroupStyleArray [numOrName] into groupStyleArray
-      overlayArray_DeconstructGroupStyleArray nodeIds, nodeStyleArray, groupStyleArray
-      put dot_StyleArrayToParams (nodeStyleArray) into styleParams
-      
-      if numOrName is not a number then
-         put "subgraph" && kwote(numOrName) & space after defSection
-      end if
-      put "{" & CR after defSection
-      put tab & "node [" & styleParams & "];" & CR after defSection
-      put CR after defSection
-      
-      -- replace CR with comma in nodeIDs -- lazy
-      repeat for each item nodeID in nodeIDs
-         put dot_ConstructDefaultDefLine (nodeID, nodeIdArray) into nodeDefLine
-         put tab & nodeDefLine & CR after defSection
-      end repeat
-      
-      put "}"  & CR after defSection
-      put CR after defSection
-   end repeat
-   delete char -2 to -1 of defSection
-   return defSection
-end dot_ConstructDefSection
 
 
 --> Dot | Header
@@ -301,7 +310,7 @@ end dot_GetGraphHeader
 
 command dot_SetHeader @dotText, dotHeader
    if the number of lines of dotHeader > 1 then
-      put outline_IncreaseIndent (dotHeader) into dotHeader
+      line_Indent dotHeader
    end if
    
    dot_SetGraphSectionOffsets dotText, startChar, endChar
@@ -396,26 +405,6 @@ function dot_GraphSectionToArray dotHeader
    end repeat
    return headerArray
 end dot_GraphSectionToArray
-
-
---> Dot | Header | Construct | Old
--
-function dot_ConstructHeader graphSize, pDotPropertyArray, graphStyle, pUseInches
-   put dot_ConstructHeaderBase (graphSize, pDotPropertyArray, graphStyle, pUseInches) into graphHeaderBase
-   
-   put "graph [" & CR after graphHeader
-   put outline_IncreaseIndent(graphHeaderBase) & CR after graphHeader
-   put "];" & CR after graphHeader
-   
-   -- default node section
-   dot_DeconstructPropertyArray pDotPropertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
-   if defaultUrl is not empty then put "node [URL=" & kwote(defaultUrl) & "];" & CR after defaultNodeSection
-   if defaultShape is not empty then put "node [shape=" & defaultShape & "];" & CR after defaultNodeSection
-   if defaultNodeSection is not empty then put CR & defaultNodeSection & CR after graphHeader
-   
-   delete last char of graphHeader
-   return graphHeader
-end dot_ConstructHeader
 
 
 --> Dot | Header | Props
@@ -573,22 +562,6 @@ end dot_StripSubGraphs
 
 
 
---> Dot
--
-function dot_TextFromSections dotHeader, defSection, clusterSection, linkSection, pOverlayName
-   put dotHeader into dotSection
-   text_InsertParagraph defSection, dotSection
-   text_InsertParagraph clusterSection, dotSection
-   text_InsertParagraph linkSection, dotSection
-   
-   put "digraph" into dotText
-   if pOverlayName is not empty then put space & kwote(pOverlayName) after dotText
-   put space & "{" & CR & outline_IncreaseIndent (dotSection) & CR & "}" after dotText
-   
-   return dotText
-end dot_TextFromSections
-
-
 --> Dot | NodeID
 -
 /*
@@ -659,6 +632,18 @@ function dot_DefSectionFromArray overlayArray, pOverlayName
    return defSection
 end dot_DefSectionFromArray
 
+function dot_StyleArrayToParams styleArray
+   repeat for each key someParam in styleArray
+      put styleArray [someParam] into someValue
+      if someValue is not empty then
+         put someParam & "=" & kwote(someValue) after styleParams
+         put ", " after styleParams
+      end if
+   end repeat
+   delete char -2 to -1 of styleParams
+   return styleParams
+end dot_StyleArrayToParams
+
 
 --> Dot | Header
 -
@@ -667,24 +652,6 @@ function dot_GetGraphHeader dotText
    put char startChar to endChar of dotText into graphHeader
    return graphHeader
 end dot_GetGraphHeader
-
-command dot_SetHeader @dotText, dotHeader
-   if the number of lines of dotHeader > 1 then
-      put outline_IncreaseIndent (dotHeader) into dotHeader
-   end if
-   
-   dot_SetGraphSectionOffsets dotText, startChar, endChar
-   if the result is true then
-      if char startChar-1 of dotText = tab then
-         put dotHeader into char (startChar - 1) to endChar of dotText
-      else
-         put dotHeader into char startChar to endChar of dotText
-      end if
-   else
-      put offset ("{", dotText) into bCharNum
-      put CR & dotHeader after char bCharNum dotText
-   end if
-end dot_SetHeader
 
 
 --> Dot | Header | Array
@@ -968,9 +935,49 @@ function dot_RectFromSize graphSize
    end switch 
 end dot_RectFromSize
 
+command line_Indent @sLines, pTabChars
+   if pTabChars is empty then put tab into pTabChars
+   --
+   repeat with lineNum = 1 to the number of lines of sLines
+      put pTabChars before line lineNum of sLines
+   end repeat
+end line_Indent
+
 
 --> Private
 -
+private command text_InsertParagraph newText, @someText, pCrNum
+   put word 1 to -1 of newText into newText
+   put word 1 to -1 of someText into someText
+   if pCrNum is empty then
+      put CR & CR into crBit
+   else if pCrNum is a number then
+      put text_RepeatString (CR, pCrNum) into crBit
+   else
+      put crNum & CR & CR into crBit
+   end if
+   
+   if newText is not empty then
+      if someText is empty then
+         put newText into someText
+      else
+         put crBit & newText after someText
+      end if
+   end if
+end text_InsertParagraph
+
+private function text_RepeatString someString, repeatNum
+   repeat repeatNum
+      put someString after repeatString
+   end repeat
+   return repeatString
+end text_RepeatString
+
+private function kwote someText, pQuoteChar
+   if pQuoteChar is empty then put quote into pQuoteChar
+   return pQuoteChar & someText & pQuoteChar
+end kwote
+
 private command _AddGraphSize @dotHeaderArray, graphPropertyArray
    put graphPropertyArray ["overlay_Size"] into graphSize
    if graphSize is not empty then
@@ -1014,16 +1021,6 @@ private command _ExtractHeaderArrayDimensions headerArray, @graphWidth, @graphHe
    end if
 end _ExtractHeaderArrayDimensions
 
-private function _LinkTypeArray idArray
-   -- this is what splits the nodes into types
-   repeat for each key nodeID in idArray
-      put idArray [nodeID] into hKey
-      hkey_Deconstruct hKey, handlerName, handlerType, scriptObject, handlerNum
-      array_AddToIndex nodeID, handlerType, IdTypeArray
-   end repeat
-   return IdTypeArray
-end _LinkTypeArray
-
 private function _ConstructNestedObjectDot hLinkArray, hIdArray, graphName, graphHeader, pTargetObject
    dot_EscapeQuotes graphName
    if graphName is empty then put "Test" into graphName
@@ -1039,6 +1036,6 @@ private function _ConstructNestedObjectDot hLinkArray, hIdArray, graphName, grap
    else
       put defSection & CR & CR & linkSection into nodeSection
    end if
-   put dot_Construct(graphName, nodeSection, graphHeader) into dotText
+   put dot_Construct (nodeSection, graphName, graphHeader) into dotText
    return dotText
 end _ConstructNestedObjectDot

@@ -1,7 +1,7 @@
 ﻿script "lib_DotConstruct"
 --> MetaData
 -
-copyright: Anonymous
+copyright: David Bovill
 license: GPLv3
 name: lib_DotConstruct
 type: library
@@ -14,40 +14,26 @@ version: 0.1
 -
 
 
---> Dot | Construct
+--> Dot | Construct | HkeyArray (move)
 -
-function dot_FromLinkArray linkArray
-   if pGraphName is empty then put "LiveGraph" into pGraphName
-   --
+function dot_FromHkeyLinkArray linkArray, pGraphName, pModelObject
    linkArray_IdConstruct linkArray, idLinkArray, idArray
-   put linkArray_ConstructGraphData (linkArray, idLinkArray, idArray) into graphData
-   put linkArray_ConstructNodeSection (idArray, idLinkArray) into nodeSection
-   
-   put "digraph" && kwote(pGraphName) && "{" & CR & outline_IncreaseIndent (nodeSection) & CR & "}" into dotText
-   --
+   put _ConstructHkeyNodeSection (idArray, idLinkArray, pModelObject) into nodeSection
+   put dot_Construct (nodeSection, pGraphName) into dotText
    return dotText
-end dot_FromLinkArray
+end dot_FromHkeyLinkArray
 
-function dot_FromLinkArray linkArray
-   linkArray_IdConstruct linkArray, idLinkArray, idArray
-   put linkArray_ConstructGraphData (linkArray, idLinkArray, idArray) into linkData
-   put _LinkTypeArray (idArray) into nodeTypeArray
+private function _ConstructHkeyNodeSection idArray, linkArray, pModelObject
+   local colourDefs, clusterDefs, linkSection
    
-   put linkArray_ConstructNodeSection (idArray, idLinkArray, nodeTypeArray) into nodeSection
-   --
-   put dot_Construct (pOverlayName, nodeSection, graphHeader) into dotText
-   return dotText
-end dot_FromLinkArray
-
-function linkArray_ConstructNodeSection hIdArray, hLinkArray, modelObject
    -- format defs
-   put linkArray_ConstructColourDefs (hIdArray, modelObject) into colourDefs
+   put _ConstructHkeyColourDefs (idArray, pModelObject) into colourDefs
    
    -- cluster defs
-   put hKeyArray_DotNestedObjectClusters (hIdArray, hLinkArray) into clusterDefs
+   put _ConstructClusterDefs (idArray, linkArray) into clusterDefs
    
    -- node links
-   put linkArray_DotNodeLinks (hLinkArray, empty) into linkSection
+   put linkArray_DotNodeLinks (linkArray, empty) into linkSection
    
    put colourDefs & CR & CR & clusterDefs into defSection
    if defSection is empty then
@@ -55,13 +41,17 @@ function linkArray_ConstructNodeSection hIdArray, hLinkArray, modelObject
    else
       return defSection & CR & CR & linkSection
    end if
-end linkArray_ConstructNodeSection
+end _ConstructHkeyNodeSection
 
-function linkArray_ConstructColourDefs hIdArray, modelObject
-   put _LinkTypeArray (hIdArray) into nodeTypeArray
+private function _ConstructHkeyColourDefs hIdArray, modelObject
+   repeat for each key nodeID in hIdArray
+      put hIdArray [nodeID] into hKey
+      hkey_Deconstruct hKey, handlerName, handlerType, scriptObject, handlerNum
+      array_AddToIndex nodeID, handlerType, idTypeArray
+   end repeat
    --
-   repeat for each key handlerType in pNodeTypeArray
-      put pNodeTypeArray [handlerType] into nodeIDs
+   repeat for each key handlerType in idTypeArray
+      put idTypeArray [handlerType] into nodeIDs
       --
       if nodeIDs is not empty then
          put dot_GetNodeDefs (handlerType, modelObject) into nodeDefs
@@ -69,14 +59,54 @@ function linkArray_ConstructColourDefs hIdArray, modelObject
       end if
    end repeat
    return colourDefs
-end linkArray_ConstructColourDefs
+end _ConstructHkeyColourDefs
 
-function linkArray_ConstructSubGraph nodeIDs, idArray, nodeDefs
-   put "{" & CR into subGraph
-   put tab & nodeDefs & CR after subGraph
-   put "}" after subGraph
-   return subGraph
-end linkArray_ConstructSubGraph
+private function _ConstructClusterDefs idArray, hLinkArray
+   -- put hKeyArray_DotNestedObjectClusters (idArray, hLinkArray) into clusterDefs
+   return empty
+end _ConstructClusterDefs
+
+
+--> Working on
+-
+command dot_SetHandlerProps handlerType, @nodeColour, @nodeFillColour, @nodeShape, @nodeStyle
+   put "filled" into nodeStyle
+   put "" into nodeShape
+   
+   switch handlerType
+      case "m"
+         if scriptObject is "Missing" then
+            put "white" into nodeColour
+            put "white" into nodeFillColour
+         else
+            put "red" into nodeColour
+            put "red" into nodeFillColour
+         end if
+         break
+      case "c"
+         put "Green4" into nodeColour
+         put "GreenYellow" into nodeFillColour
+         break
+      case "f"
+         put "blue" into nodeColour
+         put "LightBlue" into nodeFillColour
+         break
+      case "g"
+         put "white" into nodeColour
+         put "grey" into nodeFillColour
+         break
+      case "s"
+         put "white" into nodeColour
+         put "grey50" into nodeFillColour
+         break
+      default
+         -- put "yellow" into nodeColour
+         -- put "yellow" into nodeFillColour
+         put "" into nodeColour
+         put "" into nodeFillColour
+         break
+   end switch
+end dot_SetHandlerProps
 
 function dot_GetNodeDefs handlerType, modelObject
    dot_SetHandlerProps handlerType, nodeColour, nodeFillColour, nodeShape, nodeStyle
@@ -132,6 +162,66 @@ function dot_ConstructDefLine nodeLabel, nodeShape, nodeStyle, nodeColour, nodeF
    return nodeLine
 end dot_ConstructDefLine
 
+
+--> Dot | Construct
+-
+function dot_Construct nodeSection, pGraphName, pGraphHeader
+   if pGraphName is empty then put "LiveGraph" into pGraphName
+   
+   put word 1 to -1 of pGraphHeader & CR&CR & nodeSection into dotBit
+   --
+   put "digraph" && kwote (graphName) && "{" & CR into dotText
+   put word 1 to -1 of dotBit into dotBit
+   line_Indent dotBit
+   put dotBit & CR & "}" after dotText
+   return dotText
+end dot_Construct
+
+function dot_ConstructCluster someLabel, clusterNum, nodeSection, someRank, someStyle, someColour, fillColour
+   put "cluster" & clusterNum into subGraphName
+   get dot_ConstructSubgraph (subGraphName, nodeSection, someRank, someStyle, someColour, someLabel, fillColour)
+   return it
+end dot_ConstructCluster
+
+function dot_ConstructSubgraph subGraphName, nodeSection, someRank, someStyle, someColour, someLabel, fillColour
+   put "subgraph" into subGraph
+   if subGraphName is not empty then put space & subGraphName after subGraph
+   put space & "{" & CR after subGraph
+   put dot_SubGraphContents (someLabel, nodeSection, someRank, someStyle, someColour, fillColour) after subGraph
+   put CR & "}" after subGraph
+   return subGraph
+end dot_ConstructSubgraph
+
+function dot_SubGraphContents someLabel, nodeSection, someRank, someStyle, someColour, fillColour
+   dot_EscapeQuotes someLabel
+   
+   -- if someRank is empty then put "same" into someRank
+   if someStyle is empty then put "filled" into someStyle
+   if someColour is empty then put "grey60" into someColour
+   if fillColour is empty then put "grey90" into fillColour
+   
+   if someLabel is not empty then put tab & "label=" & kwote(someLabel) & ";" after subGraph
+   if someRank is not empty then put CR & tab & "rank = [[someRank]];" after subGraph
+   put CR & tab & "style=[[someStyle]];" after subGraph
+   put CR & tab & "color=[[someColour]];" after subGraph
+   put CR & tab & "fillcolor=[[fillColour]];" after subGraph
+   
+   put CR after subGraph
+   if nodeSection is not empty then
+      line_Indent nodeSection
+      put CR & nodeSection after subGraph
+   end if
+   return merge(subGraph)
+end dot_SubGraphContents
+
+function linkArray_ConstructSubGraph nodeIDs, idArray, nodeDefs
+   put "{" & CR into subGraph
+   line_Indent nodeDefs
+   put nodeDefs & CR after subGraph
+   put "}" after subGraph
+   return subGraph
+end linkArray_ConstructSubGraph
+
 command dot_AddParamToNodeDef paramTitle, paramContent, @nodeLine, kwoted
    if paramContent is empty then return false
    --
@@ -144,56 +234,6 @@ command dot_AddParamToNodeDef paramTitle, paramContent, @nodeLine, kwoted
    return true
 end dot_AddParamToNodeDef
 
-command dot_SetHandlerProps handlerType, @nodeColour, @nodeFillColour, @nodeShape, @nodeStyle
-   put "filled" into nodeStyle
-   put "" into nodeShape
-   
-   switch handlerType
-      case "m"
-         if scriptObject is "Missing" then
-            put "white" into nodeColour
-            put "white" into nodeFillColour
-         else
-            put "red" into nodeColour
-            put "red" into nodeFillColour
-         end if
-         break
-      case "c"
-         put "Green4" into nodeColour
-         put "GreenYellow" into nodeFillColour
-         break
-      case "f"
-         put "blue" into nodeColour
-         put "LightBlue" into nodeFillColour
-         break
-      case "g"
-         put "white" into nodeColour
-         put "grey" into nodeFillColour
-         break
-      case "s"
-         put "white" into nodeColour
-         put "grey50" into nodeFillColour
-         break
-      default
-         -- put "yellow" into nodeColour
-         -- put "yellow" into nodeFillColour
-         put "" into nodeColour
-         put "" into nodeFillColour
-         break
-   end switch
-   -- linkArray_SetgraphPropertyArray "default_Node", "nodeColour", nodeColour, graphPropertyArray
-   -- linkArray_SetgraphPropertyArray "default_Node", "nodeFillColour", nodeFillColour, graphPropertyArray
-end dot_SetHandlerProps
-
-function linkArray_ConstructGraphData linkArray, idLinkArray, idArray
-   put linkArray into dataArray ["linkArray"]
-   put idLinkArray into dataArray ["idLinkArray"]
-   put idArray into dataArray ["idArray"]
-   put array_ConstructReverseDictionary (idArray) into reversedIdArray
-   put reversedIdArray into dataArray ["reverseIdArray"]
-   return dataArray
-end linkArray_ConstructGraphData
-
 command linkArray_DeconstructGraphData dataArray, @linkArray, @idLinkArray, @idArray, @reversedIdArray
    -- same structure used by overlay_View (stored as local property)
    -- overlayArray = dataArray
@@ -204,14 +244,5 @@ command linkArray_DeconstructGraphData dataArray, @linkArray, @idLinkArray, @idA
 end linkArray_DeconstructGraphData
 
 
---> Deps
+--> Private
 -
-private function _LinkTypeArray hIdArray
-   -- this is what splits the nodes into types
-   repeat for each key nodeID in hIdArray
-      put hIdArray [nodeID] into hKey
-      hkey_Deconstruct hKey, handlerName, handlerType, scriptObject, handlerNum
-      array_AddToIndex nodeID, handlerType, IdTypeArray
-   end repeat
-   return IdTypeArray
-end _LinkTypeArray

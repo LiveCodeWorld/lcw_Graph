@@ -95,7 +95,7 @@ setprop script_OverlayStyle [pOverlayName] graphStyle
 end script_OverlayStyle
 
 getprop script_OverlayStyles
-   return dot_AllGraphStyles()
+   return dot_ListGraphStyles()
 end script_OverlayStyles
 
 getprop script_GraphPropertyArray [pOverlayName]

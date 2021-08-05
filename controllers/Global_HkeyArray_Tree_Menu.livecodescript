@@ -55,7 +55,7 @@ on menu_Show displayView, showHow
    --
    switch showHow
       case "stacks"
-         put hkeyArray_GetDepArray (hkeyArray, stripMissingProps) into dArray
+         put hkeyArray_GetStackDepArray (hkeyArray) into dArray
          break
       case "projects"
          put hkeyArray_GetProjectDepArray (hkeyArray, stripMissingProps) into dArray
@@ -91,7 +91,7 @@ end submenu_Dev
 on menu_DisplayMissing displayView
    put the displayed_HkeyArray of displayView into hkeyArray
    --
-   put hkeyArray_GetDepArray (hkeyArray) into depArray
+   put hkeyArray_GetStackDepArray (hkeyArray) into depArray
    put depArray ["Missing"] into missingArray
    put hkeyArray_TidyMissing (missingArray) into prettyMissingArray
    --

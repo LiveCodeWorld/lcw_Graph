@@ -60,7 +60,8 @@ command graph_Hkey hKey, pGraphStyle
    put walk_GetHkeyArray (hKey) into hKeyArray
    --
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   put the metadataObject_Folder [true] of hObject into metadataFolder
+   -- put the metadataObject_Folder [true] of hObject into metadataFolder
+   put hkey_MetadataFolder (hKey) into metadataFolder
    --
    set the cursor to busy
    overlay_CreateGraph metadataFolder, hkeyArray, pGraphStyle, hObject, pGraphStyle, true, "", "svg"
@@ -69,6 +70,31 @@ command graph_Hkey hKey, pGraphStyle
    --
    return svgFile
 end graph_Hkey
+
+command graph_HkeyDependency hKey, pProjectName, pGraphStyle, pClusterBoolean, processObject
+   -- change to lib_HkeyWalk rather than walk_GetHkeyArray?
+   -- traverses the hkey dependency graph using a slow crawl of Livecode objects
+   -- uses overlay_CreateGraph and walk_GetHkeyArray
+   
+   put empty into overlayName -- defaults to pGraphStyle or "hierarchical"
+   if pClusterBoolean is not false then 
+      put empty into clusterRank
+   else
+      put "none" into clusterRank
+   end if
+   
+   -- put hkey_DependencyArrayFromObjects (hKey, pProjectName, true) into hKeyArray
+   put walk_GetHkeyArray (hKey) into hKeyArray
+   hkeyArray_Process hKeyArray, processObject -- export to overlayArray
+   --
+   -- this is not working until we eexport overlayArray
+   put hkey_MetadataFolder (hKey) into hkeyMetadataFolder
+   folder_CreateNested hkeyMetadataFolder
+   overlay_CreateGraph hkeyMetadataFolder, hkeyArray, overlayName, hKey, pGraphStyle, clusterRank, empty, "svg", processObject
+   --
+   put hkey_SvgFile (hKey, pGraphStyle) into svgFile
+   return svgFile
+end graph_HkeyDependency
 
 command graph_CreateScriptObject sObject, pGraphStyle, pProcessObject, pProjectName
    -- uses overlay_CreateGraph and hkey_ObjectWalk (not walk_GetHkeyArray)
@@ -97,31 +123,6 @@ command graph_CreateScriptObjectHkeyArray hkeyArray, hObject, pGraphStyle, pProc
    put overlayArray_GetImageFile (overlayArray, metadataFolder) into imageFile
    return imageFile
 end graph_CreateScriptObjectHkeyArray
-
-command graph_HkeyDependency hKey, pProjectName, pGraphStyle, pClusterBoolean, processObject
-   -- change to lib_HkeyWalk rather than walk_GetHkeyArray?
-   -- traverses the hkey dependency graph using a slow crawl of Livecode objects
-   -- uses overlay_CreateGraph and walk_GetHkeyArray
-   
-   put empty into overlayName -- defaults to pGraphStyle or "hierarchical"
-   if pClusterBoolean is not false then 
-      put empty into clusterRank
-   else
-      put "none" into clusterRank
-   end if
-   
-   -- put hkey_DependencyArrayFromObjects (hKey, pProjectName, true) into hKeyArray
-   put walk_GetHkeyArray (hKey) into hKeyArray
-   hkeyArray_Process hKeyArray, processObject -- export to overlayArray
-   --
-   -- this is not working until we eexport overlayArray
-   put hkey_MetadataFolder (hKey) into hkeyMetadataFolder
-   folder_CreateNested hkeyMetadataFolder
-   overlay_CreateGraph hkeyMetadataFolder, hkeyArray, overlayName, hKey, pGraphStyle, clusterRank, empty, "svg", processObject
-   --
-   put hkey_SvgFile (hKey, pGraphStyle) into svgFile
-   return svgFile
-end graph_HkeyDependency
 
 command graph_Project scriptObject, pProjectName, pGraphStyle, pProcessObject, pForceCreate
    put graph_ConstructObjectHkeyArray (scriptObject, pProjectName, pProcessObject, pForceCreate) into hkeyArray

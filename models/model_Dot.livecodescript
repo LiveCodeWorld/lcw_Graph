@@ -93,7 +93,7 @@ end node_BorderColour
 --> Overaly | Props | Plurals
 -
 getprop overlay_Styles
-   return dot_AllGraphStyles()
+   return dot_ListGraphStyles()
 end overlay_Styles
 
 getprop overlay_Sizes
@@ -363,24 +363,12 @@ function dot_ParamsToStyleArray styleParams
    return styleParams
 end dot_ParamsToStyleArray
 
-function dot_StyleArrayToParams styleArray
-   repeat for each key someParam in styleArray
-      put styleArray [someParam] into someValue
-      if someValue is not empty then
-         put someParam & "=" & kwote(someValue) after styleParams
-         put ", " after styleParams
-      end if
-   end repeat
-   delete char -2 to -1 of styleParams
-   return styleParams
-end dot_StyleArrayToParams
-
 
 --> Dot | Plurals
 -
-function dot_AllGraphStyles
+function dot_ListGraphStyles
    return "radial,spring,circular,-,hierarchical,-,undirected spring,fast undirected spring" 
-end dot_AllGraphStyles
+end dot_ListGraphStyles
 
 function dot_AllGraphFlattenNums
    return "0,1,2,3,4,5,6,7,8,9,10,11,12,-,none"

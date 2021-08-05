@@ -28,7 +28,6 @@ command overlay_CreateGraph overlayFolder, hKeyArray, pOverlayName, pOverlayOf, 
    if pProcessObject is empty then
       put the long id of the target into pProcessObject
    end if
-   
    --
    file_ReplaceHome overlayFolder
    if hKeyArray is not an array then
@@ -60,13 +59,6 @@ command overlay_CreateGraph overlayFolder, hKeyArray, pOverlayName, pOverlayOf, 
    
    overlayArray_CreateFilesAndSetGeometry overlayArray, pMainstackHash, pImageFormat
    if token 1 of the result = "error" then return the result
-   
-   /*
-   put overlayArray_GetGraphProperty (overlayArray, "image_File") into shortImageFile
-   folder_Format overlayFolder
-   put overlayFolder & shortImageFile into imageFile
-   put file_Hash (imageFile) into pMainstackHash
-   */
    
    -- we change to mainstack_Hash rather than hash the image
    overlayArray_SetGraphProperty overlayArray, "overlay_Hash", pMainstackHash

@@ -12,226 +12,42 @@ version: 0.1
 
 --> Working on
 -
-command display_LinkArrayGraph linkArray, pFile, pStackLabel
-   linkArray_CreateDot linkArray, pFile, pGraphName, pDefSection, pDotPropertyArray
-   put the result into svgFile
-   display_SVG svgFile, pStackLabel
-end display_LinkArrayGraph
+command dot_AddDefaultNode @graphHeaderBase, defaultShape
+   if defaultShape is not empty then
+      put "shape=" & defaultShape after nodeParams
+   end if
+   --
+   put space & "style=" & kwote ("filled") after nodeParams
+   put space & "fillcolor=" & kwote ("white")  after nodeParams
+   --
+   put "node [" & word 1 to -1 of nodeParams & "];" into defaultNodeBit
+   --
+   put CR&CR & defaultNodeBit after graphHeaderBase
+end dot_AddDefaultNode
 
-
---> LinkArray | Construct | ID
--
-command linkArray_IdConstruct linkArray, @nodeLinkArray, @nodeIdArray, pKeyStyle
-   -- usefull to create simple arrays from complex data.
-   -- that is it creates simple numbered nodes 1, 2 etc and stores references to these in arrays.
-   local nodeBackArray
-   repeat for each key someKey in linkArray
-      put linkArray [someKey] into frontLinkArray
-      linkArray_Add frontLinkArray, someKey, nodeLinkArray, nodeIdArray, nodeBackArray, pKeyStyle
-   end repeat
-   return allLinks
-end linkArray_IdConstruct
-
-private command linkArray_Add newLinkArray, someNode, @hLinkArray, @hIdArray, @backArray, pKeyStyle
-   -- modified to work with nested newLinkArray
-   put linkarray_RenameKeys (someNode, hIdArray, backArray, pKeyStyle) into nodeID
-   put linkarray_RenameKeys (newLinkArray, hIdArray, backArray, pKeyStyle) into linkIDs   
-   array_AddToIndex linkIDs, nodeID, hLinkArray
-   return the result
-end linkArray_Add
-
-function linkarray_RenameKeys someKeyArray, @idArray, @keyArray, pKeyStyle
-   -- modified to use nested someKeyArray instead of just an index of keys
-   -- a general technique for building incremental unique ids and their translations (as in a database id)
-   -- for a single key this returns the (new) or existing simlified translation
-   -- while building the two way arrays
-   -- will also add multiple keys if needed (as with childNodes)
+function dot_Render dotText, pDotCommand, pTextFile, pOutputFormat
+   -- pDotCommand is an english equivalent of graphStyle
    
-   if someKeyArray is an array then -- quick hack
-      put keys (someKeyArray) into someKeys
+   dot_SaveTemporaryFile dotText, pTextFile
+   put the result into pTextFile
+   
+   -- dot_Render dotFile, svgFile, pDotCommand, pImageFormat
+   put dot_DoShell (pTextFile, pDotCommand, pOutputFormat) into shellResult
+   if shellResult is false or shellResult is empty then
+      exit to top
    else
-      put someKeyArray into someKeys
+      return shellResult
    end if
-   
-   repeat for each line someKey in someKeys
-      -- at moment someKey is an old stylye hKey
-      put keyArray [someKey] into simpleID
-      if simpleID is empty then
-         -- not already indexed (work out new incremental ID and add to idArray and keyArray)
-         put the number of lines of keys(idArray) + 1 into keyNumber
-         switch pKeyStyle
-            case "hName"
-               hkey_Deconstruct someKey, hName, hType, hObject, hNum
-               put hName into simpleID
-               break
-            case "short hkey"
-               hkey_Deconstruct someKey, hName, hType, hObject, hNum
-               put quote & hType && hName & quote into simpleID
-               break
-            case "number"
-               put keyNumber into simpleID
-               break
-            default
-               put "n" & keyNumber into simpleID
-         end switch
-         put simpleID into keyArray [someKey]
-         put someKey into idArray [simpleID]
-      end if
-      put simpleID & CR after simpleIDs
-   end repeat
-   delete char -1 of simpleIDs
-   return simpleIDs
-end linkarray_RenameKeys
+end dot_Render
 
 
---> LinkArray | Display
+--> Dot | Render
 -
-function linkArray_ConstructDot linkArray, pDotMetadataArray, pDefSection, pGraphController
-   set the cursor to watch
-   put pDotMetadataArray ["dot_HeaderArray"] into dotPropertyArray
-   put pDotMetadataArray ["graph_PropertyArray"] into graphPropertyArray
-   
-   put graphPropertyArray ["overlay_Name"] into graphName
-   if graphName is empty then put "linkArray_ConstructDot" into graphName
-   put graphPropertyArray ["overlay_Size"] into graphSize
-   put graphPropertyArray ["overlay_Style"] into graphStyle
-   put graphPropertyArray ["overlay_UseInches"] into graphUseInches
-   --
-   put dot_ConstructHeader (graphSize, dotPropertyArray, graphStyle, graphUseInches) into graphHeader
-   --
-   put linkArray_DotNodeLinks (linkArray) into linkSection
-   put linkArray_ConstructLinkSection (linkArray, pNodeTypeArray, pClusterArray, pGraphController) into nodeSection
-   --
-   if pDefSection is empty then
-      put linkSection into nodeSection
-   else
-      put pDefSection & CR & CR & linkSection into nodeSection
-   end if
-   put dot_Construct (graphName, nodeSection, graphHeader) into dotText
-   --
-   return dotText
-end linkArray_ConstructDot
-
-
---> Dot | Create
--
-command linkArray_CreateDot linkArray, pFile, pGraphName, pDefSection, pDotPropertyArray
-   local graphSize
-   
-   dot_ConstructPropertyArray pDotPropertyArray, false, true, true, false, "BT"
-   put dot_ConstructHeaderBase (graphSize, pDotPropertyArray, "hierarchy") into graphHeader
-   put linkArray_DotNodeLinks (linkArray) into linkSection
-   put linkArray_ConstructLinkSection (linkArray) into nodeSection
-   if pDefSection is empty then
-      put linkSection into nodeSection
-   else
-      put pDefSection & CR & CR & linkSection into nodeSection
-   end if
-   put dot_Construct (pGraphName, nodeSection, graphHeader) into dotText
-   --
-   dot_CreateGraph dotText, pFile
-   --
-   return svgFile
-end linkArray_CreateDot
-
-
---> LinkArray
--
-function linkArray_ConstructLinkSection linkArray, pNodeTypeArray, pClusterArray, pGraphController
-   -- all from arrays (with an optional script override in pGraphController)
-   -- cloned from "hKeyArray_ConstructNodeSection", see also "hKeyArray_DotNestedObjectClusters"
-   
-   -- node defs
-   if pNodeTypeArray is an array then put linkArray_ConstructDefSection (nodeTypeArray, pGraphController) into nodeDefs
-   if pClusterArray is an array then put linkArray_ConstructClusterDefs (clusterArray, pGraphController) into clusterDefs  -- specific (construct object clusters)
-   put nodeDefs & CR & CR & clusterDefs into defSection
-   
-   -- node links
-   put linkArray_DotNodeLinks (linkArray) into linkSection
-   if defSection is empty then
-      return linkSection
-   else
-      return defSection & CR & CR & linkSection
-   end if
-end linkArray_ConstructLinkSection
-
-function linkArray_ConstructDefSection nodeTypeArray, pGraphController
-   -- stub
-   return empty
-end linkArray_ConstructDefSection
-
-function linkArray_ConstructClusterDefs clusterArray, pGraphController
-   -- cloned from "hKeyArray_DotNestedObjectClusters"
-   -- needs a recursive function to turn a nested array into a nested cluster def in dot
-   return empty -- array_ToXml 
-end linkArray_ConstructClusterDefs
-
-function linkArray_DotNodeLinks linkArray, pNodeIDs
-   if pNodeIDs is not empty then
-      breakpoint -- not done
-   end if
-   
-   -- this version uses nested array values
-   repeat for each key someKey in linkArray
-      put linkArray [someKey] into someLinkArray
-      if the number of words of someKey > 1 then put kwote(someKey) into someKey
-      
-      if someLinkArray is an array then
-         repeat for each key someLink in someLinkArray
-            if the number of words of someLink > 1 then put kwote(someLink) into someLink
-            put someKey && "->" && someLink & ";" & CR after linkSection
-         end repeat
-      else
-         put someLinkArray into someLinks
-         repeat for each line someLink in someLinks
-            if the number of words of someLink > 1 then put kwote(someLink) into someLink
-            put someKey && "->" && someLink & ";" & CR after linkSection
-         end repeat
-      end if
-   end repeat
-   delete char -1 of linkSection
-   return linkSection
-end linkArray_DotNodeLinks
-
---  function linkArray_DotNodeLinks linkArray, pNodeIDs
--- without translating ids
-if pNodeIDs is empty then put keys(linkArray) into pNodeIDs
-repeat for each line someKey in pNodeIDs
-   put linkArray [someKey] into someLinks
-   repeat for each line someLink in someLinks
-      put someKey && "->" && someLink & ";" & CR after linkSection
-   end repeat
-end repeat
-delete char -1 of linkSection
-return linkSection
-end linkArray_DotNodeLinks
-
-function dot_Construct graphName, nodeSection, graphHeader
-   put graphHeader into dotText
-   put CR & nodeSection after dotText
-   --
-   put "digraph" && kwote(graphName) && "{" & CR into dsaf
-   put outline_IncreaseIndent (dotText) & CR & "}" after dotText
-   return word 1 to -1 of dotText
-end dot_Construct
-
-command dot_CreateGraph dotText, pFile
-   file_CreateText dotText, pFile
-   put the result into dotFile
-   --
-   put dotFile & ".svg" into svgFile
-   dot_Render dotFile, svgFile
-   --
-   return svgFile
-end dot_CreateGraph
-
-command dot_Render dotFile, svgFile, dotCommand, pImageFormat
-   put "dot" into dotCommand
-   put dotCommand into someShell
+command dot_Render dotFile, svgFile, pDotCommand, pImageFormat
+   if pDotCommand is empty then put "dot" into pDotCommand
    if pImageFormat is empty then put "svg" into pImageFormat
-   -- shell_BashParamEscape dotFile
-   -- shell_BashParamEscape svgFile
-   
+   --
+   put pDotCommand into someShell
    put space & kwote (dotFile) after someShell
    put space & "-T" & pImageFormat after someShell
    put space & "-o" && kwote (svgFile) after someShell
@@ -242,9 +58,10 @@ end dot_Render
 
 function dot_ConstructHeaderBase graphSize, dotPropertyArray, graphStyle, pUseInches  
    dot_DeconstructPropertyArray dotPropertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
-   put the result into dotPropertyArray
+   --
+   -- delete variable dotPropertyArray ["defaultShape"]
+   --
    put CR into endChar
-   
    if pUseInches is not false then
       -- think there is a bug here (graphs too large)
       put dot_RectFromSize (graphSize) into bbRect
@@ -258,34 +75,60 @@ function dot_ConstructHeaderBase graphSize, dotPropertyArray, graphStyle, pUseIn
          put "bb=" & kwote(bbRect) & endChar after graphHeaderBase
       end if
    end if
+   delete variable dotPropertyArray ["size"]
    
-   -- if overlap is empty then put false into overlap
+   --
    if graphStyle is not "hierarchical"  then
       if overlap is not empty then put "overlap=" & overlap & endChar after graphHeaderBase
-      
       if dotOrder is not empty then put  "ordering=" & dotOrder & endChar after graphHeaderBase
-      
       if concentrate is not empty then
          put "concentrate=" & concentrate & endChar after graphHeaderBase
       end if
    end if
-   
-   -- if cluster is "none" then
-   if cluster is "none" and graphStyle = "hierarchical" then
-      put "clusterrank=" & cluster & endChar after graphHeaderBase
-   end if
-   
-   if splines is not empty then put "splines=" & splines & endChar after graphHeaderBase
-   if direction is not empty then put "rankdir=" & direction & endChar after graphHeaderBase
-   
+   delete variable dotPropertyArray ["overlap"]
+   delete variable dotPropertyArray ["dotOrder"]
+   delete variable dotPropertyArray ["concentrate"]
+   -- delete variable dotPropertyArray ["graphStyle"]
+   --
+   if cluster is "none" and graphStyle = "hierarchical" then put "clusterrank=" & cluster & endChar after graphHeaderBase
+   delete variable dotPropertyArray ["cluster"]
+   --
+   if splines is not empty then put "splines=" & splines & CR after graphHeaderBase
+   delete variable dotPropertyArray ["splines"]
+   --
+   if direction is not empty then put "rankdir=" & direction & CR after graphHeaderBase
+   delete variable dotPropertyArray ["direction"]
+   --
    repeat for each key someKey in dotPropertyArray
       put dotPropertyArray [someKey] into someValue
-      put someKey & "=" & kwote(someValue) & CR after graphHeaderBase
+      if someValue is not empty then
+         put someKey & "=" & kwote(someValue) & CR after graphHeaderBase
+      end if
    end repeat
    
+   -- dot_AddDefaultNode
    delete char -1 of graphHeaderBase
    return graphHeaderBase
 end dot_ConstructHeaderBase
+
+function dot_ConstructHeader graphSize, pDotPropertyArray, graphStyle, pUseInches
+   -- old?
+   put dot_ConstructHeaderBase (graphSize, pDotPropertyArray, graphStyle, pUseInches) into graphHeaderBase
+   
+   put "graph [" & CR after graphHeader
+   line_Indent graphHeaderBase
+   put graphHeaderBase & CR after graphHeader
+   put "];" & CR after graphHeader
+   
+   -- default node section
+   dot_DeconstructPropertyArray pDotPropertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
+   if defaultUrl is not empty then put "node [URL=" & kwote(defaultUrl) & "];" & CR after defaultNodeSection
+   if defaultShape is not empty then put "node [shape=" & defaultShape & "];" & CR after defaultNodeSection
+   if defaultNodeSection is not empty then put CR & defaultNodeSection & CR after graphHeader
+   
+   delete last char of graphHeader
+   return graphHeader
+end dot_ConstructHeader
 
 function dot_RectFromSize graphSize
    switch graphSize
@@ -340,8 +183,8 @@ end dot_GraphInchSize
 
 --> Private
 -
-private command dot_ConstructPropertyArray @propertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
-   -- wa "dot_ConstructHeaderArray"
+command dot_ConstructPropertyArray @propertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
+   -- was "dot_ConstructHeaderArray" - used by a few libs
    put overlap into propertyArray ["overlap"]
    put concentrate into propertyArray ["concentrate"]
    put splines into propertyArray ["splines"]
@@ -430,6 +273,38 @@ private function kwote someText, pQuoteChar
    if pQuoteChar is empty then put quote into pQuoteChar
    return pQuoteChar & someText & pQuoteChar
 end kwote
+
+private command array_AddToIndex newLines, someKey, @someArray
+   -- if the number of lines of keys(someArray) > 5 and someKey contains "form_IsRed" then breakpoint
+   put someArray [someKey] into someIndex
+   line_AddToIndex newLines, someIndex
+   put word 1 to -1 of someIndex into someArray [someKey]
+   return the number of lines of someIndex
+end array_AddToIndex
+
+private command line_AddToIndex newLines, @someIndex
+   repeat for each line someLine in newLines
+      line_Add someLine, someIndex
+   end repeat
+   if line 1 of someIndex is empty then delete line 1 of someIndex
+end line_AddToIndex
+
+private command line_Add someLines, @someIndex
+   repeat for each line someLine in someLines
+      if someLine is empty then next repeat
+      set the wholematches to true
+      put lineoffset(someLine, someIndex) into lineNum
+      if lineNum is 0 then
+         put the number of lines of someIndex into maxLine
+         put maxLine + 1 into lineNum
+         put someLine into line lineNum of someIndex
+      else
+         put lineNum & comma after lineNums
+      end if
+   end repeat
+   delete char -1 of lineNums
+   return lineNums
+end line_Add
 
 private command text_AddTrailing @someText, someChar
    if char -1 of someText is not someChar then

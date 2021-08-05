@@ -314,7 +314,7 @@ setprop overlay_Style [pOverlayName] graphStyle
 end overlay_Style
 
 getprop overlay_Styles
-   return dot_AllGraphStyles()
+   return dot_ListGraphStyles()
 end overlay_Styles
 
 getprop overlay_MaximumDepth [pOverlayName]
@@ -392,62 +392,6 @@ setprop overlay_UseInches [pOverlayName] someBoolean
    overlay_SetGraphValue overlayFolder, "overlay_UseInches", someBoolean, pOverlayName
    return the result
 end overlay_UseInches
-
-
---> Overlay | Create
--
-/*
-These handlers are used to create graphs from overlay arrays.
-The suite used to be part of "lib_DisplayGraph"
-These handlers are also used by "lib_DisplayHkeyDeps"
-*/
-
-command overlayArray_CreateAndDisplayGraph overlayArray, pOverlayStyle, pOverlayFolder, pImageView, pResizeStyle, pStackLabel
-   /*
-   Dug out of old libOPN_Display
-   
-   A handler to take an overlayArray, and make common customisations, and then display it
-   By default it will create a temp window, and create a temp folder to stalll all the files.
-   The default style, is whatever is set in the overlayArray, or if nothing there "hierarchical"
-   */
-   
-   -- first lets fix "overlay_Folder" and create a temp folder if needed
-   if pOverlayFolder is empty then
-      put the tempname & "/" into pOverlayFolder
-      folder_CreateNested pOverlayFolder
-   end if
-   overlayArray_SetGraphProperty overlayArray, "overlay_Folder", pOverlayFolder
-   
-   -- now lets fix "overlay_Style" and set "overlay_Name" to the same value
-   if pOverlayStyle is empty then
-      put overlayArray_GetGraphProperty (overlayArray, "overlay_Style") into pOverlayStyle
-      
-      -- if pOverlayStyle is empty then put "hierarchical" into pOverlayStyle
-      if pOverlayStyle is empty then
-         if pOverlayName is among the items of dot_AllGraphStyles() then
-            put pOverlayName into pOverlayStyle
-         else
-            put "undirected spring" into pOverlayStyle
-         end if
-      end if
-   end if
-   overlayArray_SetGraphProperty overlayArray, "overlay_Style", pOverlayStyle
-   overlayArray_SetGraphProperty overlayArray, "overlay_Name", pOverlayStyle
-   
-   -- need to also save the array
-   overlayData_SetArray overlayData, overlayArray, pOverlayStyle
-   overlay_SetData pOverlayFolder, overlayData
-   
-   -- now lets create the files from the array (in the "overlay_Folder" or temp one created).
-   overlayArray_CreateFilesAndSetGeometry overlayArray
-   
-   -- now all files have been created and stored display the overlay_Folder
-   if pStackLabel is empty then
-      put "Graph style" && pOverlayStyle into pStackLabel
-   end if
-   display_Overlay pOverlayFolder, pOverlayStyle, pImageView, pStackLabel, pResizeStyle
-   return the result
-end overlayArray_CreateAndDisplayGraph
 
 
 --> Overlay | Hkey | Links

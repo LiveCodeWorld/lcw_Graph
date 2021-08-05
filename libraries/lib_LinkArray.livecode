@@ -19,24 +19,6 @@ See also hkeyArray, and overlayArray for related structures.
 
 --> LinkArray | Processing
 -
-command linkArray_RemoveSelfLinks @linkArray, pIsNested
-   if pIsNested is empty then
-      put linkArray_IsNested (linkArray) into pIsNested
-   end if
-   
-   if pIsNested is not true then
-      repeat for each key someKey in linkArray
-         put linkArray [someKey] into someLinks
-         line_Delete someKey, someLinks
-         put someLinks into linkArray [someKey]
-      end repeat
-   else
-      repeat for each key someKey in linkArray
-         delete variable linkArray [someKey][someKey]
-      end repeat
-   end if
-end linkArray_RemoveSelfLinks
-
 command linkarray_ExtractRandomNodes @nodeIdArray, someNumber
    -- was "linkarray_ExtractRandomNodes"
    repeat someNumber
@@ -83,30 +65,6 @@ function linkarray_FilterIdArray hIdArray, hLinkArray
    end repeat
    return filteredArray
 end linkarray_FilterIdArray
-
-command linkArray_RemoveSelfLinks @linkArray, pIsNested
-   if pIsNested is empty then
-      put linkArray_IsNested (linkArray) into pIsNested
-   end if
-   
-   if pIsNested is not true then
-      repeat for each key someKey in linkArray
-         put linkArray [someKey] into someLinks
-         line_Delete someKey, someLinks
-         put someLinks into linkArray [someKey]
-      end repeat
-   else
-      repeat for each key someKey in linkArray
-         delete variable linkArray [someKey][someKey]
-      end repeat
-   end if
-end linkArray_RemoveSelfLinks
-
-function linkArray_IsNested linkArray
-   put line 1 of keys (linkArray) into testKey
-   put linkArray [testKey] is an array into isNested
-   return isNested
-end linkArray_IsNested
 
 function linkArray_Reduce linkArray, minLinkNum
    -- updated to allow nested linkArray
@@ -433,6 +391,32 @@ end linkArray_ConstructXml
 
 --> Private
 -
+private command line_DeleteIndex @someIndex, pStripIndex
+   /*
+   split someIndex by CR as set
+   split pStripIndex by CR as set
+   difference someIndex with pStripIndex
+   put keys (someIndex) into uniqueIndex
+   return uniqueIndex
+   */
+   
+   repeat for each line someLine in pStripIndex
+      line_Delete someLine, someIndex
+      if lineNum = 0 then
+         put lineNum & comma after deletedLines
+      end if
+   end repeat
+   delete char -1 of deletedLines
+   return deletedLines
+end line_DeleteIndex
+
+private command line_Delete someLine, @someIndex
+   set the wholematches to true
+   put lineoffset (someLine, someIndex) into lineNum
+   delete line lineNum of someIndex
+   return lineNum
+end line_Delete
+
 private command _ConstructPropertyArray pDotPropertyArray, @overlap, @concentrate, @splines, @cluster, @direction, @dotOrder, @defaultShape, @defaultUrl
    -- see also dot_ConstructPropertyArray
    put pDotPropertyArray ["graphRect"] into graphRect

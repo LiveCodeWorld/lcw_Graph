@@ -52,14 +52,14 @@ end hkeyArray_StripProps
 --> hKeyArray
 -
 function hkeyArray_GetProjectDepArray hkeyArray, pStripProps
-   put hkeyArray_GetDepArray (hkeyArray) into sArray
+   put hkeyArray_GetStackDepArray (hkeyArray) into sArray
    --
    put sArray ["Missing"] into missingArray
    delete variable sArray ["Missing"]
    --
    repeat for each key sObject in sArray
       if exists (sObject) is false then
-         breakpoint
+         put sArray [sObject] into dArray ["Still Missing"][sObject]
       else
          put the project_Name of sObject into projectName
          put sArray [sObject] into dArray [projectName][sObject]
@@ -72,22 +72,11 @@ function hkeyArray_GetProjectDepArray hkeyArray, pStripProps
    return dArray
 end hkeyArray_GetProjectDepArray
 
-function hkeyArray_GetDepArray hkeyArray, pStripProps
+function hkeyArray_GetStackDepArray hkeyArray
    local hkeyDepArray
    hkeyArray_SetObjectArray hkeyDepArray, hkeyArray
-   --
-   /*
-   put hkeyDepArray ["Missing"] into missingArray
-   if missingArray is an array then
-      get hkeyArray_TidyMissing (missingArray, pStripProps)
-      if it is an array then
-         put it into hkeyDepArray ["Missing"]
-      end if
-   end if
-   */
-   --
    return hkeyDepArray
-end hkeyArray_GetDepArray
+end hkeyArray_GetStackDepArray
 
 command hkeyArray_SetObjectArray @hkeyDepArray, hkeyArray
    repeat for each key hKey in hkeyArray
@@ -129,7 +118,7 @@ end call_HkeyArray
 
 getprop walk_DepArray [pHkey]
    put the walk_HkeyArray [hKey] of the target into hkeyArray
-   put hkeyArray_GetDepArray (hkeyArray) into hkeyDepArray
+   put hkeyArray_GetStackDepArray (hkeyArray) into hkeyDepArray
    return hkeyDepArray
 end walk_DepArray
 

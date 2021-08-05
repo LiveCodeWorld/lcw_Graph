@@ -26,11 +26,46 @@ The data structure should perhaps be changed to the usual data/metadata arrangem
 
 --> Working On
 -
+command display_Image someImage, pStackLabel, pCloneName, pStackStyle, pLocOrRect
+   if pCloneName is empty then put "Image" into pCloneName
+   --
+   stack_CloneInvisible "View|Image|Fit Inside", pCloneName, true
+   put the result into cloneStackName
+   put the long id of control 1 of stack cloneStackName into viewObject
+   --
+   set the image_Contents of viewObject to someImage
+   --
+   stack_ShowAndGo viewObject, cloneStackName, pStackLabel, pStackStyle, pLocOrRect
+   return viewObject
+end display_Image
+
+command display_SVG svgFile, pStackLabel, pStackStyle, pLocOrRect
+   stack_CloneInvisible "View|Image|SVG", "Display SVG"
+   put the result into cloneStackName
+   put the long id of widget 1 of cd 1 of stack cloneStackName into viewObject
+   --
+   if svgFile begins with "http" then
+      set the svg_URL [true] of viewObject to svgFile
+   else
+      set the svg_File [true] of viewObject to svgFile
+   end if
+   --
+   if pStackLabel is empty then
+      set the itemdelimiter to slash
+      put item -1 of svgFile into pStackLabel
+   end if
+   stack_ShowAndGo viewObject, cloneStackName, pStackLabel, pStackStyle, pLocOrRect
+   return viewObject
+end display_SVG
+
+
+--> Display | Events
+-
 on mDoubleUp_SVG displayView, shortSvgFile
    put the displayed_URL of displayView into someURL
    put url_FromShortFile (shortSvgFile, someURL) into svgURL
    --
-   display_SVG svgURL
+   display_SVG svgFile, pStackLabel, pStackStyle
    put svgURL
 end mDoubleUp_SVG
 
@@ -61,21 +96,6 @@ end display_HtmlSvgLinks
 
 --> Display | Media
 -
-command display_Image someImage, pStackLabel, pCloneName
-   if pCloneName is empty then put "Image" into pCloneName
-   --
-   stack_CloneInvisible "View|Image|Fit Inside", pCloneName, true
-   put the result into cloneStackName
-   put the long id of control 1 of stack cloneStackName into displayView
-   --
-   set the image_Contents of displayView to someImage
-   --
-   show stack cloneStackName
-   if pStackLabel is not empty then set the label of stack cloneStackName to pStackLabel
-   --
-   return displayView
-end display_Image
-
 command display_CreateScriptObjectGraph sObject, pGraphStyle, pProcessObject
    /*
    You can alter the way the graph is constructed by placing a "graph_FilterProcessedArray" handler
@@ -111,38 +131,9 @@ command display_ScriptEditorSvg svgFile, pTabName
    return displayView
 end display_ScriptEditorSvg
 
-command display_SVG svgFile, pStackLabel
-   stack_CloneInvisible "View|Image|SVG", "Display SVG"
-   put the result into cloneStackName
-   put the long id of widget 1 of cd 1 of stack cloneStackName into displayView
-   --
-   if svgFile begins with "http" then
-      set the svg_URL [true] of displayView to svgFile
-      -- put url svgFile into svgXML
-      -- set the svg_XML of displayView to svgXML
-   else
-      set the svg_File [true] of displayView to svgFile
-   end if
-   
-   -- show and go
-   if pStackLabel is empty then
-      set the itemdelimiter to slash
-      put item -1 of svgFile into pStackLabel
-   end if
-   show stack cloneStackName
-   if pStackLabel is not empty then set the label of stack cloneStackName to pStackLabel
-   --
-   return displayView
-end display_SVG
 
-
---> Display | Event Handlers
+--> Display | HkeyArray
 -
-/*
-These handlers handle events from display views that are created from the code in this library.
-They do not have to be here, as you can change their location by setting the "mouse_Target" property of the display_View.
-*/
-
 command display_HkeyArrayGraph hkeyArray, pGraphStyle
    -- component: true
    
@@ -154,3 +145,91 @@ command display_HkeyArrayGraph hkeyArray, pGraphStyle
    put the result into imageView
    return imageView
 end display_HkeyArrayGraph
+
+command dot_CreateGraph dotText, pFile, pGraphStyle
+   file_CreateText dotText, pFile
+   put the result into dotFile
+   --
+   set the itemdelimiter to "."
+   if item -1 of dotFile = "dot" then
+      put dotFile into svgFile
+      put "svg" into item -1 of svgFile
+   else
+      put dotFile & ".svg" into svgFile
+   end if
+   --
+   put dot_CommandFromGraphStyle (pGraphStyle) into dotCommand
+   dot_Render dotFile, svgFile, dotCommand
+   --
+   return svgFile
+end dot_CreateGraph
+
+private function _TestGroupStyleArray nodeIdArray
+   local dotGroupStyleArray
+   
+   linkarray_ExtractRandomNodes nodeIdArray, 9
+   put the result into nodeIDs
+   if nodeIDs is not empty then
+      put dot_RandomColour() into rColour
+      graph_AddToGroupStyleArray dotGroupStyleArray, "Friends", nodeIDs, "black", rColour
+      graph_SetNodeLabel dotGroupStyleArray, empty, "http://google.com"
+   end if
+   
+   linkarray_ExtractRandomNodes nodeIdArray, 21
+   put the result into nodeIDs
+   if nodeIDs is not empty then
+      put dot_RandomColour() into rColour
+      graph_AddToGroupStyleArray dotGroupStyleArray, "Enemies", nodeIDs, "black", rColour
+      graph_SetNodeLabel dotGroupStyleArray, empty, "http://example.com"
+   end if
+   
+   linkarray_ExtractRandomNodes nodeIdArray, 12
+   put the result into nodeIDs
+   if nodeIDs is not empty then
+      put dot_RandomColour() into rColour
+      graph_AddToGroupStyleArray dotGroupStyleArray, "Bots", nodeIDs, "black", rColour
+      graph_SetNodeLabel dotGroupStyleArray, empty, "http://google.com"
+   end if
+   
+   put keys (nodeIdArray) into remainingIDs
+   if remainingIDs is not empty then
+      put dot_RandomColour() into rColour
+      graph_AddToGroupStyleArray dotGroupStyleArray, "Aliens", remainingIDs, "black", rColour
+      graph_SetNodeLabel dotGroupStyleArray, empty, "http://google.com"
+   end if
+   
+   return dotGroupStyleArray
+end _TestGroupStyleArray
+
+function dot_RandomColour
+   put colour_GetRandom() into rColour
+   put colour_RgbToHex (rColour) into hColour
+   return hColour
+end dot_RandomColour
+
+private function colour_GetRandom
+   -- was "randomColour"
+   put random(255) into item 1 of someColour
+   put random(255) into item 2 of someColour
+   put random(255) into item 3 of someColour
+   return someColour
+end colour_GetRandom
+
+private function colour_RgbToHex rgbColour
+   -- was "colour_ConvertToWeb"
+   
+   put "#" into theWebColor -- leading "#"
+   repeat for each item myItem in rgbColour -- numeric triplet -  R,G,B
+      put format("%02X",myItem) after theWebColor
+   end repeat
+   return theWebColor
+   
+   -- alternative technique
+   put "#" into theWebColor -- leading "#"
+   repeat for each item myItem in rgbColour -- numeric triplet - R,G,B
+      get baseconvert(myItem,10,16)
+      if the length of it is 1 then put zero before it  -- each component must be 2-digit
+      put it after theWebColor
+   end repeat
+   return theWebColor
+end colour_RgbToHex

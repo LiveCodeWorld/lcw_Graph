@@ -205,7 +205,7 @@ command overlayArray_ReconstructAndCreateFiles linkArray, overlayName, overlayFo
    overlayArray_SetGraphProperty overlayArray, "overlay_Folder", overlayFolder
    overlayArray_SetGraphProperty overlayArray, "overlay_Name", overlayName
    if pGraphStyle is empty then
-      if overlayName is among the items of dot_AllGraphStyles() then
+      if overlayName is among the items of dot_ListGraphStyles() then
          put overlayName into pGraphStyle
       else
          put "hierarchical" into pGraphStyle
@@ -231,17 +231,6 @@ command overlayArray_ResetData @overlayArray, linkArray
    overlayArray_AddDefaultUnion overlayArray, dotDefaultArray
 end overlayArray_ResetData
 
-command overlayArray_ConstructDataArray @dataArray, linkArray
-   linkArray_IdConstruct linkArray, idLinkArray, idArray
-   
-   put linkArray into dataArray ["linkArray"]
-   put idLinkArray into dataArray ["idLinkArray"]
-   put idArray into dataArray ["idArray"]
-   
-   put array_ConstructReverseDictionary (idArray) into reversedIdArray
-   put reversedIdArray into dataArray ["reverseIdArray"]
-end overlayArray_ConstructDataArray
-
 command overlayArray_AddToGroupStyleArray nodeIds, nodeStyleArrayOrName, @dotGroupStyleArray, pStyleName
    if pStyleName is empty then
       put the number of lines of keys(dotGroupStyleArray) + 1 into pStyleName
@@ -266,12 +255,6 @@ end overlayArray_DeconstructGroupStyleArray
 
 --> overlayArray | Graph | Props | Toplevel
 -
-command overlayArray_SetData @overlayArray, linkArray, pKeyStyle
-   linkArray_IdConstruct linkArray, nodeLinkArray, nodeIdArray, pKeyStyle
-   put linkArray_ConstructGraphData (linkArray, nodeLinkArray, nodeIdArray) into dataArray
-   put dataArray into overlayArray ["data"]
-end overlayArray_SetData
-
 function overlayArray_GetLinkArray overlayArray
    return overlayArray ["data"]["linkArray"]
 end overlayArray_GetLinkArray

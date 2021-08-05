@@ -92,7 +92,7 @@ command display_ObjectDepArray hObject, hkeyArray
       put the projectOverlay_Array ["processedHkey.array"] of hObject into hkeyArray
    end if
    
-   put hkeyArray_GetDepArray (hkeyArray) into objectHKeyArray
+   put hkeyArray_GetStackDepArray (hkeyArray) into objectHKeyArray
    put hkeyArray_TidyObjectArray (objectHKeyArray) into objectTreeArray
    --
    display_HkeyTreeArray objectTreeArray, hObject, "mDouble_DisplayObjectHkeyArray"
@@ -149,10 +149,13 @@ end display_Dot
 command display_OverlayData overlayFolder, pTitle
    put overlay_GetData (overlayFolder) into overlayData 
    
-   display_Array overlayData, pTitle, "Global | Script | Graph | Menu", "Global | Script | Graph | Line | Menu"
-   put the result into treeView
-   set the displayed_OverlayFolder of treeView to overlayFolder
-   set the displayed_OverlayName of treeView to pOverlayName
+   display_Array overlayData, pTitle
+   put the result into displayView
+   display_SetInteractions displayView, "Script | Graph", ""
+   --
+   set the displayed_OverlayFolder of displayView to overlayFolder
+   set the displayed_OverlayName of displayView to pOverlayName
+   return displayView
 end display_OverlayData
 
 
@@ -179,30 +182,27 @@ command display_ScriptArray scriptObject
    display_HandlerSVG imageFile
    --
    put the name of scriptObject into objectName
-   put merge ("[[objectName]],display_ScriptArray") into someTitle
    --
-   _DisplayHkeyArray hKeyArray, someTitle, stackObject
-   return indexView
+   _DisplayHkeyArray hKeyArray, objectName, display_ScriptArray, stackObject
+   return the result
 end display_ScriptArray
 
 command display_StackDeps stackObject
    -- Not fully working
-   put the project_Name of stackObject into projectName
-   put merge ("[[stackObject]],[[projectName]]") into someTitle
-   
+   put the project_Name of stackObject into projectName   
    put the walk_HkeyArray of stackObject into depArray
    --
-   _DisplayHkeyArray depArray, someTitle, stackObject
+   _DisplayHkeyArray depArray, stackObject, projectName, stackObject
    return indexView
 end display_StackDeps
 
-private command _DisplayHkeyArray depArray, someTitle, displayedObject
-   put "Global | HkeyArray | Tree | Deps | Menu" into mTitle
-   put "Global | HkeyArray | Menu" into mLineTitle
-   display_Array depArray, someTitle, mTitle, mLineTitle, "mouse_EditHkey", "mouse_EditHkey"
-   put the result into treeView
-   set the displayed_Object of treeView to displayedObject
-   return treeView
+private command _DisplayHkeyArray depArray, someTitle, stackLabel, displayedObject
+   -- put "Global | HkeyArray | Menu" into mLineTitle
+   display_Array depArray, someTitle, stackLabel
+   put the result into displayView
+   display_SetInteractions displayView, "HkeyArray | Tree | Deps", "mouse_EditHkey"
+   set the displayed_Object of displayView to displayedObject
+   return displayView
 end _DisplayHkeyArray
 
 

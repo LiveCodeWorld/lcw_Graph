@@ -84,38 +84,38 @@ function outline_Simplify tabbedOutline, @idArray, @keyArray, pKeyStyle
 end outline_Simplify
 
 function hKeyArray_XmlToClusters someXml, objectOutline, hIdArray, graphNodeType
-    put word 1 to -1 of someXml into someXml
-    delete line 1 to 3 of someXml
-    delete line -1 of someXml
-    put outline_DecreaseIndent(someXml, 1) into someXml
-     
-    put object_IndexFromOutline(objectOutline) into linkObjects
-    repeat with objectNum = 1 to the number of lines of linkObjects
-        put line objectNum of linkObjects into linkObject
-        put "n" & objectNum into linkONodeID
-        
-        put hKeyArray_ReplaceOpeningTag(objectNum, someXml) into someXml
-         
-        put "subgraph cluster" & objectNum && "{}" into emptyDef
-        put "<" & linkONodeID & "[ ]*/>" into someReg
-        put replacetext (someXml, someReg, emptyDef) into someXml
-        
-        put "<contents nodeID=" & kwote (linkONodeID) & "></contents>" into subContentsTag
-        put outline_LineOffset (subContentsTag, someXml) into lineNum
-        if lineNum = 0 then next repeat
-        
-        put line lineNum of someXml into someLine
-        put outline_TabLevel (someLine) into indentLevel
-        
-        put hKeyArray_SubGraphContents (linkONodeID, indentLevel, linkObject, hIdArray, graphNodeType) into subSection
-        -- replace subContentsTag with subSection in someXml
-        put subSection into line lineNum of someXml
-    end repeat
-     
-    -- put CR & "}" & CR into closingDef
-    put "}" into closingDef
-    put replacetext (someXml, "</n.+>", closingDef)  into someXml
-    return someXml
+   put word 1 to -1 of someXml into someXml
+   delete line 1 to 3 of someXml
+   delete line -1 of someXml
+   put outline_DecreaseIndent(someXml, 1) into someXml
+   
+   put object_IndexFromOutline(objectOutline) into linkObjects
+   repeat with objectNum = 1 to the number of lines of linkObjects
+      put line objectNum of linkObjects into linkObject
+      put "n" & objectNum into linkONodeID
+      
+      put hKeyArray_ReplaceOpeningTag(objectNum, someXml) into someXml
+      
+      put "subgraph cluster" & objectNum && "{}" into emptyDef
+      put "<" & linkONodeID & "[ ]*/>" into someReg
+      put replacetext (someXml, someReg, emptyDef) into someXml
+      
+      put "<contents nodeID=" & kwote (linkONodeID) & "></contents>" into subContentsTag
+      put outline_LineOffset (subContentsTag, someXml) into lineNum
+      if lineNum = 0 then next repeat
+      
+      put line lineNum of someXml into someLine
+      put outline_TabLevel (someLine) into indentLevel
+      
+      put hKeyArray_SubGraphContents (linkONodeID, indentLevel, linkObject, hIdArray, graphNodeType) into subSection
+      -- replace subContentsTag with subSection in someXml
+      put subSection into line lineNum of someXml
+   end repeat
+   
+   -- put CR & "}" & CR into closingDef
+   put "}" into closingDef
+   put replacetext (someXml, "</n.+>", closingDef)  into someXml
+   return someXml
 end hKeyArray_XmlToClusters
 
 
@@ -150,24 +150,25 @@ function hKeyArray_SubGraphContents linkONodeID, indentLevel, linkObject, hIdArr
    put empty into someRank
    get dot_SubGraphContents (subGraphLabel, nodeSection, someRank, "filled", someColour, fillColour)
    
-   put outline_IncreaseIndent (it, indentLevel) into subGraphContents
+   line_Indent it
+   put it into subGraphContents
    return subGraphContents
 end hKeyArray_SubGraphContents
 
 function hKeyArray_ReplaceOpeningTag tagNumber, someXml
-    put "subgraph cluster" & tagNumber && "{" into subHeader
-    -- put CR after subHeader
-    put "<n" & tagNumber & ">" into openingTag
-    put replacetext(someXml, openingTag, subHeader) into someXml
-    return someXml
+   put "subgraph cluster" & tagNumber && "{" into subHeader
+   -- put CR after subHeader
+   put "<n" & tagNumber & ">" into openingTag
+   put replacetext(someXml, openingTag, subHeader) into someXml
+   return someXml
 end hKeyArray_ReplaceOpeningTag
 
 
 --> Deps
 -
 function math_IsOdd someNumber
-    -- was "isOdd"
-    return someNumber mod 2 = 1
+   -- was "isOdd"
+   return someNumber mod 2 = 1
 end math_IsOdd
 
 function outline_LineOffset osTitle, someOutline
@@ -182,6 +183,56 @@ end outline_LineOffset
 
 --> Private
 -
+private command line_Indent @sLines, pTabChars
+   if pTabChars is empty then put tab into pTabChars
+   --
+   repeat with lineNum = 1 to the number of lines of sLines
+      put pTabChars before line lineNum of sLines
+   end repeat
+end line_Indent
+
+private function linkarray_RenameKeys someKeyArray, @idArray, @keyArray, pKeyStyle
+   -- modified to use nested someKeyArray instead of just an index of keys
+   -- a general technique for building incremental unique ids and their translations (as in a database id)
+   -- for a single key this returns the (new) or existing simlified translation
+   -- while building the two way arrays
+   -- will also add multiple keys if needed (as with childNodes)
+   
+   if someKeyArray is an array then -- quick hack
+      put keys (someKeyArray) into someKeys
+   else
+      put someKeyArray into someKeys
+   end if
+   
+   repeat for each line someKey in someKeys
+      put keyArray [someKey] into simpleID
+      if simpleID is empty then
+         -- not already indexed (work out new incremental ID and add to idArray and keyArray)
+         put the number of lines of keys(idArray) + 1 into keyNumber
+         switch pKeyStyle
+            case "hName"
+               hkey_Deconstruct someKey, hName, hType, hObject, hNum
+               put hName into simpleID
+               break
+            case "short hkey"
+               hkey_Deconstruct someKey, hName, hType, hObject, hNum
+               put quote & hType && hName & quote into simpleID
+               break
+            case "number"
+               put keyNumber into simpleID
+               break
+            default
+               put "n" & keyNumber into simpleID
+         end switch
+         put simpleID into keyArray [someKey]
+         put someKey into idArray [simpleID]
+      end if
+      put simpleID & CR after simpleIDs
+   end repeat
+   delete char -1 of simpleIDs
+   return simpleIDs
+end linkarray_RenameKeys
+
 private command outline_ToXMLRecurse tabbedOutline, propertyArray, treeNode, treeID
    put propertyArray [treeNode] into nodeContents
    

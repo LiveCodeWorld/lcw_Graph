@@ -29,67 +29,15 @@ At present, most device-independent units are either inches or points, which we 
 */
 
 
---> Graph | Model
+--> Working on
 -
-/*
-This model contains the data needed to determine how a graph is drawn from a given dot file.
-*/
+function dot_CommandFromGraphStyle pGraphStyle
+   -- defaults to "dot"
+   dot_NormalizeDotCommand pGraphStyle
+   return pGraphStyle
+end dot_CommandFromGraphStyle
 
-getprop graph_Model -- old
-   -- add this handler locally to override default bahaviour
-   -- and create local models for each graph
-   
-   return the long id of me
-end graph_Model
-
-
---> GraphViz
--
-function graphviz_ColourOutline
-   /*
-   Can be used to create a (sub)menu.
-   
-   Displays all X11 colours,
-   or or at least the colours that rev and Graphviz understands
-   */
-   
-   put colour_BaseColourOutline() into graphvizColours
-   put "Light Green,Dark Magenta" into dodgyColours
-   replace comma with CR in dodgyColours
-   line_Delete dodgyColours, graphvizColours
-   return graphvizColours
-end graphviz_ColourOutline
-
-
---> Dot
--
-function dot_ConvertToXml dotFile, pOutputFile
-   put "gv2gxl" into someShell
-   shell_BashParamEscape dotFile
-   put space && dotFile after someShell
-   if pOutputFile is not empty then
-      put "-o" & pOutputFile after someShell -- single space I think
-   end if
-   put git_ExecuteShellCommand (someShell) into shellResult
-   return shellResult
-end dot_ConvertToXml
-
-on graph_DeconstructPropertyArray dotPropertyArray, @nodeIDs, @flattenNum
-   put dotPropertyArray ["nodeIDs"] into nodeIDs
-   put dotPropertyArray ["flattenNum"] into flattenNum
-end graph_DeconstructPropertyArray
-
-on graph_ConstructPropertyArray @dotPropertyArray, nodeIDs, flattenNum
-   if flattenNum is empty then put the overlay_FlattenNum of the graph_Model of the target into flattenNum
-   
-   put nodeIDs into dotPropertyArray ["nodeIDs"]
-   put flattenNum into dotPropertyArray ["flattenNum"]
-end graph_ConstructPropertyArray
-
-
---> Dot
--
-on dot_NormalizeDotCommand @graphStyle
+command dot_NormalizeDotCommand @graphStyle
    -- converts a loosely named "overlay_Style" from a user input, to a formal "dot_OutputFormat"
    
    if graphStyle is empty then put the overlay_Style of me into graphStyle
@@ -151,6 +99,67 @@ on dot_NormalizeDotCommand @graphStyle
    end switch
 end dot_NormalizeDotCommand
 
+
+--> Graph | Model
+-
+/*
+This model contains the data needed to determine how a graph is drawn from a given dot file.
+*/
+
+getprop graph_Model -- old
+   -- add this handler locally to override default bahaviour
+   -- and create local models for each graph
+   
+   return the long id of me
+end graph_Model
+
+
+--> GraphViz
+-
+function graphviz_ColourOutline
+   /*
+   Can be used to create a (sub)menu.
+   
+   Displays all X11 colours,
+   or or at least the colours that rev and Graphviz understands
+   */
+   
+   put colour_BaseColourOutline() into graphvizColours
+   put "Light Green,Dark Magenta" into dodgyColours
+   replace comma with CR in dodgyColours
+   line_Delete dodgyColours, graphvizColours
+   return graphvizColours
+end graphviz_ColourOutline
+
+
+--> Dot
+-
+function dot_ConvertToXml dotFile, pOutputFile
+   put "gv2gxl" into someShell
+   shell_BashParamEscape dotFile
+   put space && dotFile after someShell
+   if pOutputFile is not empty then
+      put "-o" & pOutputFile after someShell -- single space I think
+   end if
+   put git_ExecuteShellCommand (someShell) into shellResult
+   return shellResult
+end dot_ConvertToXml
+
+on graph_DeconstructPropertyArray dotPropertyArray, @nodeIDs, @flattenNum
+   put dotPropertyArray ["nodeIDs"] into nodeIDs
+   put dotPropertyArray ["flattenNum"] into flattenNum
+end graph_DeconstructPropertyArray
+
+on graph_ConstructPropertyArray @dotPropertyArray, nodeIDs, flattenNum
+   if flattenNum is empty then put the overlay_FlattenNum of the graph_Model of the target into flattenNum
+   
+   put nodeIDs into dotPropertyArray ["nodeIDs"]
+   put flattenNum into dotPropertyArray ["flattenNum"]
+end graph_ConstructPropertyArray
+
+
+--> Dot
+-
 function dot_OutputFormats
    -- was "dot_GetOutputFormats"
    return "jpg,png,gif,-,canon,cmap,cmapx,dia,dot,epdf,fig,hpgl,imap,ismap,mif,mp,pcl,pdf,pic,plain,plain-ext,ps,ps2,svg,svgz,vtx,xdot"
@@ -226,42 +235,6 @@ on dot_NormalizeNode @someNode
         put kwote(someNode) into someNode
     end if
 end dot_NormalizeNode
-
-function dot_ConstructCluster someLabel, clusterNum, nodeSection, someRank, someStyle, someColour, fillColour
-    put "cluster" & clusterNum into subGraphName
-    return dot_ConstructSubgraph(subGraphName, nodeSection, someRank, someStyle, someColour, someLabel, fillColour)
-    return merge(subGraph)
-end dot_ConstructCluster
-
-function dot_ConstructSubgraph subGraphName, nodeSection, someRank, someStyle, someColour, someLabel, fillColour
-    put "subgraph" into subGraph
-    if subGraphName is not empty then put space & subGraphName after subGraph
-    put space & "{" & CR after subGraph
-    put dot_SubGraphContents (someLabel, nodeSection, someRank, someStyle, someColour, fillColour) after subGraph
-    put CR & "}" after subGraph
-    return subGraph
-end dot_ConstructSubgraph
-
-function dot_SubGraphContents someLabel, nodeSection, someRank, someStyle, someColour, fillColour
-   dot_EscapeQuotes someLabel
-   
-   -- if someRank is empty then put "same" into someRank
-   if someStyle is empty then put "filled" into someStyle
-   if someColour is empty then put "grey60" into someColour
-   if fillColour is empty then put "grey90" into fillColour
-   
-   if someLabel is not empty then put tab & "label=" & kwote(someLabel) & ";" after subGraph
-   if someRank is not empty then put CR & tab & "rank = [[someRank]];" after subGraph
-   put CR & tab & "style=[[someStyle]];" after subGraph
-   put CR & tab & "color=[[someColour]];" after subGraph
-   put CR & tab & "fillcolor=[[fillColour]];" after subGraph
-   
-   put CR after subGraph
-   if nodeSection is not empty then
-      put CR & outline_IncreaseIndent(nodeSection) after subGraph
-   end if
-   return merge(subGraph)
-end dot_SubGraphContents
 
 on dot_SetGraphSectionOffsets @dotText, @startChar, @endChar
    --trims top and tail of dotText
@@ -439,18 +412,6 @@ end dot_SaveAndDisplayImage
 
 --> Dot | Render
 -
-function dot_Render dotText, pDotCommand, pTextFile, pOutputFormat
-   -- pDotCommand is an english equivalent of graphStyle
-   dot_SaveTemporaryFile dotText, pTextFile
-   put the result into pTextFile
-   put dot_DoShell (pTextFile, pDotCommand, pOutputFormat) into shellResult
-   if shellResult is false or shellResult is empty then
-      exit to top
-   else
-      return shellResult
-   end if
-end dot_Render
-
 private function dot_CheckResult gvResult, outputFormat, someShell
    if outputFormat is among the items of "png,jpeg,jpg,gif" then
       set the itemdelimiter to ":"
