@@ -12,19 +12,14 @@ version: 0.3
 
 --> Display
 -
-command display_HkeySvg hKey, svgFile
-   -- display_HkeyGraph hKey, true
-   put hkey_MetadataFolder (hKey) into mFolder
-   put mFolder & shortFile into svgFile
-   --
-   -- if scriptEditor_PaneExists ("Deps") then
-   -- display_ScriptEditorSvg svgFile
-   -- else
-   display_Svg svgFile, "Hkey Deps"
-   -- end if
-   put the result into displayView
-   set the displayed_Hkey of displayView to hkey
-   return displayView
+-- command display_HkeySvg hKey, shortSvgFile
+put hkey_MetadataFolder (hKey) into mFolder
+put mFolder & shortSvgFile into svgFile
+--
+display_Svg svgFile, "Hkey Deps"
+put the result into displayView
+set the displayed_Hkey of displayView to hkey
+return displayView
 end display_HkeySvg
 
 command display_HkeySVG hkey

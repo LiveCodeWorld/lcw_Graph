@@ -56,7 +56,7 @@ command graph_Hkey hKey, pGraphStyle
    -- uses "walk_GetHkeyArray" of stack "lib_HkeyWalk"
    -- used to use graph_HkeyDependency
    -- graph_CreateScriptObjectHkeyArray hkeyArray, sObject, "fast undirected spring"
-   
+   if pGraphStyle is empty then put "hierarchical" into pGraphStyle
    put walk_GetHkeyArray (hKey) into hKeyArray
    --
    hkey_Deconstruct hKey, hName, hType, hObject, hNum

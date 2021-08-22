@@ -86,22 +86,6 @@ command display_HkeyDepArray hKey
    return displayView
 end display_HkeyDepArray
 
-command display_ObjectDepArray hObject, hkeyArray
-   -- think hObject can be hkey or Object
-   if hkeyArray is empty then
-      put the projectOverlay_Array ["processedHkey.array"] of hObject into hkeyArray
-   end if
-   
-   put hkeyArray_GetStackDepArray (hkeyArray) into objectHKeyArray
-   put hkeyArray_TidyObjectArray (objectHKeyArray) into objectTreeArray
-   --
-   display_HkeyTreeArray objectTreeArray, hObject, "mDouble_DisplayObjectHkeyArray"
-   --
-   put the result into treeView
-   set the view_Data of treeView to hKeyArray
-   return treeview
-end display_ObjectDepArray
-
 command display_HkeyArrayDependencyScript hkeyArray, pScriptObject, pStripObjects, pStripProps, pMakePrivate
    local depSuite, missingHkeys
    hkeyArray_ConstructDependencySuite hkeyArray, pScriptObject, depSuite, pStripObjects, pStripProps, pMakePrivate
@@ -196,15 +180,6 @@ command display_StackDeps stackObject
    return indexView
 end display_StackDeps
 
-private command _DisplayHkeyArray depArray, someTitle, stackLabel, displayedObject
-   -- put "Global | HkeyArray | Menu" into mLineTitle
-   display_Array depArray, someTitle, stackLabel
-   put the result into displayView
-   display_SetInteractions displayView, "HkeyArray | Tree | Deps", "mouse_EditHkey"
-   set the displayed_Object of displayView to displayedObject
-   return displayView
-end _DisplayHkeyArray
-
 
 --> Deps
 -
@@ -293,3 +268,72 @@ command hkeyArray_Graph hkeyArray, graphStyle, graphSize
 end hkeyArray_Graph
 
 
+--> hkeyTreeArray
+-
+command display_ObjectDepArray hObject, hkeyArray
+   -- think hObject can be hkey or Object
+   if hkeyArray is empty then
+      put the projectOverlay_Array ["processedHkey.array"] of hObject into hkeyArray
+   end if
+   
+   put hkeyArray_GetStackDepArray (hkeyArray) into objectHKeyArray
+   put hkeyArray_TidyObjectArray (objectHKeyArray) into objectTreeArray
+   --
+   display_HkeyTreeArray objectTreeArray, hObject, "mDouble_DisplayObjectHkeyArray"
+   --
+   put the result into treeView
+   set the view_Data of treeView to hKeyArray
+   return treeview
+end display_ObjectDepArray
+
+command display_HkeyTreeArray hKeyArray, hKey
+   put hkeyArray_ConstructTreeArray (hkeyArray) into hkeyTreeArray
+   --
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   put the result into shortHkey
+   --
+   display_Data hkeyTreeArray, hKey, "hkeyTreeArray"
+   put the result into displayView
+   --
+   -- may want to use "Global | HkeyArray | Tree | Filter | Menu"
+   display_SetInteractions displayView, "HkeyArray", "mDouble_DisplayHkeyTreeArray"
+   set the displayed_Object of displayView to hObject
+   set the displayed_Hkey of displayView to hKey
+   return displayView
+end display_HkeyTreeArray
+
+function hkeyArray_ConstructTreeArray hKeyArray
+   local treeArray
+   
+   put keys (hKeyArray) into sortedHkeys
+   sort sortedHkeys by item 1 of each
+   repeat for each line sortedHkey in sortedHkeys
+      _addToDepKeyArray treeArray, sortedHkey, hKeyArray
+   end repeat
+   return treeArray
+end hkeyArray_ConstructTreeArray
+
+
+--> Private
+-
+private command _addToDepKeyArray @treeArray, hKey, hKeyArray
+   put the keys of hKeyArray [hKey] into depHkeys
+   sort depHkeys by word 2 of each
+   repeat for each line depHkey in depHkeys
+      hkey_Deconstruct depHkey, hName, hType, hObject, hNum
+      put the result into shortHkey
+      
+      put hName into treeArray [hKey][shortHkey]["hName"]
+      put hType into treeArray [hKey][shortHkey]["hType"]
+      put hObject into treeArray [hKey][shortHkey]["hObject"]
+   end repeat
+end _addToDepKeyArray
+
+private command _DisplayHkeyArray depArray, someTitle, stackLabel, displayedObject
+   -- put "Global | HkeyArray | Menu" into mLineTitle
+   display_Array depArray, someTitle, stackLabel
+   put the result into displayView
+   display_SetInteractions displayView, "HkeyArray | Tree | Deps", "mouse_EditHkey"
+   set the displayed_Object of displayView to displayedObject
+   return displayView
+end _DisplayHkeyArray

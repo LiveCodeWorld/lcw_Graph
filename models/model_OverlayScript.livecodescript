@@ -22,6 +22,13 @@ This allow easy access to the graph metadata associated with a script.
 At the moment storing and help about an objects properties etc along with the description of the script.
 */
 
+getprop script_Markdown
+   -- should use pandoc (just a stub for now)
+   put the script_Help of the target into sMarkDown
+   -- put html_StripAllTags (sMarkDown) into sMarkDown
+   return sMarkDown
+end script_Markdown
+
 getprop object_Help
    return the script_Help of the target
 end object_Help
@@ -29,14 +36,6 @@ end object_Help
 setprop object_Help someHelp
    set the script_Help of the target to someHelp
 end object_Help
-
-getprop script_Markdown
-   -- should use pandoc
-   -- just a stub for now
-   put the script_Help of the target into someHTML
-   put html_StripAllTags (someHTML) into someMarkDown
-   return someMarkDown
-end script_Markdown
 
 getprop script_Help
    put the script_HelpFile of the target into someFile

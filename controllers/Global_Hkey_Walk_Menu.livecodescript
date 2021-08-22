@@ -1,6 +1,7 @@
 ﻿script "Global | Hkey | Walk | Menu"
 --> MetaData
 -
+copyright: David Bovill
 license: GPLv3
 name: Global | Hkey | Walk | Menu
 type: controller
@@ -26,28 +27,28 @@ end displaySvg_Params
 
 --> Global | Hkey | Walk | Menu
 -
-on menu_DisplayHkeyArray hKey
-   display_HkeyArray hKey
-end menu_DisplayHkeyArray
+on menu_GraphHandler hKey
+   display_CreateHandlerGraph hKey
+end menu_GraphHandler
+
+on menu_FastGraphHandler hKey
+   display_CreateHandlerGraph hKey, "fast undirected spring"
+end menu_FastGraphHandler
+
+on _
+end _
 
 on menu_DisplaySvg hKey, shortFile
    display_HkeySvg hKey, svgFile
 end menu_DisplaySvg
 
+on menu_DisplayHkeyArray hKey
+   display_HkeyArray hKey
+end menu_DisplayHkeyArray
+
 on menu_DisplayDot hKey
    display_HkeyDot hKey
 end menu_DisplayDot
-
-on _
-end _
-
-on menu_GraphHandler hKey
-   display_CreateHandlerGraph hKey -- doesn't use lib_HkeyWalk
-end menu_GraphHandler
-
-on menu_FastGraphHandler hKey
-   display_CreateFastHandlerGraph hKey
-end menu_FastGraphHandler
 
 on _
 end _

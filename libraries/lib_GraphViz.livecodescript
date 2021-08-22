@@ -88,6 +88,7 @@ command dot_NormalizeDotCommand @graphStyle
          also draws undirected graphs using the "spring'' model described above, 
          but it uses a multi-scale approach to produce layouts of large graphs in a reasonably short time.
          */
+         -- changed to "fdp" as the graphs are ugly otherwise -- hack
          put "fdp" into graphStyle
          break
       default

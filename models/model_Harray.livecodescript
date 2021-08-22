@@ -311,10 +311,6 @@ command lcw_AddScriptToHarray @hArray, someObject, someScript, scriptFile, pCrea
       end switch
    end repeat
 
-   -- having gone through every line of the script we can do something like
-   -- put the script_MenuTitleTableArray of stackObject into mTitleTableArray
-   -- menu_SetTitleTableArrayGlobal stackObject, mTitleTableArray, suiteTitle
-
    return scriptFile
 end lcw_AddScriptToHarray
 
@@ -387,10 +383,6 @@ private command _DisplayIndexedCallsComment hKey, shortCalls
 end _DisplayIndexedCallsComment
 
 private command _addMenuToHarray @hArray, suiteTitle, shortHkey, ruggedObject, ruggedMainStack, isOnMessage, lineType, handlerHash, scriptHash, @shortkeySuiteArray, @thisScriptsMenuArray
-   -- here we want to look at automatically indexing and creating global menu_Table / array
-   -- and then
-   -- menu_SetTitleTableArrayGlobal stackObject, mTitleTableArray, suiteTitle
-
    switch
       case word 1 of suiteTitle = "Global" and word 2 of suiteTitle = "|"
          menu_AddGlobalHarray suiteTitle, shortHkey, ruggedObject, handlerHash, isOnMessage, lineType, thisScriptsMenuArray, hArray
