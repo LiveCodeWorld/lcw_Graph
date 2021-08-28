@@ -31,6 +31,20 @@ At present, most device-independent units are either inches or points, which we 
 
 --> Working on
 -
+function dot_DoShell imageFile, pDotCommand, pImageFormat
+   dot_NormalizeDotCommand pDotCommand
+   if pImageFormat is empty then put "png" into pImageFormat
+   put graphViz_GetShellPath() into gvPath
+   
+   put gvPath & pDotCommand into someShell
+   put space & "-T" & pImageFormat after someShell
+   put space & quote & imageFile & quote after someShell
+   
+   put shell(someShell) into gvResult
+   put dot_CheckResult(gvResult, "png", someShell) into shellResult
+   return shellResult
+end dot_DoShell
+
 function dot_CommandFromGraphStyle pGraphStyle
    -- defaults to "dot"
    dot_NormalizeDotCommand pGraphStyle
@@ -238,7 +252,7 @@ on dot_NormalizeNode @someNode
 end dot_NormalizeNode
 
 on dot_SetGraphSectionOffsets @dotText, @startChar, @endChar
-   --trims top and tail of dotText
+   # Trims top and tail of dotText
    put word 1 to -1 of dotText into dotText
    put 0 into startChar
    put 0 into endChar
@@ -255,14 +269,6 @@ on dot_SetGraphSectionOffsets @dotText, @startChar, @endChar
    end if
    put startChar + skipNum + 1 into endChar
    return true
-   
-   -- put "(?Umi)\W*(graph\W\[.*\];)" into someReg -- does not work for multiline's
-   -- put "(?Umi)\W(graph\W*\[.*)" into someReg
-   put "(?Uim)\W*(graph\W*\[" into someReg
-   put CR & ".*" after someReg
-   put "\];)" after someReg
-   put matchchunk (dotText, someReg, startChar, endChar) into foundGraphSection
-   return foundGraphSection
 end dot_SetGraphSectionOffsets
 
 
@@ -340,7 +346,7 @@ function dot_GraphInchSize someRect, expandIfNeeded
    return someSize
 end dot_GraphInchSize
 
-on dot_ConvertToInches @pixelSize, screenRez
+command dot_ConvertToInches @pixelSize, screenRez
     -- was "dot_ConvertSizeToInches"
     if screenRez is empty then put 96 into screenRez
     set the numberformat to "0.0000"
@@ -350,7 +356,7 @@ on dot_ConvertToInches @pixelSize, screenRez
     end repeat
 end dot_ConvertToInches
 
-on dot_ConvertToPngPixels @xdotValue
+command dot_ConvertToPngPixels @xdotValue
     -- PNG is 96 dpi and xdot is at 72 dpi
     put round(xdotValue * 96 / 72) into xdotValue 
 end dot_ConvertToPngPixels
@@ -757,34 +763,6 @@ command dot_DoImageMapShell dotCommand, dotFile, imageFile, pCmapFile, pXdotFile
    return shellResult
 end dot_DoImageMapShell
   
-function dot_DoShell imageFile, pDotCommand, pImageFormat
-   dot_NormalizeDotCommand pDotCommand
-   if pImageFormat is empty then put "png" into pImageFormat
-   put graphViz_GetShellPath() into gvPath
-   
-   put gvPath & pDotCommand into someShell
-   put space & "-T" & pImageFormat after someShell
-   put space & quote & imageFile & quote after someShell
-   
-   put shell(someShell) into gvResult
-   put dot_CheckResult(gvResult, "png", someShell) into shellResult
-   return shellResult
-end dot_DoShell
-
--- function dot_DoShell someFile, pDotCommand, pOutputFormat
-   dot_NormalizeDotCommand pDotCommand
-   if pImageFormat is empty then put "png" into pImageFormat
-   put graphViz_GetShellPath() into gvPath
-   
-   put gvPath & pDotCommand into someShell
-   if pOutputFormat is not empty then put space & "-T" & pOutputFormat after someShell
-   put space & quote & someFile & quote after someShell
-   
-   put shell(someShell) into gvResult
-   put dot_CheckResult(gvResult, "png", someShell) into shellResult
-   return shellResult
-end dot_DoShell
-
 function graphViz_GetShellPath
    put pref_GetValue ("dotPath") into dotPath
    return dotPath

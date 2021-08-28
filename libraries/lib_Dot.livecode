@@ -11,10 +11,30 @@ version: 1.1
 /*
 Shiny new library for processing all things dot.
 See also older library libOPN_GraphViz
+
+-- put "(?Umi)\W*(graph\W\[.*\];)" into someReg -- does not work for multiline's
+-- put "(?Umi)\W(graph\W*\[.*)" into someReg
+put "(?Uim)\W*(graph\W*\[" into someReg
+put CR & ".*" after someReg
+put "\];)" after someReg
+put matchchunk (dotText, someReg, startChar, endChar) into foundGraphSection
 */
 
 --> Working on
 -
+command dot_AddLayout @dotText, pGraphStyle
+   put dot_CommandFromGraphStyle (pGraphStyle) into dotCommand
+   --
+   put "layout\s=\s'(.+)'" into regExp -- lazy
+   replace "'" with quote in regExp
+   if matchChunk (dotText, regExp, sNum, eNum) is true then
+      put dotCommand into char sNum to eNum of dotText
+   else
+      put offset ("{", dotText) into bracketNum
+      put " layout =" && kwote (dotCommand) after char bracketNum of dotText
+   end if
+end dot_AddLayout
+
 private command overlayArray_DeconstructGroupStyleArray @nodeIds, @nodeStyleArrayOrName, dotGroupStyleArray
    put dotGroupStyleArray ["nodeIds"] into nodeIds
    if the number of lines of nodeIds = 1 then
