@@ -6,6 +6,10 @@ name: lib_HandlerDeps
 type: script library
 version: 0.3
 
+/*
+Seems trashy. See lib_ScriptFetch
+*/
+
 
 --> Props
 -
@@ -19,44 +23,7 @@ getprop script_HkeyArrayFromExportedCalls [pSetName]
 end script_HkeyArrayFromExportedCalls
 
 
---> Hkey | Collect
--
-function hkey_CollectFromObjects hKeys, pSortAlphabetically
-   local newScript
-   put word 1 to -1 of hKeys into hKeys
-   if pSortAlphabetically is true then sort hKeys by item 1 of each
-   repeat for each line hKey in hKeys
-      put handler_Get (hKey) into someHandler
-      text_AddParagraph someHandler, newScript
-   end repeat
-   return newScript
-end hkey_CollectFromObjects
-
-function script_FromHkeys hKeys, pMakePrivate
-   local newScript, missingHkeys
-   script_FetchFromHkeys hKeys, newScript, missingHkeys, pMakePrivate
-   return newScript
-end script_FromHkeys
-
-command script_FetchFromHkeys hKeys, @newScript, @missingHkeys, pMakePrivate
-   -- utitlity for returning missing keys as well
-   put word 1 to -1 of hKeys into hKeys
-   sort hKeys
-   repeat for each line hKey in hKeys
-      put hkey_FetchHandler (hKey) into someHandler
-      if someHandler is empty then
-         line_Add hKey, missingHkeys
-      else
-         if pMakePrivate is true and word 1 of dsfa is not "private" then
-            put "private" & space before someHandler
-         end if
-         text_AddParagraph someHandler, newScript
-      end if
-   end repeat
-end script_FetchFromHkeys
-
-
---> Deps
+--> HkeyArray | Exported | Recursive
 -
 function hkey_CallArrayFromExported hKey, pSetName
    local hkeyArray
@@ -78,9 +45,6 @@ function scriptArray_ConstructShortHkeyArray dataArray
    return hkeyArray
 end scriptArray_ConstructShortHkeyArray
 
-
---> Private
--
 function hkeyArray_FromExported hKey, pProjectName
    local hkeyArray
    hkeyArray_RecurseFromExported hKey, hkeyArray, pProjectName

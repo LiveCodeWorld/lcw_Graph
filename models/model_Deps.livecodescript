@@ -26,6 +26,58 @@ This woud probably be much better stored in an sqlite database.
 */
 
 
+--> Working on
+-
+function hkey_TestFetchDeps hKey, someHandler, pSkipHkeyComponents, pSkipHkeyProps
+   put hkey_TestShortDeps (hKey, someHandler, pSkipHkeyComponents, pSkipHkeyProps) into shortBoolean
+   if shortBoolean = false then return false
+   
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   if exists (hObject) is false then return shortBoolean  
+   
+   if pSkipHkeyComponents is empty then put pref_GetValue ("skip_HkeyComponents") is not false into pSkipHkeyComponents
+   if pSkipHkeyProps is empty then put pref_GetValue ("skip_HkeyProps") is not false into pSkipHkeyProps
+   
+   put the uRIP ["Type"] of hObject into objectType
+   put the object_MetaData ["component"] of hObject into scriptIsComponent
+   switch
+      case hkey_IsDataGridCall (hKey, hName, hType, hObject) is true
+         return false
+      case scriptIsComponent is true and pSkipHkeyComponents is true
+         return false
+      case objectType is not "library" and hType is among the items of "g,s" and pSkipHkeyProps is true
+         return false
+      default
+         return true
+   end switch
+end hkey_TestFetchDeps
+
+function hkey_TestShortDeps hKey, someHandler, pSkipHkeyComponents, pSkipHkeyProps
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   if pSkipHkeyComponents is empty then put pref_GetValue ("skip_HkeyComponents") is not false into pSkipHkeyComponents
+   if pSkipHkeyProps is empty then put pref_GetValue ("skip_HkeyProps") is not false into pSkipHkeyProps
+   
+   switch
+      case hName = "_"
+         return false
+      case hName is among the items of "menu_Target,menu_CheckTarget,menu_Version" and hType = "g"
+         return false
+      case hName is "menu_Init" and hType = "c"
+         return false
+      case char 1 of hName = "u" and hType is among the items of "g,s"
+         return false
+      case "_" is not in hName and hType is among the items of "g,s"
+         return false
+      case char 1 to 3 of hName = "rev" and char 4 of hName is not "_"
+         return false
+      case handler_IsComponent (someHandler) and pSkipHkeyComponents is true
+         return false
+      default
+         return true
+   end switch
+end hkey_TestShortDeps
+
+
 --> Deps | MainstackArray
 -
 /*
@@ -140,70 +192,6 @@ command hArray_CreateDependencyGraph hKey, pGraphStyle, pOverlayName
    put the result into overlayArray
    return overlayArray
 end hArray_CreateDependencyGraph
-
-
---> hkey | Model | Deps
--
-function hkey_FetchDeps hKey, pFetchHow  
-   local hKeyArray
-   hkey_RecurseCallArray hKey, hkeyArray, pFetchHow
-   put array_AllNodes (hKeyArray) into allShortDeps
-   put item 1 to 2 of hKey into shortKey
-   line_Delete shortKey, allShortDeps
-   return allShortDeps
-end hkey_FetchDeps
-
-
---> Working on
--
-function hkey_TestFetchDeps hKey, someHandler, pSkipHkeyComponents, pSkipHkeyProps
-   put hkey_TestShortDeps (hKey, someHandler, pSkipHkeyComponents, pSkipHkeyProps) into shortBoolean
-   if shortBoolean = false then return false
-   
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   if exists (hObject) is false then return shortBoolean  
-   
-   if pSkipHkeyComponents is empty then put pref_GetValue ("skip_HkeyComponents") is not false into pSkipHkeyComponents
-   if pSkipHkeyProps is empty then put pref_GetValue ("skip_HkeyProps") is not false into pSkipHkeyProps
-   
-   put the uRIP ["Type"] of hObject into objectType
-   put the object_MetaData ["component"] of hObject into scriptIsComponent
-   switch
-      case hkey_IsDataGridCall (hKey, hName, hType, hObject) is true
-         return false
-      case scriptIsComponent is true and pSkipHkeyComponents is true
-         return false
-      case objectType is not "library" and hType is among the items of "g,s" and pSkipHkeyProps is true
-         return false
-      default
-         return true
-   end switch
-end hkey_TestFetchDeps
-
-function hkey_TestShortDeps hKey, someHandler, pSkipHkeyComponents, pSkipHkeyProps
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   if pSkipHkeyComponents is empty then put pref_GetValue ("skip_HkeyComponents") is not false into pSkipHkeyComponents
-   if pSkipHkeyProps is empty then put pref_GetValue ("skip_HkeyProps") is not false into pSkipHkeyProps
-   
-   switch
-      case hName = "_"
-         return false
-      case hName is among the items of "menu_Target,menu_CheckTarget,menu_Version" and hType = "g"
-         return false
-      case hName is "menu_Init" and hType = "c"
-         return false
-      case char 1 of hName = "u" and hType is among the items of "g,s"
-         return false
-      case "_" is not in hName and hType is among the items of "g,s"
-         return false
-      case char 1 to 3 of hName = "rev" and char 4 of hName is not "_"
-         return false
-      case handler_IsComponent (someHandler) and pSkipHkeyComponents is true
-         return false
-      default
-         return true
-   end switch
-end hkey_TestShortDeps
 
 function stackArray_ConstructObjectFolder textStackFolder, objectBit, pSubStackName
    -- should update and rename to new folder conventions

@@ -16,6 +16,29 @@ This library processes hkeyArrays.
 
 --> Working on
 -
+function hkeyArray_ListHkeys hkeyArray, pFirstKey
+   local hKeys
+   put array_AllNodes (hkeyArray) into hKeys
+   /*
+   repeat for each key hKey in hkeyArray
+      set the cursor to busy
+      line_Add hKey, hKeys
+      put hkeyArray [hKey] into handlerCalls
+      line_Add handlerCalls, hKeys
+   end repeat
+   */
+   if pFirstKey is not empty then
+      set the wholematches to true
+      put lineOffset (pFirstKey, hKeys) into lineNum
+      delete line lineNum of hKeys
+   end if
+   sort hKeys
+   if pFirstKey is not empty then
+      put pFirstKey & CR before hKeys
+   end if
+   return word 1 to -1 of hKeys
+end hkeyArray_ListHkeys
+
 
 --> Props
 -
@@ -139,7 +162,7 @@ command hkeyArray_ConstructSubArray hKey, hkeyArray, @subArray
 end hkeyArray_ConstructSubArray
 
 
---> Working On
+--> hkeyArray | Object
 -
 function hkeyArray_ExtractObject someObject, hkeyArray
    -- extracts all hkeys for an existing object (does checks)
@@ -203,20 +226,6 @@ function hkeyArray_ExtractMissingArray hkeyArray, fllterSystem, filterCustomMiss
    end if
    return filteredHkeyArray
 end hkeyArray_ExtractMissingArray
-
-function hkeyArray_ExtractHandlers hkeyArray
-   -- update to remove "line_Add" with array dump
-   local hKeys
-   repeat for each key hKey in hkeyArray
-      set the cursor to busy
-      line_Add hKey, hKeys
-      
-      put hkeyArray [hKey] into handlerCalls
-      line_Add handlerCalls, hKeys
-   end repeat
-   sort hKeys
-   return hKeys
-end hkeyArray_ExtractHandlers
 
 
 --> HkeyArray | Object | Extract

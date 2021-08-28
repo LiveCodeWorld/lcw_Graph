@@ -52,9 +52,6 @@ function dot_CommandFromGraphStyle pGraphStyle
 end dot_CommandFromGraphStyle
 
 command dot_NormalizeDotCommand @graphStyle
-   -- converts a loosely named "overlay_Style" from a user input, to a formal "dot_OutputFormat"
-   
-   if graphStyle is empty then put the overlay_Style of me into graphStyle
    switch
       case graphStyle is among the items of "spring,neato"
          /*
@@ -232,23 +229,23 @@ on dot_DeconstructTextResult dotTextResult, @dotText, @dotError
 end dot_DeconstructTextResult
 
 function dot_GetLinkSection linkArray
-    local nodeLinks
-    repeat for each key fromLink in linkArray
-        put linkArray [fromLink] into toLinks
-        dot_NormalizeNode fromLink
-        repeat for each line toLink in toLinks
-            dot_NormalizeNode toLink
-            put fromLink && "->" && toLink & ";" & CR after nodeLinks
-        end repeat
-    end repeat
-    return nodeLinks
+   local nodeLinks
+   repeat for each key fromLink in linkArray
+      put linkArray [fromLink] into toLinks
+      dot_NormalizeNode fromLink
+      repeat for each line toLink in toLinks
+         dot_NormalizeNode toLink
+         put fromLink && "->" && toLink & ";" & CR after nodeLinks
+      end repeat
+   end repeat
+   return nodeLinks
 end dot_GetLinkSection
 
 on dot_NormalizeNode @someNode
-    replace quote with empty in someNode
-    if the number of words of someNode > 1 then
-        put kwote(someNode) into someNode
-    end if
+   replace quote with empty in someNode
+   if the number of words of someNode > 1 then
+      put kwote(someNode) into someNode
+   end if
 end dot_NormalizeNode
 
 on dot_SetGraphSectionOffsets @dotText, @startChar, @endChar
@@ -347,73 +344,73 @@ function dot_GraphInchSize someRect, expandIfNeeded
 end dot_GraphInchSize
 
 command dot_ConvertToInches @pixelSize, screenRez
-    -- was "dot_ConvertSizeToInches"
-    if screenRez is empty then put 96 into screenRez
-    set the numberformat to "0.0000"
-    repeat with itemNum = 1 to the number of items of pixelSize
-        put item itemNum of pixelSize into someNumber
-        put someNumber / screenRez  into item itemNum of pixelSize
-    end repeat
+   -- was "dot_ConvertSizeToInches"
+   if screenRez is empty then put 96 into screenRez
+   set the numberformat to "0.0000"
+   repeat with itemNum = 1 to the number of items of pixelSize
+      put item itemNum of pixelSize into someNumber
+      put someNumber / screenRez  into item itemNum of pixelSize
+   end repeat
 end dot_ConvertToInches
 
 command dot_ConvertToPngPixels @xdotValue
-    -- PNG is 96 dpi and xdot is at 72 dpi
-    put round(xdotValue * 96 / 72) into xdotValue 
+   -- PNG is 96 dpi and xdot is at 72 dpi
+   put round(xdotValue * 96 / 72) into xdotValue 
 end dot_ConvertToPngPixels
 
 function dot_ConvertDrawRect drawPoints, gHeight, @pointNum, @revRect
-    -- was "graphViz_ConvertDrawRect"
-    local revPoints
-    if word 1 of drawPoints is "P" then
-        put word 2 of drawPoints into pointNum
-        put word 3 to -1 of drawPoints into drawPoints
-        repeat pointNum
-            put word 1 of drawPoints into nodeX
-            put word 2 of drawPoints into nodeY
-             
-            put gHeight - nodeY into reflectedY
-            
-            dot_ConvertToPngPixels nodeX
-            add 7 to nodeX
-            dot_ConvertToPngPixels reflectedY
-            add 7 to reflectedY
-            put nodeX,reflectedY into reflectedLoc
-            
-            put reflectedLoc & CR after revPoints
-            delete word 1 to 2 of drawPoints
-        end repeat
-    end if
-    -- delete last char of revPoints
-    put line 1 of revPoints after revPoints
-    
-    if pointNum = 4 then
-        put line 2 of revPoints & "," & line 4 of revPoints into revRect
-    else
-        put empty into revRect
-    end if
-    return revPoints
+   -- was "graphViz_ConvertDrawRect"
+   local revPoints
+   if word 1 of drawPoints is "P" then
+      put word 2 of drawPoints into pointNum
+      put word 3 to -1 of drawPoints into drawPoints
+      repeat pointNum
+         put word 1 of drawPoints into nodeX
+         put word 2 of drawPoints into nodeY
+         
+         put gHeight - nodeY into reflectedY
+         
+         dot_ConvertToPngPixels nodeX
+         add 7 to nodeX
+         dot_ConvertToPngPixels reflectedY
+         add 7 to reflectedY
+         put nodeX,reflectedY into reflectedLoc
+         
+         put reflectedLoc & CR after revPoints
+         delete word 1 to 2 of drawPoints
+      end repeat
+   end if
+   -- delete last char of revPoints
+   put line 1 of revPoints after revPoints
+   
+   if pointNum = 4 then
+      put line 2 of revPoints & "," & line 4 of revPoints into revRect
+   else
+      put empty into revRect
+   end if
+   return revPoints
 end dot_ConvertDrawRect
 
 function dot_ReflectPoint someLoc, gHeight
-    -- was "graphViz_ReflectPoint"
-    put item 1 of someLoc into nodeX
-    put item 2 of someLoc into nodeY
-    
-    put gHeight - nodeY into reflectedY
-    put nodeX,reflectedY into reflectedLoc
-    return reflectedLoc
+   -- was "graphViz_ReflectPoint"
+   put item 1 of someLoc into nodeX
+   put item 2 of someLoc into nodeY
+   
+   put gHeight - nodeY into reflectedY
+   put nodeX,reflectedY into reflectedLoc
+   return reflectedLoc
 end dot_ReflectPoint
 
 
 --> Dot | Files
 -
 command dot_SaveAndDisplayImage someImage, imageView, imageFile
-    if imageView is empty then put view_GetTemplateObject ("View|Image|OPN Image") into imageView
-    if imageFile is empty then put dot_LabelFileWithGraphStyle (graphStyle, dotFile) into imageFile
-     
-    file_CreateImage someImage, imageFile
-    set the image_File of imageView to imageFile
-    object_GoTo imageView
+   if imageView is empty then put view_GetTemplateObject ("View|Image|OPN Image") into imageView
+   if imageFile is empty then put dot_LabelFileWithGraphStyle (graphStyle, dotFile) into imageFile
+   
+   file_CreateImage someImage, imageFile
+   set the image_File of imageView to imageFile
+   object_GoTo imageView
 end dot_SaveAndDisplayImage
 
 
@@ -483,71 +480,71 @@ function dot_NodeDefLineFromArray nodeID, defLineArray
 end dot_NodeDefLineFromArray
 
 function dot_ConstructDefLine nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile
-    -- was "node_ConstructParamLine"
-    local nodeLine
-    
-    if nodeLabel is not empty then
-        put "label='[[nodeLabel]]'" into nodeLine
-    end if
-     
-    if nodeShape is not empty then
-        if nodeLine is not empty then
-            put "," & space after nodeLine
-        end if
-        put "shape=[[nodeShape]]" after nodeLine
-        if nodeShape is "polygon" then
-            if polyParams is not empty then
-                put "," && polyParams after nodeLine
-            end if
-        end if
-    end if
-     
-    dot_AddParamToNodeDef "style", nodeStyle, nodeLine, false
-    dot_AddParamToNodeDef "color", nodeColour, nodeLine, false
-    dot_AddParamToNodeDef "fillcolor", nodeFillColour, nodeLine, false
-    dot_AddParamToNodeDef "URL", nodeUrl, nodeLine
-    dot_AddParamToNodeDef "tooltip", nodeToolTip, nodeLine
-    dot_AddParamToNodeDef "shapefile", nodeShapeFile, nodeLine
-    
-    replace "'" with quote in nodeLine
-    put merge(nodeLine) into nodeLine
-     
-    return nodeLine
+   -- was "node_ConstructParamLine"
+   local nodeLine
+   
+   if nodeLabel is not empty then
+      put "label='[[nodeLabel]]'" into nodeLine
+   end if
+   
+   if nodeShape is not empty then
+      if nodeLine is not empty then
+         put "," & space after nodeLine
+      end if
+      put "shape=[[nodeShape]]" after nodeLine
+      if nodeShape is "polygon" then
+         if polyParams is not empty then
+            put "," && polyParams after nodeLine
+         end if
+      end if
+   end if
+   
+   dot_AddParamToNodeDef "style", nodeStyle, nodeLine, false
+   dot_AddParamToNodeDef "color", nodeColour, nodeLine, false
+   dot_AddParamToNodeDef "fillcolor", nodeFillColour, nodeLine, false
+   dot_AddParamToNodeDef "URL", nodeUrl, nodeLine
+   dot_AddParamToNodeDef "tooltip", nodeToolTip, nodeLine
+   dot_AddParamToNodeDef "shapefile", nodeShapeFile, nodeLine
+   
+   replace "'" with quote in nodeLine
+   put merge(nodeLine) into nodeLine
+   
+   return nodeLine
 end dot_ConstructDefLine
 
 
 --> Dot | Node Defs | ShapeFile
 -
 function dot_ConstructShapeDef someNode, nodeLabel, nodeShape, nodeFillColour, nodeUrl, nodeToolTip, nodeStyle, nodeColour
-    dot_NormalizeNode someNode
-    if nodeStyle is empty then put "filled" into nodeStyle
-    if nodeColour is empty then put nodeFillColour into nodeColour
-     
-    get dot_ConstructDefLine(nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, "", nodeUrl, nodeToolTip, "")
-    put someNode && "[" & it & "];" into nodeDef
-    put nodeDef & CR after nodeDefs
-     
-    delete last char of nodeDefs
-    return nodeDefs
+   dot_NormalizeNode someNode
+   if nodeStyle is empty then put "filled" into nodeStyle
+   if nodeColour is empty then put nodeFillColour into nodeColour
+   
+   get dot_ConstructDefLine(nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, "", nodeUrl, nodeToolTip, "")
+   put someNode && "[" & it & "];" into nodeDef
+   put nodeDef & CR after nodeDefs
+   
+   delete last char of nodeDefs
+   return nodeDefs
 end dot_ConstructShapeDef
 
 function dot_ConstructShapeFileDefs shapeFileArray, someWidth, someHeight, fixedSize
-     -- shapefile is deprecated
-  local nodeDefs
-    
-    put shapeFileArray ["Node titles"] into defNodes
-    repeat for each line someNode in defNodes
-        set the cursor to busy
-        
-        put shapeFileArray [someNode] into nodeShapeFile
-        put shapeFileArray [someNode,"url"] into nodeUrl
-        put shapeFileArray [someNode,"tooltip"] into nodeToolTip
-        
-        get dot_ConstructShapeFileDef(someNode, nodeShapeFile, someWidth, someHeight, fixedSize, nodeUrl, nodeToolTip)   
-        put nodeDef & CR after nodeDefs
-    end repeat
-    delete last char of nodeDefs
-    return nodeDefs
+   -- shapefile is deprecated
+   local nodeDefs
+   
+   put shapeFileArray ["Node titles"] into defNodes
+   repeat for each line someNode in defNodes
+      set the cursor to busy
+      
+      put shapeFileArray [someNode] into nodeShapeFile
+      put shapeFileArray [someNode,"url"] into nodeUrl
+      put shapeFileArray [someNode,"tooltip"] into nodeToolTip
+      
+      get dot_ConstructShapeFileDef(someNode, nodeShapeFile, someWidth, someHeight, fixedSize, nodeUrl, nodeToolTip)   
+      put nodeDef & CR after nodeDefs
+   end repeat
+   delete last char of nodeDefs
+   return nodeDefs
 end dot_ConstructShapeFileDefs
 
 function dot_ConstructGraphicDef nodeLabel, someWidth, someHeight, fixedSize, nodeUrl, nodeToolTip
@@ -577,75 +574,75 @@ function dot_ConstructGraphicDef nodeLabel, someWidth, someHeight, fixedSize, no
 end dot_ConstructGraphicDef
 
 function dot_ConstructShapeFileDef nodeName, nodeShapeFile, someWidth, someHeight, fixedSize, nodeUrl, nodeToolTip
-    put "shapeFile" into nodeShape
-    put empty into polyParams
-    put empty into nodeStyle
-    put empty into nodeColour
-    put empty into nodeFillColour
-    
-    put " " into nodeLabel
-    get dot_ConstructDefLine(nodeName, nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile)
-     
-    if someWidth is not empty then
-        dot_ConvertToInches someWidth
-        put ", width=" & someWidth after it
-    end if
-    if someHeight is not empty then
-        dot_ConvertToInches someHeight
-        put ", height=" & someHeight after it
-    end if
-    if fixedsize is not empty then put ", fixedsize=" & fixedsize after it
-    
-    dot_NormalizeNode nodeName
-    put nodeName && "[" & it & "];" into nodeDef
-     
-    return nodeDef
+   put "shapeFile" into nodeShape
+   put empty into polyParams
+   put empty into nodeStyle
+   put empty into nodeColour
+   put empty into nodeFillColour
+   
+   put " " into nodeLabel
+   get dot_ConstructDefLine(nodeName, nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile)
+   
+   if someWidth is not empty then
+      dot_ConvertToInches someWidth
+      put ", width=" & someWidth after it
+   end if
+   if someHeight is not empty then
+      dot_ConvertToInches someHeight
+      put ", height=" & someHeight after it
+   end if
+   if fixedsize is not empty then put ", fixedsize=" & fixedsize after it
+   
+   dot_NormalizeNode nodeName
+   put nodeName && "[" & it & "];" into nodeDef
+   
+   return nodeDef
 end dot_ConstructShapeFileDef
 
 
 --> Dot | Node Defs | Poly
 -
 function dot_ConstructPolyDefs someNodes, polyStyle, polySkew, polyDistortion, nodeColour, nodeFillColour, nodeUrl, nodeToolTip, regular, peripheries, polyOrientation
-    return "Not done yet!"
-    
-    local nodeDefs
-    put "polygon" into nodeShape
-    put empty into polyParams
-    put empty into nodeShapeFile
-    repeat for each line someNode in someNodes
-        set the cursor to busy
-        dot_NormalizeNode someNode
-         
-        get dot_ConstructDefLine(someNode, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile)
-        put someNode && "[" & it & "];" into nodeDef
-        put nodeDef & CR after nodeDefs
-    end repeat
-    delete last char of nodeDefs
-    return nodeDefs
+   return "Not done yet!"
+   
+   local nodeDefs
+   put "polygon" into nodeShape
+   put empty into polyParams
+   put empty into nodeShapeFile
+   repeat for each line someNode in someNodes
+      set the cursor to busy
+      dot_NormalizeNode someNode
+      
+      get dot_ConstructDefLine(someNode, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile)
+      put someNode && "[" & it & "];" into nodeDef
+      put nodeDef & CR after nodeDefs
+   end repeat
+   delete last char of nodeDefs
+   return nodeDefs
 end dot_ConstructPolyDefs
 
 
 --> Dot | Node Defs | Defaults
 -
 function dot_ConstructDefaultNodeDefs nodeShape, nodeStyle, nodeColour, nodeFillColour, nodeUrl, nodeToolTip
-    --   node [URL="http://wiki.architex.tv/\N", shape=box, fontsize=22, fontname=arial, style=filled];
-    get dot_ConstructDefLine(empty, nodeShape, nodeStyle, nodeColour, nodeFillColour, "", nodeUrl, nodeToolTip, "")
-    return "node [" & it & "];"
+   --   node [URL="http://wiki.architex.tv/\N", shape=box, fontsize=22, fontname=arial, style=filled];
+   get dot_ConstructDefLine(empty, nodeShape, nodeStyle, nodeColour, nodeFillColour, "", nodeUrl, nodeToolTip, "")
+   return "node [" & it & "];"
 end dot_ConstructDefaultNodeDefs
 
 function dot_ConstructDefaultEdgeDefs edgeColour, edgeStyle, arrowhead, edgeWidth
-    --  edge [color=cyan, style=solid, arrowhead=none, width=2]
-    put dot_ConstructEdgeDefParams(edgeColour, edgeStyle, arrowhead, edgeWidth) into nodeLine
-    return "edge [" & nodeLine & "];"
+   --  edge [color=cyan, style=solid, arrowhead=none, width=2]
+   put dot_ConstructEdgeDefParams(edgeColour, edgeStyle, arrowhead, edgeWidth) into nodeLine
+   return "edge [" & nodeLine & "];"
 end dot_ConstructDefaultEdgeDefs
 
 function dot_ConstructEdgeDefParams edgeColour, edgeStyle, arrowhead, edgeWidth
-    local nodeLine
-    dot_AddParamToNodeDef "style", edgeStyle, nodeLine, false
-    dot_AddParamToNodeDef "color", edgeColour, nodeLine, false
-    dot_AddParamToNodeDef "arrowhead", arrowhead, nodeLine, false
-    dot_AddParamToNodeDef "width", edgeWidth, nodeLine, false
-    return nodeLine
+   local nodeLine
+   dot_AddParamToNodeDef "style", edgeStyle, nodeLine, false
+   dot_AddParamToNodeDef "color", edgeColour, nodeLine, false
+   dot_AddParamToNodeDef "arrowhead", arrowhead, nodeLine, false
+   dot_AddParamToNodeDef "width", edgeWidth, nodeLine, false
+   return nodeLine
 end dot_ConstructEdgeDefParams
 
 
@@ -653,47 +650,47 @@ end dot_ConstructEdgeDefParams
 --> Dot | Formats
 -
 function dot_MakeSpringText dotFile
-    -- neato /Users/david/.Trash/dot.dot -Tepdf
-    shell_BashParamEscape dotFile
-    put merge("neato [[dotFile]]") into someShell
-    
-    put graphViz_GetShellPath() into gvPath
-    put gvPath & someShell into someShell
-    return shell(someShell)
+   -- neato /Users/david/.Trash/dot.dot -Tepdf
+   shell_BashParamEscape dotFile
+   put merge("neato [[dotFile]]") into someShell
+   
+   put graphViz_GetShellPath() into gvPath
+   put gvPath & someShell into someShell
+   return shell(someShell)
 end dot_MakeSpringText
 
 
 --> Dot | Draw
 -
 function dot_MakeSpringImage dotFile
-    -- neato /Users/david/.Trash/dot.dot -Tepdf
-    shell_BashParamEscape dotFile
-    put merge("neato -Tpng [[dotFile]]") into someShell
-    
-    put graphViz_GetShellPath() into gvPath
-    put gvPath & someShell into someShell
-    return shell(someShell)
+   -- neato /Users/david/.Trash/dot.dot -Tepdf
+   shell_BashParamEscape dotFile
+   put merge("neato -Tpng [[dotFile]]") into someShell
+   
+   put graphViz_GetShellPath() into gvPath
+   put gvPath & someShell into someShell
+   return shell(someShell)
 end dot_MakeSpringImage
 
 function dot_MakeCircular dotFile
-    /*
-    circodraws graphs using a circular layout (see Six and Tollis, GD ’99 and ALENEX ’99, and Kaufmann 
-    and Wiese, GD ’02.) The tool identifies biconnected components and draws the nodes of the component on 
-    acircle. The block-cutpoint tree is then laid out using a recursive radial algorithm. Edge crossings within a 
-    circle are minimized by placing as manyedges on the circle’sperimeter as possible. In particular, if the 
-    component is outerplanar,the component will have a planar layout. 
-    If a node belongs to multiple non-trivial biconnected components, the layout puts the node in one of them. 
-    By default, this is the first non-trivial component found in the search from the root component. 
-    
-    circo ["Gname=value] ["Nname=value]["Ename=value]["Tlang]["llibfile]["ooutfile]["vV][files] 
-    */
-    
-    shell_BashParamEscape dotFile
-    put merge("circo -Tpng [[dotFile]]") into someShell
-    
-    put graphViz_GetShellPath() into gvPath
-    put gvPath & someShell into someShell
-    return shell(someShell)
+   /*
+   circodraws graphs using a circular layout (see Six and Tollis, GD ’99 and ALENEX ’99, and Kaufmann 
+   and Wiese, GD ’02.) The tool identifies biconnected components and draws the nodes of the component on 
+   acircle. The block-cutpoint tree is then laid out using a recursive radial algorithm. Edge crossings within a 
+   circle are minimized by placing as manyedges on the circle’sperimeter as possible. In particular, if the 
+   component is outerplanar,the component will have a planar layout. 
+   If a node belongs to multiple non-trivial biconnected components, the layout puts the node in one of them. 
+   By default, this is the first non-trivial component found in the search from the root component. 
+   
+   circo ["Gname=value] ["Nname=value]["Ename=value]["Tlang]["llibfile]["ooutfile]["vV][files] 
+   */
+   
+   shell_BashParamEscape dotFile
+   put merge("circo -Tpng [[dotFile]]") into someShell
+   
+   put graphViz_GetShellPath() into gvPath
+   put gvPath & someShell into someShell
+   return shell(someShell)
 end dot_MakeCircular
 
 function dot_MakeRadial dotFile
@@ -714,14 +711,14 @@ function dot_MakeRadial dotFile
 end dot_MakeRadial
 
 function dot_MakeRadialImage dotFile
-    -- twopi /Users/david/.Trash/dot.dot -Tepdf
-    shell_BashParamEscape dotFile
-    put merge("twopi [[dotFile]] -Tpng") into someShell
-    
-    put graphViz_GetShellPath() into gvPath
-    put gvPath & someShell into someShell
-    put shell(someShell) into gvResult
-    return dot_CheckResult(gvResult)
+   -- twopi /Users/david/.Trash/dot.dot -Tepdf
+   shell_BashParamEscape dotFile
+   put merge("twopi [[dotFile]] -Tpng") into someShell
+   
+   put graphViz_GetShellPath() into gvPath
+   put gvPath & someShell into someShell
+   put shell(someShell) into gvResult
+   return dot_CheckResult(gvResult)
 end dot_MakeRadialImage
 
 
@@ -762,7 +759,7 @@ command dot_DoImageMapShell dotCommand, dotFile, imageFile, pCmapFile, pXdotFile
    put dot_CheckResult (gvResult, "png", someShell) into shellResult
    return shellResult
 end dot_DoImageMapShell
-  
+
 function graphViz_GetShellPath
    put pref_GetValue ("dotPath") into dotPath
    return dotPath
@@ -779,37 +776,37 @@ end graphViz_SetShellPath
 --> Dot | Shell | Text
 -
 function graphViz_CreateCmapx dotText
-    -- dot foo.dot -Nhref=\\N -Tcmpax -o foo.map -Tpng -o foo.png
-    file_CreateText dotText
-    put the result into someFile
-     
-    put graphViz_GetShellPath() into gvPath
-    put gvPath & "dot -Nhref=\\N -Tcmapx" && quote & someFile & quote into someShell
-    get shell(someShell)
-    return it
+   -- dot foo.dot -Nhref=\\N -Tcmpax -o foo.map -Tpng -o foo.png
+   file_CreateText dotText
+   put the result into someFile
+   
+   put graphViz_GetShellPath() into gvPath
+   put gvPath & "dot -Nhref=\\N -Tcmapx" && quote & someFile & quote into someShell
+   get shell(someShell)
+   return it
 end graphViz_CreateCmapx
 
 
 --> Dot | Shell | Other
 -
 function dot_StripLeastConected dotFile, minConnected
-    if minConnected is empty then put 1 into minConnected
-    shell_BashParamEscape dotFile
-    
-    put merge("gvpr -i 'N[$.degree > [[minConnected]]]'") && dotFile into someShell
-    
-    put graphViz_GetShellPath() into gvPath
-    put gvPath & someShell into someShell
-    return shell(someShell)
+   if minConnected is empty then put 1 into minConnected
+   shell_BashParamEscape dotFile
+   
+   put merge("gvpr -i 'N[$.degree > [[minConnected]]]'") && dotFile into someShell
+   
+   put graphViz_GetShellPath() into gvPath
+   put gvPath & someShell into someShell
+   return shell(someShell)
 end dot_StripLeastConected
 
 function dot_ExtractConnected dotFile
-    shell_BashParamEscape dotFile
-    put merge("sccmap -d [[dotFile]]") into someShell
-    
-    put graphViz_GetShellPath() into gvPath
-    put gvPath & someShell into someShell
-    return shell(someShell)
+   shell_BashParamEscape dotFile
+   put merge("sccmap -d [[dotFile]]") into someShell
+   
+   put graphViz_GetShellPath() into gvPath
+   put gvPath & someShell into someShell
+   return shell(someShell)
 end dot_ExtractConnected
 
 function dot_Biconected dotFile
@@ -832,12 +829,12 @@ function dot_Tred dotFile
    The “meaning” and validity of the reduced graphs is application dependent. 
    tred is particularly useful as a preprocessor to dot to reduce clutter in dense layouts. 
    */
-    shell_BashParamEscape dotFile
-    put merge("tred [[dotFile]]") into someShell
-    
-    put graphViz_GetShellPath() into gvPath
-    put gvPath & someShell into someShell
-    return shell(someShell)
+   shell_BashParamEscape dotFile
+   put merge("tred [[dotFile]]") into someShell
+   
+   put graphViz_GetShellPath() into gvPath
+   put gvPath & someShell into someShell
+   return shell(someShell)
 end dot_Tred
 
 function dot_UnFlatten dotFile, someNum
@@ -858,81 +855,81 @@ function dot_UnFlatten dotFile, someNum
 end dot_UnFlatten
 
 function dot_MakeAcyclic dotFile
-    /*
-    acyclicis a filter that takes a directed graph as input and outputs a copyofthe graph with sufficient edges 
-    reversed to makethe graph acyclic. The reversed edge inherits all of the attributes of the original edge. The 
-    optional file argument specifies where the the input graph is stored; by default, the program reads from 
-    stdin. 
-    */
-    -- acyclic[?nv? ][?ooutfile][ file]
-    shell_BashParamEscape dotFile
-    put merge("acyclic [[dotFile]]") into someShell
-    
-    put graphViz_GetShellPath() into gvPath
-    put gvPath & someShell into someShell
-    return shell(someShell)
+   /*
+   acyclicis a filter that takes a directed graph as input and outputs a copyofthe graph with sufficient edges 
+   reversed to makethe graph acyclic. The reversed edge inherits all of the attributes of the original edge. The 
+   optional file argument specifies where the the input graph is stored; by default, the program reads from 
+   stdin. 
+   */
+   -- acyclic[?nv? ][?ooutfile][ file]
+   shell_BashParamEscape dotFile
+   put merge("acyclic [[dotFile]]") into someShell
+   
+   put graphViz_GetShellPath() into gvPath
+   put gvPath & someShell into someShell
+   return shell(someShell)
 end dot_MakeAcyclic
 
 function dot_AcyclicInfo dotFile, acyclicFile
-    shell_BashParamEscape dotFile
-    shell_BashParamEscape acyclicFile
-    put merge("acyclic -v -o [[acyclicFile]] [[dotFile]]") into someShell
-    
-    put graphViz_GetShellPath() into gvPath
-    put gvPath & someShell into someShell
-    return shell(someShell)
+   shell_BashParamEscape dotFile
+   shell_BashParamEscape acyclicFile
+   put merge("acyclic -v -o [[acyclicFile]] [[dotFile]]") into someShell
+   
+   put graphViz_GetShellPath() into gvPath
+   put gvPath & someShell into someShell
+   return shell(someShell)
 end dot_AcyclicInfo
 
 
 --> Dot | Colours
 -
 function dot_RGBToHex rgbColour
-    -- was "graphViz_RGBToHex"
-    if rgbColour is empty or rgbColour is "none" then
-        return empty
-    else if rgbColour is among the lines of the colornames then
-        return rgbColour
-    else
-        put quote & colour_RgbToHex (rgbColour) & quote into webColour
-        return webColour
-    end if
+   -- was "graphViz_RGBToHex"
+   if rgbColour is empty or rgbColour is "none" then
+      return empty
+   else if rgbColour is among the lines of the colornames then
+      return rgbColour
+   else
+      put quote & colour_RgbToHex (rgbColour) & quote into webColour
+      return webColour
+   end if
 end dot_RGBToHex
-  
+
 function dot_ConvertRevShape revShape, pSides
-    -- was "graphViz_ConvertRevShape"
-    if revShape is empty then
-        return "ellipse"
-    else if revShape is "regular" then
-        switch pSides
-            case 3
-                return "triangle"
-            case 4
-                return "rectangle"
-            case 5
-                return "pentagon"
-            case 6
-                return "hexagon"
-        end switch
-    else if revShape is "oval" then
-        return "ellipse"
-    else
-        return revShape
-    end if
+   -- was "graphViz_ConvertRevShape"
+   if revShape is empty then
+      return "ellipse"
+   else if revShape is "regular" then
+      switch pSides
+         case 3
+            return "triangle"
+         case 4
+            return "rectangle"
+         case 5
+            return "pentagon"
+         case 6
+            return "hexagon"
+      end switch
+   else if revShape is "oval" then
+      return "ellipse"
+   else
+      return revShape
+   end if
 end dot_ConvertRevShape
 
 
 --> Dot | Utilities
 -
 on dot_EscapeQuotes @someLabel
-    replace quote with ("\" & quote) in someLabel
+   replace quote with ("\" & quote) in someLabel
 end dot_EscapeQuotes
 
 function dot_QuoteNode someNodeID
-    -- comma's and other chars can also result in badly named nodes.
-    if the number of words of someNodeID > 1 or char 1 of someNodeID is a number then
-        return kwote(someNodeID)
-    else
-        return someNodeID
-    end if
+   -- comma's and other chars can also result in badly named nodes.
+   if the number of words of someNodeID > 1 or char 1 of someNodeID is a number then
+      return kwote(someNodeID)
+   else
+      return someNodeID
+   end if
 end dot_QuoteNode
 

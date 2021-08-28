@@ -6,10 +6,74 @@ name: lib_DisplayHkeyArray
 type: library
 version: 0.3
 
+--> Working on
+-
+
+
+--> Display | HkeyArray | Script
+-
+command display_HkeyDepScript hKey
+   put walk_GetHkeyArray (hKey) into hkeyArray
+   put "Deps for" && hKey into pTitle
+   display_ScriptFromHkeyArray hkeyArray, pTitle, hKey
+   return the result
+end display_HkeyDepScript
+
+command display_ScriptFromHkeyArray hkeyArray, pTitle, pFirstKey
+   put hkeyArray_ListHkeys (hkeyArray, pFirstKey) into hKeys
+   display_ScriptFromHkeys hKeys, pTitle
+   return the result
+end display_ScriptFromHkeyArray
+
+command display_ScriptFromHkeys hKeys, pTitle
+   put hkey_CollectFromObjects (hKeys, false) into newScript
+   --
+   display_Text newScript, sTitle
+   put the result into displayView
+   return displayView
+end display_ScriptFromHkeys
+
+
+--> Display | HkeyArray
+-
+command display_HKeyArray hKey, pHkeyArray, pLabel, pShowHow, pStripMissing
+   if pHkeyArray is not an array then
+      put walk_GetHkeyArray (hKey) into pHkeyArray
+   end if
+   if pShowHow is empty then
+      put "hkeyArray" into pShowHow
+   end if
+   --
+   put hkeyArray_DisplayData (pHkeyArray, pShowHow, pStripMissing, hKey) into dData
+   --
+   display_Data dData, hKey, "HkeyArray"
+   put the result into displayView
+   set the tool_Menus of displayView to "HkeyArray"
+   --
+   set the show_How of displayView to pShowHow
+   set the displayed_Hkey of displayView to hKey
+   set the displayed_HkeyArray of displayView to pHkeyArray
+   --
+   return displayView
+end display_HKeyArray
+
+function hkeyArray_DisplayData hkeyArray, pShowHow, pStripMissing, pFirstHkey
+   switch pShowHow
+      case "hKeys"
+         return hkeyArray_ListHkeys (hkeyArray, pFirstHkey)
+      case "stacks"
+         return hkeyArray_GetStackDepArray (hkeyArray)
+      case "projects"
+         return hkeyArray_GetProjectDepArray (hkeyArray, pStripMissing)
+      default 
+         return hkeyArray
+   end switch
+end hkeyArray_DisplayData
+
 
 --> Display | Events
 -
-command mDouble_DisplayHkeyArray displayView, someValue, sPath
+command mDoubleUp_HkeyArray displayView, someValue, sPath
    if the optionKey is "Down" then breakpoint
    --
    switch 
@@ -22,7 +86,7 @@ command mDouble_DisplayHkeyArray displayView, someValue, sPath
    end switch
    --
    hkey_Edit hKey
-end mDouble_DisplayHkeyArray
+end mDoubleUp_HkeyArray
 
 command mDouble_DisplayHkeyTreeArray displayView, someValue, hKey
    hkey_Edit hKey
@@ -41,22 +105,6 @@ end mDouble_DisplayObjectHkeyArray
 
 --> Display | HkeyArray
 -
-command display_HKeyArray hKey, pHkeyArray, pLabel
-   if pHkeyArray is not an array then
-      put walk_GetHkeyArray (hKey) into pHkeyArray
-   end if
-   if pLabel is empty then put "hKeyArray" into pLabel
-   --
-   display_Data pHkeyArray, hKey, pLabel
-   put the result into displayView
-   display_SetInteractions displayView, "HkeyArray", "mDouble_DisplayHkeyArray"
-   --
-   set the displayed_Hkey of displayView to hKey
-   set the displayed_HkeyArray of displayView to pHkeyArray
-   --
-   return displayView
-end display_HKeyArray
-
 command display_ScriptHkeyArray hKeyArray, sObject
    display_Data hKeyArray, hKey, "hKeyArray"
    put the result into displayView
@@ -182,72 +230,6 @@ end display_StackDeps
 
 
 --> Deps
--
-command hkeyArray_ConstructDependencySuite hkeyArray, pStripScriptObject, @depSuite, pStripObjects, pStripProps, pMakePrivate
-   local depScript
-   
-   put array_AllNodes (hkeyArray) into allCalls
-   hkey_StripDuplicates allCalls
-   put the result into duplicateHkeyArray
-   
-   put hkey_ConstructDepArray (allCalls, pMakePrivate) into depArray
-   
-   if exists (pStripScriptObject) is true then
-      -- strip the nodes from the scriptObject whose hkeyArray we are processing
-      hkey_SimpleStripObject allCalls, pStripScriptObject
-      put the result into strippedKeys
-   end if
-   
-   if pStripProps is true then
-      -- this does not do a network walk (does this matter?)
-      hkey_StripGetProps allCalls
-      line_Add the result, strippedKeys
-      
-      hkey_StripSetProps allCalls
-      line_Add the result, strippedKeys
-   end if
-   
-   -- now let's recursively strip the nodes from the objects in pStripObjects we don't want
-   repeat for each line stripObject in pStripObjects
-      -- take care that the object name is fromatted correctly
-      if exists(stripObject) is false then
-         put merge ("Cannot find [[stripObject]]!") into someMessage
-         lcw_Notify someMessage, true
-         next repeat
-      end if
-      
-      -- lets get rid of any calls to the objects we are stripping
-      -- hkeyArray_RemoveObjectLinks hkeyArray, stripObject
-      hkey_SimpleStripObject allCalls, stripObject
-      line_Add the result, strippedKeys
-   end repeat
-   
-   put strippedKeys into depArray ["strippedKeys"]
-   put depArray ["depSuite"] into depSuite
-   
-   -- put script_ConstructDependencySuite (allCalls) into depSuite
-   return depArray
-end hkeyArray_ConstructDependencySuite
-
-function hkey_ConstructDepArray allCalls, pMakePrivate
-   local depScript, missingHkeys
-   
-   sort allCalls
-   hkey_StripDuplicates allCalls
-   put the result into duplicateHkeyArray
-   
-   script_FetchFromHkeys allCalls, depScript, missingHkeys, pMakePrivate
-   put script_ConstructSuite ("Deps", depScript) into depSuite
-   put depSuite into depArray ["depSuite"]
-   
-   put allCalls into depArray ["uniqueHkeys"]
-   put missingHkeys into depArray ["missingHkeys"]
-   put duplicateHkeyArray into depArray ["duplicateHkeyArray"]
-   return depArray
-end hkey_ConstructDepArray
-
-
---> HkeyArray | Graph
 -
 command hkeyArray_Graph hkeyArray, graphStyle, graphSize
    -- simple graphing of any hkeyArray

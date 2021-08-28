@@ -43,29 +43,27 @@ getprop show_Param [displayView]
 end show_Param
 
 getprop show_Params [displayView]
-   return "projects,stacks,-,hkeyArray"
+   return "projects,stacks,hKeys,-,hkeyArray"
 end show_Params
 
 
 --> Global | HkeyArray | Tree | Menu
 -
+on menu_CollectDeps displayView
+   put the displayed_HkeyArray of displayView into hkeyArray
+   put the title_Text of displayView into hKey
+   put "Deps for" && hKey into pTitle
+   --
+   display_ScriptFromHkeyArray hkeyArray, pTitle
+end menu_CollectDeps
+
 on menu_Show displayView, showHow
    put the displayed_HkeyArray of displayView into hkeyArray
    put the strip_MissingProps of displayView into stripMissingProps
    --
-   switch showHow
-      case "stacks"
-         put hkeyArray_GetStackDepArray (hkeyArray) into dArray
-         break
-      case "projects"
-         put hkeyArray_GetProjectDepArray (hkeyArray, stripMissingProps) into dArray
-         break
-      case "hkeyArray"
-         put hkeyArray into dArray
-         break
-   end switch
+   put hkeyArray_DisplayData (hkeyArray, showHow, stripMissingProps) into dData
    --
-   set the displayed_Data of displayView to dArray
+   set the displayed_Data of displayView to dData
    set the show_How of displayView to showHow
 end menu_Show
 
