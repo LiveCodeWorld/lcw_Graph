@@ -145,7 +145,7 @@ setprop link_Size newWidth
   arrow_SetLinkType arrowObject, "", newWidth
 end link_Size
 
-getprop graphic_Shape
+-- getprop graphic_Shape
     put the view_Object of the target into someNode
     put node_GraphicShape(someNode) into graphicShape
     return graphicShape
@@ -989,100 +989,6 @@ on menu_Ball steps
   delete word 1 to 4 of someNode
   ball_Animate someNode, steps
 end menu_Ball
-
-on ball_Animate someNode, dof, arrivedMessage
-  if arrivedMessage is empty then put "strobeNode" into arrivedMessage
-  put arrivedMessage into p2p_Message
-  put the front_ArrowLinks of someNode into frontLinks
-  repeat for each line someArrow in frontLinks
-    ball_AnimateArrow someArrow, dof
-  end repeat
-end ball_Animate
-
-on ball_AnimateArrow arrowObject, dof
-  put the link_Object of arrowObject into dObject
-  if the visible of dObject is true then
-    put the points of arrowObject into frontPoints
-    put line 1 of frontPoints into fromPoint
-    put line 2 of frontPoints into toPoint
-     
-    put createBall(fromPoint, arrowObject, "") into ballObject
-     
-    set the degrees_OfFreedom of ballObject to dof
-    set the destination_Object of ballObject to dObject
-     
-    put 30 into lastStepNum
-    set the last_StepNum of ballObject to lastStepNum
-     
-    get loc_TranslationVector(fromPoint, toPoint, xVector, yVector)
-     
-    put xVector/lastStepNum into xStep
-    put yVector/lastStepNum into yStep
-    set the x_Step of ballObject to xStep
-    set the y_Step of ballObject to yStep
-     
-    set the this_stepNum of ballObject to 1
-    set the last_loc of ballObject to fromPoint
-    moveBall ballObject
-  end if
-end ball_AnimateArrow
-
-function createBall ballLoc, frontLink, ballStyle
-  switch ballStyle
-  case "big"
-    break
-  default
-    put "772,256,783,267" into smallRect
-  end switch
-  put the layer of frontLink into arrowLayer
-  
-  lock screen
-  create graphic "Ball 2"
-  put it into createdGraphic
-  
-  if ballLoc is empty then put the loc of createdGraphic into ballLoc
-  set the style of createdGraphic to "oval"
-  set the filled of createdGraphic to true
-  set the linesize of createdGraphic to 1
-  set the rect of createdGraphic to smallRect
-  set the loc of createdGraphic to ballLoc
-  
-  put the relayergroupedcontrols into oStiffLayer
-  set the relayergroupedcontrols to true
-  set the layer of createdGraphic to (arrowLayer + 1)
-  set the relayergroupedcontrols to oStiffLayer
-  choose browse tool
-  unlock screen
-  return createdGraphic
-end createBall
-
-on moveBall ballObject
-    put the this_stepNum of ballObject into stepNum
-    put the last_stepNum of ballObject into lastStepNum
-    if stepNum = lastStepNum then
-        put the destination_Object of ballObject into dObject
-        put the degrees_OfFreedom of ballObject into dof
-        delete ballObject
-         
-        if dof > 1 then
-            subtract 1 from dof
-            ball_Animate dObject, dof
-        end if
-        send p2p_Message to dObject
-        return empty
-    end if
-     
-    put the x_Step of ballObject into xStep
-    put the y_Step of ballObject into yStep
-     
-    put the last_loc of ballObject into lastLoc
-    put loc_TranslateByVector(lastLoc, xStep, yStep) into newLoc
-    set the loc of ballObject to newLoc
-     
-    set the last_loc of ballObject to newLoc
-    set the this_stepNum of ballObject to (stepNum + 1)
-    send "moveBall ballObject" to me in 3 ticks
-end moveBall
 
 on node_TextRotate someNode
     if someNode is empty then put the view_Object of the target into someNode

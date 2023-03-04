@@ -12,6 +12,203 @@ version: 0.1
 
 --> Working on
 -
+command dotArray_CreateObjects dotArray, dotGroup
+   set the showName of templateGraphic to true
+   --
+   put dotArray ["objects"] into objectsArray
+   repeat with itemNum = 1 to item 2 of the extents of objectsArray
+      put objectsArray [itemNum] into oArray
+      put oArray ["name"] into oName
+      --
+      put oArray ["nodes"] into nodeArray
+      switch
+         case nodeArray is an array
+            break
+         default
+            _CreateGraphic oArray, dotGroup
+      end switch
+      --
+   end repeat
+end dotArray_CreateObjects
+
+command dotArray_CreateEdges dotArray, dotGroup
+   set the showName of templateGraphic to true
+   --
+   put dotArray ["edges"] into edgesArray
+   repeat with itemNum = 1 to item 2 of the extents of edgesArray
+      put edgesArray [itemNum] into edgeArray
+      _CreateEdge edgeArray, dotGroup
+   end repeat
+end dotArray_CreateEdges
+
+command _CreateGraphic oArray, dotGroup
+   put oArray ["name"] into oName
+   put oArray ["label"] into oLabel
+   put oArray ["shape"] into oShape
+   put oArray ["style"] is "filled" into isOpaque
+   --
+   reset templateGraphic
+   set the opaque of the templateGraphic to true
+   set the showName of the templateGraphic to true
+   --
+   create graphic oName in dotGroup -- card cardNum of stack stackName
+   put it into gObject
+   --
+   switch oLabel
+      case "\N"
+         break -- don't set (same as name)
+      default
+         set the label of gObject to oLabel
+   end switch
+   --
+   switch
+      case oArray ["nodes"] is an array
+         -- creeate a group
+         break
+      case oShape = "box"
+         -- set the style of gObject to "rectangle"
+         -- set the rect of gObject to oRect
+         put _GetDrawPoints (oArray, 3) into gPoints
+         set the style of gObject to "polygon"
+         set the points of gObject to gPoints
+         break
+      case oShape = "triangle"
+         -- set the style of gObject to "regular"
+         -- set the polysides of gObject to 3
+         set the style of gObject to "polygon"
+         put _GetDrawPoints (oArray, 3) into gPoints
+         set the points of gObject to gPoints
+         break
+      case oShape = "diamond"
+         -- set the style of gObject to "regular"
+         -- set the polysides of gObject to 4
+         --
+         set the style of gObject to "polygon"
+         put _GetDrawPoints (oArray, 3) into gPoints
+         set the points of gObject to gPoints
+         break
+      case oShape = "pentagon"
+         set the style of gObject to "regular"
+         set the polysides of gObject to 5
+         break
+      case oShape = "ellipse"
+      case oShape = "circle"
+      default
+         set the style of gObject to "oval"
+         --
+         put _GetDrawRect (oArray, 2) into oRect
+         set the rect of gObject to oRect
+   end switch
+   --
+   return gObject
+end _CreateGraphic
+
+command _CreateEdge edgeArray, dotGroup
+   put edgeArray ["_draw_"][2]["points"] into pArray
+   repeat with itemNum = 1 to item 2 of the extents of pArray
+      put pArray [itemNum][1] into sPoint
+      put pArray [itemNum][2] into item 2 of sPoint
+      put sPoint & CR after edgePoints
+   end repeat
+   delete char -1 of edgePoints
+   --
+   put "Edge" && edgeArray ["_gvid"] into edgeName
+   --
+   reset templateGraphic
+   set the style of the templateGraphic to curve
+   set the points of the templateGraphic to edgePoints
+   set the lineSize of the templateGraphic to 4
+   set the endArrow of the templateGraphic to true
+   set the showName of the templateGraphic to false
+   --
+   create graphic edgeName in dotGroup -- card cardNum of stack stackName
+   put it into edgeObject
+   --
+   reset templateGraphic
+   return edgeObject
+end _CreateEdge
+
+
+--> Dot | Array | Fetch
+-
+function dot_FetchArray dotURL
+   put url dotURL into dotText
+   --
+   put dot_CreateArray (dotText) into dotArray
+   --
+   return dotArray
+end dot_FetchArray
+
+function dot_CreateArray dotText
+   put dot_CreateText (dotText, "json") into dotJSON
+   put json_ToArray(dotJSON) into dotArray
+   --
+   return dotArray
+end dot_CreateArray
+
+function dot_CreateText dotText, exportFormat
+   file_CreateText dotText
+   put the result into dotFile
+   -- 
+   put dot_DoShell (dotFile, "dot", exportFormat) into dotExport
+   --
+   return dotExport
+end dot_CreateText
+
+
+--> Working on
+-
+--> Dot | Construct
+-
+function dot_FromLinkArray linkArray, pGraphStyle, pBgColour, pConcentrate, pDefaultShape, pDefSection, pGraphName
+   local graphSize, pNodeTypeArray, pClusterArray, dotPropertyArray
+   
+   if pBgColour is empty then put "lightblue" into pBgColour
+   put pBgColour into dotPropertyArray ["bgcolor"]
+   --
+   put false into overlap
+   put true into splines
+   put false into cluster
+   put "" into dotOrder
+   put "" into defaultUrl
+   put "" into pDirection
+   --
+   _ConstructDotHeaderArray dotPropertyArray, overlap, pConcentrate, splines, cluster, pDirection, dotOrder, pDefaultShape, defaultUrl
+   put dot_ConstructHeaderBase (graphSize, dotPropertyArray, pGraphStyle) into graphHeader
+   dot_AddDefaultNode graphHeader, pDefaultShape
+   --
+   put linkArray_ConstructLinkSection (linkArray, pNodeTypeArray, pClusterArray) into nodeSection
+   put linkArray_DotNodeLinks (linkArray) into linkSection
+   if pDefSection is empty then
+      put linkSection into nodeSection
+   else
+      put pDefSection & CR & CR & linkSection into nodeSection
+      put word 1 to -1 of nodeSection into nodeSection
+   end if
+   --
+   put dot_Construct (nodeSection, pGraphName, graphHeader) into dotText
+   --
+   return dotText
+end dot_FromLinkArray
+
+function dot_ConstructSingleNodeGraph nodeDotParams, graphName, someNodeID, graphSize
+   -- not used?
+   local dotNodeDefs, dotNodeLinks
+   
+   if someNodeID is empty then put the text of the nodeID_Field of me into someNodeID
+   _ConstructDotHeaderArray dotPropertyArray
+   put dot_ConstructHeader (graphSize) into graphHeader
+   
+   put dot_QuoteNode (someNodeID) into someNodeID
+   put someNodeID && "[" &  nodeDotParams & "];" into nodeSection
+   
+   put graphHeader into dotText
+   line_Insert nodeSection, dotText
+   
+   put "digraph" && graphName && "{" & return & outline_IncreaseIndent(dotText, 1) & CR & "}" into dotGraph
+   return dotGraph
+end dot_ConstructSingleNodeGraph
+
 command dot_AddDefaultNode @graphHeaderBase, defaultShape
    if defaultShape is not empty then
       put "shape=" & defaultShape after nodeParams
@@ -25,14 +222,42 @@ command dot_AddDefaultNode @graphHeaderBase, defaultShape
    put CR&CR & defaultNodeBit after graphHeaderBase
 end dot_AddDefaultNode
 
+command dot_CreateGraph dotText, pTextFile, pGraphStyle
+   if pGraphStyle is empty then
+      put dot_GetLayout (dotText) into dotCommand
+      if dotCommand is empty then
+         put "dot" into dotCommand
+      end if
+   else
+      put dot_CommandFromGraphStyle (pGraphStyle) into dotCommand
+   end if
+   --
+   file_CreateText dotText, pTextFile
+   put the result into pTextFile
+   --
+   set the itemdelimiter to "."
+   if item -1 of pTextFile = "dot" then
+      put pTextFile into svgFile
+      put "svg" into item -1 of svgFile
+   else
+      put pTextFile & ".svg" into svgFile
+   end if
+   --
+   dot_RenderImage pTextFile, svgFile, dotCommand, "svg"
+   --
+   return svgFile
+end dot_CreateGraph
+
 function dot_Render dotText, pDotCommand, pTextFile, pOutputFormat
    -- pDotCommand is an english equivalent of graphStyle
+   if pDotCommand is empty then put "dot" into pDotCommand
+   if pImageFormat is empty then put "svg" into pImageFormat
    
    dot_SaveTemporaryFile dotText, pTextFile
    put the result into pTextFile
-   
-   -- dot_Render dotFile, svgFile, pDotCommand, pImageFormat
-   put dot_DoShell (pTextFile, pDotCommand, pOutputFormat) into shellResult
+   --
+   put dot_DoShell (pTextFile, pDotCommand, pImageFormat) into shellResult
+   --
    if shellResult is false or shellResult is empty then
       exit to top
    else
@@ -40,10 +265,7 @@ function dot_Render dotText, pDotCommand, pTextFile, pOutputFormat
    end if
 end dot_Render
 
-
---> Dot | Render
--
-command dot_Render dotFile, svgFile, pDotCommand, pImageFormat
+command dot_RenderImage dotFile, svgFile, pDotCommand, pImageFormat
    if pDotCommand is empty then put "dot" into pDotCommand
    if pImageFormat is empty then put "svg" into pImageFormat
    --
@@ -54,159 +276,92 @@ command dot_Render dotFile, svgFile, pDotCommand, pImageFormat
    --
    put shell (someShell) into gvResult
    return gvResult
-end dot_Render
+end dot_RenderImage
 
-function dot_ConstructHeaderBase graphSize, dotPropertyArray, graphStyle, pUseInches  
-   dot_DeconstructPropertyArray dotPropertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
-   --
-   -- delete variable dotPropertyArray ["defaultShape"]
-   --
-   put CR into endChar
-   if pUseInches is not false then
-      -- think there is a bug here (graphs too large)
-      put dot_RectFromSize (graphSize) into bbRect
-      put dot_GraphInchSize (bbRect, true) into inchSize
-      if inchSize is not empty then
-         put "size=" & kwote(inchSize) & endChar after graphHeaderBase
-      end if
-   else
-      put dot_RectFromSize (graphSize) into bbRect
-      if bbRect is not empty then
-         put "bb=" & kwote(bbRect) & endChar after graphHeaderBase
-      end if
-   end if
-   delete variable dotPropertyArray ["size"]
+function dot_DoShell dotFile, pDotCommand, pImageFormat
+   dot_NormalizeDotCommand pDotCommand
+   if pImageFormat is empty then put "svg" into pImageFormat
+   put graphViz_GetShellPath() into gvPath
    
-   --
-   if graphStyle is not "hierarchical"  then
-      if overlap is not empty then put "overlap=" & overlap & endChar after graphHeaderBase
-      if dotOrder is not empty then put  "ordering=" & dotOrder & endChar after graphHeaderBase
-      if concentrate is not empty then
-         put "concentrate=" & concentrate & endChar after graphHeaderBase
-      end if
-   end if
-   delete variable dotPropertyArray ["overlap"]
-   delete variable dotPropertyArray ["dotOrder"]
-   delete variable dotPropertyArray ["concentrate"]
-   -- delete variable dotPropertyArray ["graphStyle"]
-   --
-   if cluster is "none" and graphStyle = "hierarchical" then put "clusterrank=" & cluster & endChar after graphHeaderBase
-   delete variable dotPropertyArray ["cluster"]
-   --
-   if splines is not empty then put "splines=" & splines & CR after graphHeaderBase
-   delete variable dotPropertyArray ["splines"]
-   --
-   if direction is not empty then put "rankdir=" & direction & CR after graphHeaderBase
-   delete variable dotPropertyArray ["direction"]
-   --
-   repeat for each key someKey in dotPropertyArray
-      put dotPropertyArray [someKey] into someValue
-      if someValue is not empty then
-         put someKey & "=" & kwote(someValue) & CR after graphHeaderBase
-      end if
-   end repeat
+   put gvPath & pDotCommand into someShell
+   put space & "-T" & pImageFormat after someShell
+   put space & quote & dotFile & quote after someShell
    
-   -- dot_AddDefaultNode
-   delete char -1 of graphHeaderBase
-   return graphHeaderBase
-end dot_ConstructHeaderBase
+   put shell(someShell) into gvResult
+   --
+   put dot_CheckResult (gvResult, pImageFormat, someShell) into shellResult
+   return shellResult
+end dot_DoShell
 
-function dot_ConstructHeader graphSize, pDotPropertyArray, graphStyle, pUseInches
-   -- old?
-   put dot_ConstructHeaderBase (graphSize, pDotPropertyArray, graphStyle, pUseInches) into graphHeaderBase
-   
-   put "graph [" & CR after graphHeader
-   line_Indent graphHeaderBase
-   put graphHeaderBase & CR after graphHeader
-   put "];" & CR after graphHeader
-   
-   -- default node section
-   dot_DeconstructPropertyArray pDotPropertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
-   if defaultUrl is not empty then put "node [URL=" & kwote(defaultUrl) & "];" & CR after defaultNodeSection
-   if defaultShape is not empty then put "node [shape=" & defaultShape & "];" & CR after defaultNodeSection
-   if defaultNodeSection is not empty then put CR & defaultNodeSection & CR after graphHeader
-   
-   delete last char of graphHeader
-   return graphHeader
-end dot_ConstructHeader
+function dot_CommandFromGraphStyle pGraphStyle
+   -- defaults to "dot"
+   dot_NormalizeDotCommand pGraphStyle
+   return pGraphStyle
+end dot_CommandFromGraphStyle
 
-function dot_RectFromSize graphSize
-   switch graphSize
-      case empty
-         return empty
-      case "full"
-         put "0,0,3000,3000" into someRect
-         return someRect
-      case "screen"
-         put dot_BboxSize (the screenrect) into someRect
-         return someRect
-      default -- "none"
-         if graphSize is a rect then
-            put dot_BboxSize (graphSize) into someRect
-            return someRect
-         else
-            return empty
-         end if
-   end switch 
-end dot_RectFromSize
-
-function dot_BboxSize someRect
-   put item 3 of someRect - item 1 of someRect into someWidth
-   put item 4 of someRect - item 2 of someRect into someHeight
-   put 0,0,someWidth,someHeight into someRect
-   return someRect
-end dot_BboxSize
-
-command dot_ConvertToInches @pixelSize, screenRez
-   -- was "dot_ConvertSizeToInches"
-   if screenRez is empty then put 96 into screenRez
-   set the numberformat to "0.0000"
-   repeat with itemNum = 1 to the number of items of pixelSize
-      put item itemNum of pixelSize into someNumber
-      put someNumber / screenRez  into item itemNum of pixelSize
-   end repeat
-end dot_ConvertToInches
-
-function dot_GraphInchSize someRect, expandIfNeeded
-   if someRect is empty then return empty
-   put item 3 of someRect - item 1 of someRect into someWidth
-   put item 4 of someRect - item 2 of someRect into someHeight
-   
-   put someWidth,someHeight into someSize
-   dot_ConvertToInches someSize
-   if expandIfNeeded is true then
-      put "!" after someSize
-   end if
-   return someSize
-end dot_GraphInchSize
+command dot_NormalizeDotCommand @graphStyle
+   switch
+      case graphStyle is among the items of "spring,neato"
+         /*
+         draws undirected graphs using ``spring'' models
+         (see Kamada and Kawai, Information Processing Letters 31:1, April 1989).
+         */
+         put "neato" into graphStyle
+         break
+      case graphStyle is among the items of "circular,circo"
+         /*
+         draws graphs using a circular layout (see Six and Tollis, GD '99 and ALENEX '99, and Kaufmann and Wiese, GD '02.)  
+         The tool identifies biconnected components and draws the nodes of the component on a circle. 
+         The block-cutpoint tree is then laid out using a recursive radial algorithm. 
+         Edge crossings within a circle are minimized by placing as many edges on the circle's perimeter as possible.  
+         In particular, if the component is outerplanar, the component will have a planar layout.
+         
+         If a node belongs to multiple non-trivial biconnected components, the layout puts the node in one of them.
+         By default, this is the first non-trivial component found in the search from the root component.
+         */
+         put "circo" into graphStyle
+         break
+      case graphStyle is among the items of "radial,twopi"
+         /*
+         draws graphs using a radial layout (see G. Wills, Symposium on Graph Drawing GD'97, September, 1997).  
+         Basically, one node is chosen as the center and put at the origin.  
+         The remaining nodes are placed on a sequence of concentric circles centered about the origin, 
+         each a fixed radial distance from the  previous  circle.   
+         All  nodes distance 1 from the center are placed on the first circle;
+         all nodes distance 1 from a node on the first circle are placed on the second circle; and so forth.
+         */
+         put "twopi" into graphStyle
+         break
+      case graphStyle is among the items of "undirected spring,fdp"
+         /*
+         filter for drawing undirected graphs
+         draws undirected graphs using a "spring'' model. 
+         It relies on a force-directed approach in the spirit of Fruchterman and Reingold 
+         (cf. Software-Practice & Experience 21(11), 1991, pp. 1129-1164).
+         */
+         put "fdp" into graphStyle
+         break
+      case graphStyle is among the items of "fast spring,fast undirected spring,sfdp"
+         -- sfdp - filter for drawing large undirected graphs
+         /*
+         also draws undirected graphs using the "spring'' model described above, 
+         but it uses a multi-scale approach to produce layouts of large graphs in a reasonably short time.
+         */
+         -- changed to "fdp" as the graphs are ugly otherwise -- hack
+         put "fdp" into graphStyle
+         break
+      default
+         /*
+         draws  directed  graphs.
+         It works well on DAGs and other graphs that can be drawn as hierarchies.  
+         */
+         put "dot" into graphStyle
+   end switch
+end dot_NormalizeDotCommand
 
 
 --> Private
 -
-command dot_ConstructPropertyArray @propertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
-   -- was "dot_ConstructHeaderArray" - used by a few libs
-   put overlap into propertyArray ["overlap"]
-   put concentrate into propertyArray ["concentrate"]
-   put splines into propertyArray ["splines"]
-   put cluster into propertyArray ["cluster"]
-   put direction into propertyArray ["direction"]
-   put dotOrder into propertyArray ["dotOrder"]
-   put defaultShape into propertyArray ["defaultShape"]
-   put defaultUrl into propertyArray ["defaultUrl"]
-end dot_ConstructPropertyArray
-
-private command dot_DeconstructPropertyArray pDotPropertyArray, @overlap, @concentrate, @splines, @cluster, @direction, @dotOrder, @defaultShape, @defaultUrl
-   put pDotPropertyArray ["graphRect"] into graphRect
-   put pDotPropertyArray ["overlap"] into overlap
-   put pDotPropertyArray ["concentrate"] into concentrate
-   put pDotPropertyArray ["splines"] into splines
-   put pDotPropertyArray ["cluster"] into cluster
-   put pDotPropertyArray ["direction"] into direction
-   put pDotPropertyArray ["dotOrder"] into dotOrder
-   put pDotPropertyArray ["defaultShape"] into defaultShape
-   put pDotPropertyArray ["defaultUrl"] into defaultUrl
-end dot_DeconstructPropertyArray
-
 private function outline_IncreaseIndent someOsSection, byIndentLevel, indentString
    if indentString is empty then put tab into indentString
    if byIndentLevel is not a number then put 1 into byIndentLevel
@@ -318,3 +473,31 @@ private function text_RepeatString someString, repeatNum
    end repeat
    return repeatString
 end text_RepeatString
+
+
+--> Private
+-
+command _ConstructDotHeaderArray @propertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
+   put overlap into propertyArray ["overlap"]
+   put concentrate into propertyArray ["concentrate"]
+   put splines into propertyArray ["splines"]
+   put cluster into propertyArray ["cluster"]
+   put direction into propertyArray ["direction"]
+   put dotOrder into propertyArray ["dotOrder"]
+   put defaultShape into propertyArray ["defaultShape"]
+   put defaultUrl into propertyArray ["defaultUrl"]
+end _ConstructDotHeaderArray
+
+private command _DeconstructDotHeaderArray pDotPropertyArray, @overlap, @concentrate, @splines, @cluster, @direction, @dotOrder, @defaultShape, @defaultUrl
+   put pDotPropertyArray ["graphRect"] into graphRect
+   put pDotPropertyArray ["overlap"] into overlap
+   put pDotPropertyArray ["concentrate"] into concentrate
+   put pDotPropertyArray ["splines"] into splines
+   put pDotPropertyArray ["cluster"] into cluster
+   put pDotPropertyArray ["direction"] into direction
+   put pDotPropertyArray ["dotOrder"] into dotOrder
+   put pDotPropertyArray ["defaultShape"] into defaultShape
+   put pDotPropertyArray ["defaultUrl"] into defaultUrl
+end _DeconstructDotHeaderArray
+
+

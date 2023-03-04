@@ -29,89 +29,6 @@ At present, most device-independent units are either inches or points, which we 
 */
 
 
---> Working on
--
-function dot_DoShell imageFile, pDotCommand, pImageFormat
-   dot_NormalizeDotCommand pDotCommand
-   if pImageFormat is empty then put "png" into pImageFormat
-   put graphViz_GetShellPath() into gvPath
-   
-   put gvPath & pDotCommand into someShell
-   put space & "-T" & pImageFormat after someShell
-   put space & quote & imageFile & quote after someShell
-   
-   put shell(someShell) into gvResult
-   put dot_CheckResult(gvResult, "png", someShell) into shellResult
-   return shellResult
-end dot_DoShell
-
-function dot_CommandFromGraphStyle pGraphStyle
-   -- defaults to "dot"
-   dot_NormalizeDotCommand pGraphStyle
-   return pGraphStyle
-end dot_CommandFromGraphStyle
-
-command dot_NormalizeDotCommand @graphStyle
-   switch
-      case graphStyle is among the items of "spring,neato"
-         /*
-         draws undirected graphs using ``spring'' models
-         (see Kamada and Kawai, Information Processing Letters 31:1, April 1989).
-         */
-         put "neato" into graphStyle
-         break
-      case graphStyle is among the items of "circular,circo"
-         /*
-         draws graphs using a circular layout (see Six and Tollis, GD '99 and ALENEX '99, and Kaufmann and Wiese, GD '02.)  
-         The tool identifies biconnected components and draws the nodes of the component on a circle. 
-         The block-cutpoint tree is then laid out using a recursive radial algorithm. 
-         Edge crossings within a circle are minimized by placing as many edges on the circle's perimeter as possible.  
-         In particular, if the component is outerplanar, the component will have a planar layout.
-         
-         If a node belongs to multiple non-trivial biconnected components, the layout puts the node in one of them.
-         By default, this is the first non-trivial component found in the search from the root component.
-         */
-         put "circo" into graphStyle
-         break
-      case graphStyle is among the items of "radial,twopi"
-         /*
-         draws graphs using a radial layout (see G. Wills, Symposium on Graph Drawing GD'97, September, 1997).  
-         Basically, one node is chosen as the center and put at the origin.  
-         The remaining nodes are placed on a sequence of concentric circles centered about the origin, 
-         each a fixed radial distance from the  previous  circle.   
-         All  nodes distance 1 from the center are placed on the first circle;
-         all nodes distance 1 from a node on the first circle are placed on the second circle; and so forth.
-         */
-         put "twopi" into graphStyle
-         break
-      case graphStyle is among the items of "undirected spring,fdp"
-         /*
-         filter for drawing undirected graphs
-         draws undirected graphs using a "spring'' model. 
-         It relies on a force-directed approach in the spirit of Fruchterman and Reingold 
-         (cf. Software-Practice & Experience 21(11), 1991, pp. 1129-1164).
-         */
-         put "fdp" into graphStyle
-         break
-      case graphStyle is among the items of "fast spring,fast undirected spring,sfdp"
-         -- sfdp - filter for drawing large undirected graphs
-         /*
-         also draws undirected graphs using the "spring'' model described above, 
-         but it uses a multi-scale approach to produce layouts of large graphs in a reasonably short time.
-         */
-         -- changed to "fdp" as the graphs are ugly otherwise -- hack
-         put "fdp" into graphStyle
-         break
-      default
-         /*
-         draws  directed  graphs.
-         It works well on DAGs and other graphs that can be drawn as hierarchies.  
-         */
-         put "dot" into graphStyle
-   end switch
-end dot_NormalizeDotCommand
-
-
 --> Graph | Model
 -
 /*
@@ -191,7 +108,7 @@ function dot_OutputImageFormats
 end dot_OutputImageFormats
 
 function dot_OutputTextFormats
-   return "cmap,cmapx,dot,imap,ismap,plain,plain-ext,xdot"
+   return "cmap,cmapx,dot,imap,ismap,plain,plain-ext,xdot,-,json,json0,dot_json,xdot_json"
 end dot_OutputTextFormats
 
 function dot_OutputStrangeFormats
@@ -218,7 +135,7 @@ command dot_SetTestData shortFile, dotText
    put dotText into url ("file:" & someFile)
 end dot_SetTestData
 
-on dot_DeconstructTextResult dotTextResult, @dotText, @dotError
+command dot_DeconstructTextResult dotTextResult, @dotText, @dotError
    repeat with firstLineNum = 1 to the number of lines of dotTextResult
       if word 1 of line firstLineNum of dotTextResult = "digraph" then
          exit repeat
@@ -248,159 +165,6 @@ on dot_NormalizeNode @someNode
    end if
 end dot_NormalizeNode
 
-on dot_SetGraphSectionOffsets @dotText, @startChar, @endChar
-   # Trims top and tail of dotText
-   put word 1 to -1 of dotText into dotText
-   put 0 into startChar
-   put 0 into endChar
-   
-   set the wholematches to true
-   put wordOffset("graph", dotText) into wordNum
-   if wordNum = 0 then return false
-   
-   put the number of chars of (word 1 to wordNum of dotText) - 4 into startChar
-   put offset ("];", dotText, startChar) into skipNum  -- could use a regular expression here
-   if wordNum = 0 then
-      put 0 into startChar
-      return false
-   end if
-   put startChar + skipNum + 1 into endChar
-   return true
-end dot_SetGraphSectionOffsets
-
-
---> Dot | Geometry
--
-function dot_RectFromSize graphSize
-   switch graphSize
-      case empty
-         return empty
-      case "full"
-         put "0,0,3000,3000" into someRect
-         return someRect
-      case "screen"
-         put dot_BboxSize (the screenrect) into someRect
-         return someRect
-      case "image"
-         put view_GetTemplateObject ("View|Image|OPN Image") into imageView
-         put the rect of imageView into graphRect
-         put dot_BboxSize (graphRect) into someRect
-         return someRect
-      default -- "none"
-         if graphSize is a rect then
-            put dot_BboxSize (graphSize) into someRect
-            return someRect
-         else
-            return empty
-         end if
-   end switch 
-end dot_RectFromSize
-
-getprop dot_BboxSize
-   put the rect of the target into someRect
-   put dot_BboxSize (someRect) into targetSize
-   return targetSize
-end dot_BboxSize
-
-getprop dot_InchSize [expandIfNeeded]
-   put the rect of the target into someRect
-   put dot_GraphInchSize (someRect, expandIfNeeded) into targetSize
-   return targetSize
-end dot_InchSize
-
-getprop dot_TargetSizeLine
-   put the rect of the target into graphRect
-   put dot_ConvertGraphRect (graphRect, false, false) into targetSize
-   return targetSize
-end dot_TargetSizeLine
-
-function dot_ConvertGraphRect someRect, expandIfNeeded, useBbox
-   if useBbox is false then
-      put dot_GraphInchSize (someRect, expandIfNeeded) into someRect
-   else
-      put dot_BboxSize (someRect) into someRect
-   end if
-   return someRect
-end dot_ConvertGraphRect
-
-function dot_BboxSize someRect
-   put item 3 of someRect - item 1 of someRect into someWidth
-   put item 4 of someRect - item 2 of someRect into someHeight
-   put 0,0,someWidth,someHeight into someRect
-   return someRect
-end dot_BboxSize
-
-function dot_GraphInchSize someRect, expandIfNeeded
-   if someRect is empty then return empty
-   put item 3 of someRect - item 1 of someRect into someWidth
-   put item 4 of someRect - item 2 of someRect into someHeight
-   
-   put someWidth,someHeight into someSize
-   dot_ConvertToInches someSize
-   if expandIfNeeded is true then
-      put "!" after someSize
-   end if
-   return someSize
-end dot_GraphInchSize
-
-command dot_ConvertToInches @pixelSize, screenRez
-   -- was "dot_ConvertSizeToInches"
-   if screenRez is empty then put 96 into screenRez
-   set the numberformat to "0.0000"
-   repeat with itemNum = 1 to the number of items of pixelSize
-      put item itemNum of pixelSize into someNumber
-      put someNumber / screenRez  into item itemNum of pixelSize
-   end repeat
-end dot_ConvertToInches
-
-command dot_ConvertToPngPixels @xdotValue
-   -- PNG is 96 dpi and xdot is at 72 dpi
-   put round(xdotValue * 96 / 72) into xdotValue 
-end dot_ConvertToPngPixels
-
-function dot_ConvertDrawRect drawPoints, gHeight, @pointNum, @revRect
-   -- was "graphViz_ConvertDrawRect"
-   local revPoints
-   if word 1 of drawPoints is "P" then
-      put word 2 of drawPoints into pointNum
-      put word 3 to -1 of drawPoints into drawPoints
-      repeat pointNum
-         put word 1 of drawPoints into nodeX
-         put word 2 of drawPoints into nodeY
-         
-         put gHeight - nodeY into reflectedY
-         
-         dot_ConvertToPngPixels nodeX
-         add 7 to nodeX
-         dot_ConvertToPngPixels reflectedY
-         add 7 to reflectedY
-         put nodeX,reflectedY into reflectedLoc
-         
-         put reflectedLoc & CR after revPoints
-         delete word 1 to 2 of drawPoints
-      end repeat
-   end if
-   -- delete last char of revPoints
-   put line 1 of revPoints after revPoints
-   
-   if pointNum = 4 then
-      put line 2 of revPoints & "," & line 4 of revPoints into revRect
-   else
-      put empty into revRect
-   end if
-   return revPoints
-end dot_ConvertDrawRect
-
-function dot_ReflectPoint someLoc, gHeight
-   -- was "graphViz_ReflectPoint"
-   put item 1 of someLoc into nodeX
-   put item 2 of someLoc into nodeY
-   
-   put gHeight - nodeY into reflectedY
-   put nodeX,reflectedY into reflectedLoc
-   return reflectedLoc
-end dot_ReflectPoint
-
 
 --> Dot | Files
 -
@@ -416,7 +180,7 @@ end dot_SaveAndDisplayImage
 
 --> Dot | Render
 -
-private function dot_CheckResult gvResult, outputFormat, someShell
+function dot_CheckResult gvResult, outputFormat, someShell
    if outputFormat is among the items of "png,jpeg,jpg,gif" then
       set the itemdelimiter to ":"
       switch item 1 of gvResult
@@ -652,7 +416,7 @@ end dot_ConstructEdgeDefParams
 function dot_MakeSpringText dotFile
    -- neato /Users/david/.Trash/dot.dot -Tepdf
    shell_BashParamEscape dotFile
-   put merge("neato [[dotFile]]") into someShell
+   put merge  ("neato [[dotFile]]") into someShell
    
    put graphViz_GetShellPath() into gvPath
    put gvPath & someShell into someShell

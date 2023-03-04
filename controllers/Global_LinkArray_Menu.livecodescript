@@ -31,20 +31,9 @@ end menu_Target
 --> Global | LinkArray | Menu
 -
 on menu_DisplayLinkArrayGraph displayView
-   put "fast undirected spring" into graphStyle
-   --
    put the displayed_Array of displayView into linkArray
    --
-   put the project_AssetFolder of stack "lcw_Lexon" into projectAssetFolder
-   put projectAssetFolder & "contract.dot" into dotFile
-   --
-   put lexon_ConstructGroupStyleArray (dData) into dotGroupStyleArray
-   put dot_ConstructDefSection (dotGroupStyleArray, linkArray) into defSection
-   put empty into pDefSection
-   --
-   delete variable linkArray ["GENERAL: definitions."]
-   --
-   display_LinkArrayGraph linkArray, graphStyle, dotFile, "lightblue", "LinkArray", pDefSection
+   display_LinkArrayGraph linkArray, "fast undirected spring"
 end menu_DisplayLinkArrayGraph
 
 on _
@@ -62,13 +51,6 @@ end submenu_Filter
 return "Global | HkeyArray | Tree | Deps | Menu"
 end submenu_Deps
 
-on submenu_Dev
-   return "Dev | Menu"
-end submenu_Dev
-
-
---> Dev | Menu
--
 on menu_GraphLinkArray displayView, graphStyle
    put the displayed_Array of displayView into linkArray
    
@@ -101,6 +83,24 @@ on menu_DisplaySvg scriptObject, shortSvgFile
    end if
 end menu_DisplaySvg
 
+private on __
+end __
 
---> Deps
--
+on menu_LexonLinkArrayGraph displayView
+   put "fast undirected spring" into graphStyle
+   --
+   put the displayed_Array of displayView into linkArray
+   --
+   put the project_AssetFolder of stack "lcw_Lexon" into projectAssetFolder
+   put projectAssetFolder & "contract.dot" into dotFile
+   --
+   put lexon_ConstructGroupStyleArray (dData) into dotGroupStyleArray
+   put dot_ConstructDefSection (dotGroupStyleArray, linkArray) into defSection
+   put empty into pDefSection
+   --
+   delete variable linkArray ["GENERAL: definitions."]
+   --
+   display_LinkArrayGraph linkArray, graphStyle, dotFile, "lightblue", "LinkArray", pDefSection
+end menu_LexonLinkArrayGraph
+
+

@@ -54,14 +54,15 @@ on menu_CollectDeps displayView
    put the title_Text of displayView into hKey
    put "Deps for" && hKey into pTitle
    --
-   display_ScriptFromHkeyArray hkeyArray, pTitle
+   display_ScriptFromHkeyArray hkeyArray, pTitle, hKey
 end menu_CollectDeps
 
 on menu_Show displayView, showHow
    put the displayed_HkeyArray of displayView into hkeyArray
    put the strip_MissingProps of displayView into stripMissingProps
+   put the title_Text of displayView into hKey
    --
-   put hkeyArray_DisplayData (hkeyArray, showHow, stripMissingProps) into dData
+   put hkeyArray_DisplayData (hkeyArray, showHow, stripMissingProps, hKey) into dData
    --
    set the displayed_Data of displayView to dData
    set the show_How of displayView to showHow

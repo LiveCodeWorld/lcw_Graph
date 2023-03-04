@@ -17,6 +17,109 @@ See stack "model_Hkey"
 */
 
 
+
+--> Props
+-
+/*
+These properties are only used localy by the linkArray_Model to change the way nodes are named.
+They are not essential, and graphs will otherwise be drawn using the node IDs in the linkArray and hIdArray (nodeDictionary)
+*/
+
+getprop hkey_DotText [hKey]
+   -- was "linkarray_ModelDotText", then "hkey_DotText"
+   put the long id of the target into pTargetObject
+   if hKey is empty then put the displayed_Hkey of pTargetObject into hKey
+   
+   put hkey_GetLinkArray (hKey) into hkeyArray
+   linkArray_IdConstruct hkeyArray, hLinkArray, hIdArray
+   
+   put the overlay_Name of pTargetObject into graphName
+   put the dot_ClusterType of pTargetObject into dotClusterType
+   switch dotClusterType
+      case "Object"
+         put the dot_Header of pTargetObject into graphHeader
+         put hKeyArray_ConstructObjectDot (hLinkArray, hIdArray, graphName, graphHeader, pTargetObject) into dotText
+         return dotText
+      case "Nested Trac Text"
+         put the linkarray_TracGraphHeader [defaultNodeUrl] of pTargetObject into graphHeader
+         put _ConstructNestedObjectDot (hLinkArray, hIdArray, graphName, graphHeader, pTargetObject) into dotText
+         
+         put "{{{" & CR after tracMacro
+         put "#!graphviz" & CR after tracMacro
+         put dotText & CR after tracMacro
+         put "}}}" & CR after tracMacro
+         
+         delete char -1 of tracMacro
+         return tracMacro
+      default -- case "Nested"
+         put the dot_Header of pTargetObject into graphHeader
+         put _ConstructNestedObjectDot (hLinkArray, hIdArray, graphName, graphHeader, pTargetObject) into dotText
+         return dotText
+   end switch
+end hkey_DotText
+
+getprop dot_NodeID [nodeID]
+   -- a default (Should not change it)
+   return nodeID
+end dot_NodeID
+
+getprop dot_NodeType [nodeID]
+   -- default value
+   put the uOPN ["dot_NodeType"] of the linkArray_Model of the target into nodeType
+   if nodeType is empty then
+      put "nodeID" into nodeType
+      set the uOPN ["dot_NodeType"] of the linkArray_Model of the target to nodeType
+   end if
+   return nodeType
+end dot_NodeType
+
+setprop dot_NodeType [nodeID] graphNodeType
+   set the uOPN ["dot_NodeType"] of the linkArray_Model of the target to graphNodeType
+end dot_NodeType
+
+getprop dot_NodeTypes
+   return the hKey_CaseConditions ["dot_ConstructNodeID,f"] of me
+end dot_NodeTypes
+
+-- setprop dot_Header dotHeader
+-- could also update arrays?
+-- a default value, which you can override locally
+put the dot_Text of the target into dotText
+dot_SetHeader dotText, dotHeader
+set the dot_Text of the target to dotText
+return dotText
+end dot_Header
+
+getprop dot_Header [pOverlayName]
+   -- a default value, which you can override locally
+   if pOverlayName is empty then put the displayed_OverlayName of the target into pOverlayName
+   put the overlay_Array of the target into overlayArray
+   put overlayArray_ConstructHeader (overlayArray, pOverlayName) into dotHeader
+   return dotHeader
+end dot_Header
+
+getprop dot_DefSection [pOverlayName]
+   -- a default value, which you can override locally
+   put the overlay_Array of the target into overlayArray
+   put dot_DefSectionFromArray (overlayArray, pOverlayName) into defSection
+   return defSection
+end dot_DefSection
+
+getprop dot_LinkSection
+   put the displayed_OverlayName of the target into graphName
+   put the overlay_Array of the target into overlayArray
+   
+   if dotClusterArray is an array then
+      -- put linkArray_ConstructClusterDefs (overlayArray, pGraphController) into linkSection
+      put overlayData_ConstructClusterSection (overlayArray, graphName) into linkSection
+   else
+      overlayArray_DeconstructData overlayArray, linkArray, idArray, idLinkArray, reverseIdLinkArray, dotClusterArray
+      put linkArray_DotNodeLinks (linkArray) into linkSection
+   end if
+   return linkSection
+end dot_LinkSection
+
+
 --> Dot | Node
 -
 /*

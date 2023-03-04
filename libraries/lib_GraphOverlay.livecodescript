@@ -73,7 +73,7 @@ command overlayArray_CreateFilesAndSetGeometry @overlayArray, pMainstackHash, pI
    if hkeyArray is not an array then return empty
    
    -- creates all the dot and image files (but does not save the array files)
-   overlay_CreateDotFiles overlayArray, empty, pImageFormat
+   overlayArray_CreateDotFiles overlayArray, empty, pImageFormat
    put the result into gvResult
    if token 1 of gvResult = "error" then
       lcw_Notify gvResult, true
@@ -93,14 +93,14 @@ command overlayArray_CreateFilesAndSetGeometry @overlayArray, pMainstackHash, pI
    return geometryArray
 end overlayArray_CreateFilesAndSetGeometry
 
-command overlay_CreateDotFiles @overlayArray, pOverlayFolder, pImageFormat
+command overlayArray_CreateDotFiles @overlayArray, pOverlayFolder, pImageFormat
    -- creates all the dot and image files (but does not save the array files)
    if pImageFormat is empty then put "png" into pImageFormat
    
    put overlayArray_GetLinkArray (overlayArray) into hkeyArray
    if hkeyArray is not an array then return empty
    
-   put dot_FromOverlayArray (overlayArray) into dotText
+   put overlayArray_ConstructDot (overlayArray) into dotText
    
    if pOverlayFolder is not empty then
       folder_CreateNested pOverlayFolder
@@ -153,7 +153,52 @@ command overlay_CreateDotFiles @overlayArray, pOverlayFolder, pImageFormat
    overlay_SetAndStoreFileRelative overlayArray, "xdot_File", xdotFile
    
    return gvResult
-end overlay_CreateDotFiles
+end overlayArray_CreateDotFiles
+
+
+--> Dot | Overlay Array
+-
+/* 
+A overlayArray is a datastructure that contains all the required information to draw a dot graph.
+
+Several dotArrays can be nested inside an overlayData structure (see libOPN_GraphData),
+which can be returned using the script_OverlayData of hkey_FetchOverlayData.
+
+This library and it's handlers could be renamed to graphArray / libOPN_GraphArray,
+but overlayArray while not as intuitive, is at least unique (there may be other types of graph?).
+*/
+
+function overlayArray_ConstructDot overlayArray, pOverlayName 
+   put overlayArray_ConstructHeader (overlayArray) into dotHeader
+   put dot_DefSectionFromArray (overlayArray, pOverlayName) into defSection
+   
+   overlayArray_DeconstructData overlayArray, linkArray, idArray, idLinkArray, reverseIdLinkArray, dotClusterArray
+   
+   put overlayArray_GetHeaderProperty (overlayArray, "dot_ClusterRank") into dotCluster
+   if dotClusterArray is an array and dotCluster is not "none" then
+      put overlayArray_ConstructClusterSection (overlayArray, pOverlayName) into clusterSection
+   end if
+   
+   -- put hKeyArray_ConstructNodeSection (idArray, idLinkArray, graphController, nodeTypeArray) into linkSection
+   put linkArray_DotNodeLinks (idLinkArray) into linkSection
+   
+   if pOverlayName is empty then
+      put "overlayArray_ConstructDot" into pGraphTitle
+   else
+      put pOverlayName into pGraphTitle
+      replace space with "_" in pGraphTitle
+   end if
+   put dot_TextFromSections (dotHeader, defSection, clusterSection, linkSection, pGraphTitle) into dotText
+   return dotText
+end overlayArray_ConstructDot
+
+function overlayArray_ConstructHeader overlayArray, pOverlayName
+   overlayArray_DeconstructMetadata overlayArray, graphPropertyArray, dotHeaderArray, nodePropertyArray, edgePropertyArray, dotNodeStyleArray, pOverlayName
+   -- _AddGraphSize dotHeaderArray, graphPropertyArray -- not needed with svg's
+   _AddHeaderStuff dotHeaderArray, graphPropertyArray
+   put dot_HeaderFromArrays (dotHeaderArray, nodePropertyArray, edgePropertyArray) into dotHeader
+   return dotHeader
+end overlayArray_ConstructHeader
 
 
 --> Private

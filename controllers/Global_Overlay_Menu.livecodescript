@@ -78,7 +78,7 @@ on menu_CloneOverlay scriptObject, overlayName
    overlayArray_SetGraphProperty overlayArray, "overlay_Name", newOverlayName
    
    overlay_SetArray overlayFolder, overlayArray, newOverlayName
-   overlay_CreateDotFiles overlayArray, overlayFolder
+   overlayArray_CreateDotFiles overlayArray, overlayFolder
    
    display_Overlay overlayFolder, newOverlayName
 end menu_CloneOverlay
@@ -104,7 +104,7 @@ on menu_DotTextFromArray scriptObject, overlayName
    put the overlay_Folder of scriptObject into overlayFolder
    --
    put overlay_GetArray (overlayFolder, overlayName) into overlayArray
-   put dot_FromOverlayArray (overlayArray) into dotText
+   put overlayArray_ConstructDot (overlayArray) into dotText
    
    display_Text dotText, "overlayArray_FromLinkArray"
 end menu_DotTextFromArray

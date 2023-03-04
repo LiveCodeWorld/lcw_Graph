@@ -65,7 +65,7 @@ private command hkeyArray_RecurseFromExported hKey, @hkeyArray, pProjectName
    put longCalls into hkeyArray [hKey]
    
    repeat for each line longCall in longCalls
-      hkey_RecurseLongCallArrayFromExported hKey, @hkeyArray, pProjectName
+      hkey_RecurseLongCallArrayFromExported hKey, hkeyArray, pProjectName
    end repeat
 end hkeyArray_RecurseFromExported
 

@@ -28,7 +28,7 @@ end display_ScriptFromHkeyArray
 command display_ScriptFromHkeys hKeys, pTitle
    put hkey_CollectFromObjects (hKeys, false) into newScript
    --
-   display_Text newScript, sTitle
+   display_Text newScript, pTitle
    put the result into displayView
    return displayView
 end display_ScriptFromHkeys
@@ -152,28 +152,6 @@ command display_HkeyArrayDependencyScript hkeyArray, pScriptObject, pStripObject
    
    return someArray
 end display_HkeyArrayDependencyScript
-
-command display_Dot dotText, pStyleOrDotArray, pImageView, pStackLabel, pDotFile, pResizeStyle
-   if exists (pImageView) is false then
-      if pResizeStyle is empty then put "fit inside frame" into pResizeStyle
-      if pStackLabel is empty then put "Dot" into pStackLabel
-      display_Image empty, true, pStackLabel, true
-      put the result into pImageView
-   end if
-   
-   if pStyleOrDotArray is an array then
-      set the overlay_Array of pImageView to pStyleOrDotArray
-   else
-      set the overlay_Style of pImageView to pStyleOrDotArray
-   end if
-   
-   set the image_File of pImageView to ""
-   set the uOPN ["dot_File"] of pImageView to pDotFile
-   set the dot_Text of pImageView to dotText 
-   
-   object_GoTo pImageView, true
-   return pImageView
-end display_Dot
 
 
 --> Display | Graph | Array

@@ -12,37 +12,6 @@ version: 0.1
 
 --> Working on
 -
-function linkArray_ConstructDotSimple linkArray, pGraphStyle, pBgColour, pConcentrate, pDefaultShape, pDefSection, pGraphName
-   local graphSize, pNodeTypeArray, pClusterArray, dotPropertyArray
-   
-   if pBgColour is empty then put "lightblue" into pBgColour
-   put pBgColour into dotPropertyArray ["bgcolor"]
-   --
-   put false into overlap
-   put true into splines
-   put false into cluster
-   put "" into dotOrder
-   put "" into defaultUrl
-   put "" into pDirection
-   --
-   dot_ConstructPropertyArray dotPropertyArray, overlap, pConcentrate, splines, cluster, pDirection, dotOrder, pDefaultShape, defaultUrl
-   put dot_ConstructHeaderBase (graphSize, dotPropertyArray, pGraphStyle) into graphHeader
-   dot_AddDefaultNode graphHeader, pDefaultShape
-   --
-   put linkArray_ConstructLinkSection (linkArray, pNodeTypeArray, pClusterArray) into nodeSection
-   put linkArray_DotNodeLinks (linkArray) into linkSection
-   if pDefSection is empty then
-      put linkSection into nodeSection
-   else
-      put pDefSection & CR & CR & linkSection into nodeSection
-      put word 1 to -1 of nodeSection into nodeSection
-   end if
-   --
-   put dot_Construct (nodeSection, pGraphName, graphHeader) into dotText
-   --
-   return dotText
-end linkArray_ConstructDotSimple
-
 
 --> OverlayArray
 -
@@ -124,7 +93,7 @@ command display_LinkArrayGraph linkArray, pGraphStyle, pFile, pBgColour, pGraphN
    --
    -- put linkArray_DotNodeLinks (linkArray, empty) into nodeSection
    -- put dot_Construct (nodeSection, pGraphName) into dotText
-   put linkArray_ConstructDotSimple (linkArray, pGraphStyle, pBgColour, pConcentrate, pDefaultShape, pDefSection, pGraphName) into dotText
+   put dot_FromLinkArray (linkArray, pGraphStyle, pBgColour, pConcentrate, pDefaultShape, pDefSection, pGraphName) into dotText
    dot_CreateGraph dotText, pFile, pGraphStyle
    put the result into svgFile
    display_SVG svgFile, pGraphName

@@ -17,62 +17,221 @@ local LocalArray
 
 --> Menu | Props
 -
-on menu_Init tObject
-   -- called only once for top menu
-  pass menu_Init
-end menu_Init
+getprop displayGraphText_Params
+   return dot_OutputTextFormats()
+end displayGraphText_Params
 
-getprop menu_Target [tObject]
-   -- called once for each menu
-   return the display_View of tObject
-end menu_Target
+function _FetchText dotURL, exportFormat
+   put "dot" into dotCommand
+   -- put dot_CommandFromGraphStyle (graphStyle) into dotCommand
+   --
+   put url dotURL into dotText
+   --
+   file_CreateText dotText
+   put the result into dotFile
+   -- 
+   put dot_DoShell (dotFile, dotCommand, exportFormat) into dotText
+   --
+   return dotText
+end _FetchText
 
-getprop menu_CheckTarget [mTarget]
-   -- use to do initialisation
-   pass menu_CheckTarget
-end menu_CheckTarget
+function dot_FetchArray dotURL
+   put url dotURL into dotText
+   --
+   file_CreateText dotText
+   put the result into dotFile
+   -- 
+   put dot_DoShell (dotFile, "dot", "json") into dotJSON
+   put json_ToArray(dotJSON) into dotArray
+   --
+   return dotArray
+end dot_FetchArray
 
-getprop test_Param [mTarget]
-  return "b"
-end test_Param
+command display_DotArray dotURL
+   put dot_FetchArray (dotURL) into dotArray
+   --
+   set the itemdelimiter to slash
+   put item -1 of dotURL into shortFile
+   display_Data dotArray, shortFile, "Dot"
+   return the result
+end display_DotArray
 
-getprop test_Params [mTarget]
-   return "a,b,c"
-end test_Params
+command dotArray_CreateObjects dotArray, cardNum, stackName
+   set the showName of templateGraphic to true
+   --
+   put dotArray ["objects"] into objectsArray
+   repeat with itemNum = 1 to item 2 of the extents of objectsArray
+      put objectsArray [itemNum] into oArray
+      put oArray ["name"] into oName
+      --
+      put oArray ["nodes"] into nodeArray
+      switch
+         case nodeArray is an array
+            
+            break
+         default
+            _CreateGraphic oArray, cardNum, stackName
+      end switch
+      --
+   end repeat
+end dotArray_CreateObjects
 
-getprop checked_TestChecked
-   return true
-end checked_TestChecked
+command _CreateGraphic oArray, cardNum, stackName
+   put oArray ["name"] into oName
+   put oArray ["label"] into oLabel
+   put oArray ["shape"] into oShape
+   put oArray ["style"] is "filled" into isOpaque
+   --
+   create graphic oName in card cardNum of stack stackName
+   put it into gObject
+   --
+   set the label of gObject to oLabel
+   set the opaque of gObject to isOpaque
+   --
+   switch
+      case nodeArray is an array
+         return empty
+      case oShape = "box"
+         -- set the style of gObject to "rectangle"
+         -- set the rect of gObject to oRect
+         put _GetDrawPoints (oArray) into gPoints
+         set the style of gObject to "polygon"
+         set the points of gObject to gPoints
+         break
+      case oShape = "ellipse"
+      case oShape = "circle"
+         set the style of gObject to "oval"
+         --
+         put _GetDrawRect (oArray) into oRect
+         set the rect of gObject to oRect
+         break
+      case oShape = "triangle"
+         -- set the style of gObject to "regular"
+         -- set the polysides of gObject to 3
+         set the style of gObject to "polygon"
+         put _GetDrawPoints (oArray) into gPoints
+         set the points of gObject to gPoints
+         break
+      case oShape = "diamond"
+         -- set the style of gObject to "regular"
+         -- set the polysides of gObject to 4
+         --
+         set the style of gObject to "polygon"
+         put _GetDrawPoints (oArray) into gPoints
+         set the points of gObject to gPoints
+         break
+      case oShape = "pentagon"
+         set the style of gObject to "regular"
+         set the polysides of gObject to 5
+         break
+      default
+         set the style of gObject to "oval"
+   end switch
+   --
+   return gObject
+end _CreateGraphic
 
-getprop disabled_Test
-  return false -- true, "delete"
-end disabled_Test
+function _GetDrawPoints oArray
+   get oArray ["_draw_"]
+   put it [3]["points"] into pArray
+   repeat with itemNum = 1 to item 2 of the extents of pArray
+      put pArray [itemNum][1] into item 1 of pLoc
+      put pArray [itemNum][2] into item 2 of pLoc
+      put pLoc & CR after gPoints
+   end repeat
+   -- delete char -1 of gPoints
+   put line 1 of gPoints after gPoints
+   return gPoints
+end _GetDrawPoints
+
+function _GetDrawRect oArray
+   get oArray ["_draw_"]
+   put it [3]["rect"] into rArray
+   put rArray [1] into item 1 of oRect
+   put rArray [2] into item 3 of oRect
+   put rArray [3] into item 4 of oRect
+   put rArray [1] into item 2 of oRect
+   return oRect
+end _GetDrawRect
 
 
 --> Global | Graph | Lines | Menu
 -
-on menu_Test displayView, abc
-   put displayView & CR & abc
-end menu_Test
+on menu_ParseExample
+   put "https://graphviz.org/Gallery/gradient/colors.gv.txt" into dotURL
+   --
+   put dot_FetchArray (dotURL) into dotArray
+   --
+   put dotArray ["bb"] into bb
+   put item 3 of bb into sWidth
+   put item 4 of bb into sHeight
+   put line 2 of the screenrects into sRect
+   --
+   put "Graphviz Presentation" into stackName
+   put 1 into cardNum
+   --
+   -- create invisible stack stackName
+   -- set the rect of stack stackName to sRect
+   put the rect of card 1 of stack stackName into cRect
+   put rect_FromWidthAndHeight (cRect, sWidth, sHeight) into bbRect
+   --
+   put the long id of card cardNum of stack stackName into cObject
+   if exists (graphic "bb" of cObject) is false then
+      set the opaque of templateGraphic to true
+      set the backgroundcolor of templateGraphic to "red"
+      --
+      create graphic "bb" in card cardNum of stack stackName
+      put it into cGraphic
+      set the rect of cGraphic to bbRect
+   end if
+   --
+   dotArray_CreateObjects dotArray, cardNum, stackName
+   --
+   choose browse tool
+   show stack stackName
+   -- put bbRect
+end menu_ParseExample
 
-on menu_TestChecked
-  put menu_GetChecked (the params)
-end menu_TestChecked
-
-on _
+private on _
 end _
 
-on submenu_Dev
-   return "Dev | Menu"
-end submenu_Dev
+on menu_GoPackageExample indexView
+   put url "https://graphviz.org/Gallery/directed/go-package.gv.txt" into dotText
+   --
+   display_Dot dotText
+end menu_GoPackageExample
 
+on menu_CreateDotText
+   put url "https://graphviz.org/Gallery/directed/go-package.gv.txt" into dotText
+   --
+   put graphViz_CreateCmapx (dotText)
+end menu_CreateDotText
 
---> Dev | Menu
--
-on menu_Experiment displayView
-   put displayView
-end menu_Experiment
+on menu_GoPackageArray indexView
+   put url "https://graphviz.org/Gallery/directed/go-package.gv.txt" into dotText
+   file_CreateText dotText
+   put the result into dotFile
+   -- 
+   put dot_DoShell (dotFile, "dot", "json") into dotJSON
+   put json_ToArray(dotJSON) into dotArray
+   --
+   display_Data dotArray, "go-package.gv.txt", "Dot"
+   put the result into displayView
+end menu_GoPackageArray
 
+private on __
+end __
 
---> Deps
--
+on menu_Shapes
+   put "https://graphviz.org/Gallery/gradient/colors.gv.txt" into dotURL
+   --
+   display_DotArray dotURL
+   --
+   put _FetchText (dotURL, "plain")
+end menu_Shapes
+
+on menu_DisplayGraphText displayView, exportFormat
+   put "https://graphviz.org/Gallery/directed/go-package.gv.txt" into dotURL
+   --
+   put _FetchText (dotURL, exportFormat)
+end menu_DisplayGraphText

@@ -91,23 +91,12 @@ end graph_ConstructDot
 
 function graph_ConstructHeader pGraphStyle, graphSize
    put empty into graphSize
-   put "dot_FromOverlayArray" into graphTitle
-   put graph_ConstructDotHeaderArray() into pDotHeaderArray
+   put "overlayArray_ConstructDot" into graphTitle
+   put dot_ConstructHeaderArray() into pDotHeaderArray
    put false into pUseInches
    put dot_ConstructHeader (graphSize, pDotHeaderArray, pGraphStyle, pUseInches) into dotHeader
    return dotHeader
 end graph_ConstructHeader
-
-function graph_ConstructDotHeaderArray overlap, splines, defaultShape, defaultUrl
-   local dotHeaderArray, cluster, direction, dotOrder
-   put true into concentrate
-   put false into overlap
-   put true into splines
-   put "rectangle" into defaultShape
-   
-   dot_ConstructPropertyArray dotHeaderArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
-   return dotHeaderArray
-end graph_ConstructDotHeaderArray
 
 
 --> Graph | Def

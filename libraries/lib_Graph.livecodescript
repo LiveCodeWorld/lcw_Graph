@@ -109,6 +109,9 @@ end graph_CreateScriptObject
 
 command graph_CreateScriptObjectHkeyArray hkeyArray, hObject, pGraphStyle, pProcessObject
    -- tailored to create a clustered graph from hKeyArray of an objects script
+   -- display_CreateScriptObjectGraph sObject, projectName, pGraphStyle, pProcessObject, false
+   -- display_ObjectDepArray sObject
+   
    if pGraphStyle is empty then put "hierarchical" into pGraphStyle
    --
    put the metadataObject_Folder [true] of hObject into metadataFolder

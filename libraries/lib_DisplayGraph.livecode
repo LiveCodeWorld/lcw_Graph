@@ -26,6 +26,61 @@ The data structure should perhaps be changed to the usual data/metadata arrangem
 
 --> Working On
 -
+command display_DotText dotText, gTitle
+   put the dot_Name of graphView into gTitle
+   display_Text dotText, gTitle, "Global | Dot | Graph | Text | Menu"
+   put the result into displayView
+   --
+   -- set the graph_View of displayView to graphView
+   set the displayed_Object of displayView to graphView
+   
+end display_DotText
+
+
+--> Display | Dot
+-
+command display_DotArray dotURL
+   put dot_FetchArray (dotURL) into dotArray
+   --
+   set the itemdelimiter to slash
+   put item -1 of dotURL into shortFile
+   display_Data dotArray, shortFile, "Dot"
+   return the result
+end display_DotArray
+
+command display_Dot dotText, pGraphStyle, pGraphName, pDotFile
+   dot_CreateGraph dotText, pDotFile, pGraphStyle
+   --
+   put the result into svgFile
+   display_SVG svgFile, pGraphName
+   --
+   return svgFile
+   
+   /*
+   -- display_Dot dotText, pStyleOrDotArray, pImageView, pStackLabel, pDotFile, pResizeStyle
+   if exists (pImageView) is false then
+      if pResizeStyle is empty then put "fit inside frame" into pResizeStyle
+      if pStackLabel is empty then put "Dot" into pStackLabel
+      display_Image empty, true, pStackLabel, true
+      put the result into pImageView
+   end if
+   
+   if pStyleOrDotArray is an array then
+      set the overlay_Array of pImageView to pStyleOrDotArray
+   else
+      set the overlay_Style of pImageView to pStyleOrDotArray
+   end if
+   
+   set the image_File of pImageView to ""
+   set the uOPN ["dot_File"] of pImageView to pDotFile
+   --
+   set the dot_Text of pImageView to dotText 
+   
+   object_GoTo pImageView, true
+   return pImageView
+   */
+end display_Dot
+
 command display_Image someImage, pStackLabel, pCloneName, pStackStyle, pLocOrRect
    if pCloneName is empty then put "Image" into pCloneName
    --
@@ -65,21 +120,19 @@ on mDoubleUp_SVG displayView, shortSvgFile
    put the displayed_URL of displayView into someURL
    put url_FromShortFile (shortSvgFile, someURL) into svgURL
    --
-   display_SVG svgFile, pStackLabel, pStackStyle
-   put svgURL
+   display_SVG svgURL, shortSvgFile
 end mDoubleUp_SVG
 
-function url_FromShortFile shortSvgFile, someURL
-   --
-   -- set the itemdelimiter to slash
-   put someURL into svgURL
-   if char -1 of svgURL is not slash then put slash after svgURL
-   put shortSvgFile after svgURL
-   return svgURL
-end url_FromShortFile
 
-command display_HtmlSvgLinks someURL
-   put url someURL into someHTML
+--> Display | Graph | Tools
+-
+command display_ExampleSvgs pURL
+   -- pURL is a web page which contains links to svgs
+   if pURL is empty then
+      put "https://dev.w3.org/SVG/tools/svgweb/samples/svg-files/" into pURL
+   end if
+   put url pURL into someHTML
+   --
    put html_ExtractAllLinks (someHTML) into svgLinks
    filter svgLinks with "*.svg"
    --
@@ -90,7 +143,7 @@ command display_HtmlSvgLinks someURL
    --
    set the displayed_URL of displayView to someURL
    return displayView
-end display_HtmlSvgLinks
+end display_ExampleSvgs
 
 
 
@@ -146,23 +199,89 @@ command display_HkeyArrayGraph hkeyArray, pGraphStyle
    return imageView
 end display_HkeyArrayGraph
 
-command dot_CreateGraph dotText, pFile, pGraphStyle
-   file_CreateText dotText, pFile
-   put the result into dotFile
+
+--> Deps
+-
+function html_ExtractAllLinks someHtml
+   /*
+   This one is prob better:
+   
+   <a[\s]+[^>]*?href[\s]?=[\s\"\']+(.*?)[\"\']+.*?>([^<]+|.*?)?<\/a>
+         
+   from http://regexlib.com/REDetails.aspx?regexp_id=968
+   
+   
+   based on http://regexlib.com/REDetails.aspx?regexp_id=774
+   
+   Pattern:  href[\s]*=[\s]*&quot;[^\n&quot;]*&quot;
+         RegExp Author:  Tony Hawe
+   Matching Text:	href =&quot;http://www.theregister.com/&quot;|||href=&quot;http://theregister.co.uk&quot;|||hre
+   Non-Matching Text:	href=http://theregister.co.uk
+   Description:	A very short pattern for extracting hrefs from HTML, does not validate they are within a tag
+   */
+   
+   local urlIndex
+   replace lineFeed with empty in someHtml -- seems necessary
+   
+   put "href[\s]*=[\s]*'([^\n']*)'" into someReg
+   replace "'" with quote in someReg -- for now to make regExp readable
+   
+   repeat
+      if matchchunk(someHtml, someReg, startCharNum, endCharNum) is false then
+         delete last char of urlIndex
+         return urlIndex
+      else
+         put char startCharNum to endCharNum of someHtml into someUrl
+         put someUrl & CR after urlIndex
+         delete char 1 to endCharNum + 1 of someHtml
+      end if
+   end repeat
+end html_ExtractAllLinks
+
+function dot_UrlNameMenu
+   put dot_ConstructDotNameArray() into dotNameArray
+   -- put LocalArray ["dotNameArray"] into dotNameArray
+   put keys (dotNameArray) into nameMenu
+   replace CR with comma in nameMenu
+   return nameMenu & ",-,minimal"
+end dot_UrlNameMenu
+
+function dot_ConstructDotNameArray
+   -- construct a dictionary to store urls in and enable menu interface based on keys
+   local dotNameArray
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/colors.gv.txt"
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/bazel.gv.txt"
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/sdh.gv.txt"
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/go-package.gv.txt"
    --
-   set the itemdelimiter to "."
-   if item -1 of dotFile = "dot" then
-      put dotFile into svgFile
-      put "svg" into item -1 of svgFile
-   else
-      put dotFile & ".svg" into svgFile
-   end if
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/undirected/gd_1994_2007.gv.txt"
    --
-   put dot_CommandFromGraphStyle (pGraphStyle) into dotCommand
-   dot_Render dotFile, svgFile, dotCommand
+   return dotNameArray
+end dot_ConstructDotNameArray
+
+function dot_GetMinimal
+   put "digraph { a->b }" into dotText
+   return dotText
+end dot_GetMinimal
+
+function url_FromShortFile shortSvgFile, someURL
    --
-   return svgFile
-end dot_CreateGraph
+   -- set the itemdelimiter to slash
+   put someURL into svgURL
+   if char -1 of svgURL is not slash then put slash after svgURL
+   put shortSvgFile after svgURL
+   return svgURL
+end url_FromShortFile
+
+
+--> Private
+-
+private command _AddToNameArray @dotNameArray, dotURL
+   set the itemdelimiter to slash
+   put item -1 of dotURL into shortName
+   replace ".gv.txt" with empty in shortName
+   put dotURL into dotNameArray [shortName]
+end _AddToNameArray
 
 private function _TestGroupStyleArray nodeIdArray
    local dotGroupStyleArray

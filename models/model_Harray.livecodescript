@@ -1441,7 +1441,7 @@ command view_CreateIcon libraryView, pIconView
 
    get the mobile_Name of libraryView
    put the rect of libraryView into someRect
-   put rect_SubtractMargin (-2, someRect) into someRect
+   put rect_Subtract (-2, someRect) into someRect
 
    put the stack_Name of libraryView into stackName
    put the windowid of stack stackName into someWindowID
