@@ -26,6 +26,19 @@ The data structure should perhaps be changed to the usual data/metadata arrangem
 
 --> Working On
 -
+command display_Image someImage, pStackLabel, pCloneName, pStackStyle, pLocOrRect
+   if pCloneName is empty then put "Image" into pCloneName
+   --
+   stack_CloneInvisible "View|Image|Fit Inside", pCloneName, true
+   put the result into cloneStackName
+   put the long id of control 1 of stack cloneStackName into viewObject
+   --
+   set the image_Contents of viewObject to someImage
+   --
+   stack_ShowAndGo viewObject, cloneStackName, pStackLabel, pStackStyle, pLocOrRect
+   return viewObject
+end display_Image
+
 command display_DotText dotText, gTitle
    put the dot_Name of graphView into gTitle
    display_Text dotText, gTitle, "Global | Dot | Graph | Text | Menu"
@@ -80,19 +93,6 @@ command display_Dot dotText, pGraphStyle, pGraphName, pDotFile
    return pImageView
    */
 end display_Dot
-
-command display_Image someImage, pStackLabel, pCloneName, pStackStyle, pLocOrRect
-   if pCloneName is empty then put "Image" into pCloneName
-   --
-   stack_CloneInvisible "View|Image|Fit Inside", pCloneName, true
-   put the result into cloneStackName
-   put the long id of control 1 of stack cloneStackName into viewObject
-   --
-   set the image_Contents of viewObject to someImage
-   --
-   stack_ShowAndGo viewObject, cloneStackName, pStackLabel, pStackStyle, pLocOrRect
-   return viewObject
-end display_Image
 
 command display_SVG svgFile, pStackLabel, pStackStyle, pLocOrRect
    stack_CloneInvisible "View|Image|SVG", "Display SVG"
