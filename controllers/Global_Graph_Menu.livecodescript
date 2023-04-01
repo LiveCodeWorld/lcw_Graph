@@ -41,16 +41,6 @@ on menu_ParseDot indexView, whichDot
    end if
 end menu_ParseDot
 
-on _
-end _
-
-on submenu_Dev
-   return "Dev | Menu"
-end submenu_Dev
-
-
---> Dev | Menu
--
 -- on menu_CreatePresentationStack indexView, whichDot
 put _ChooseDot (whichDot) into dotText
 put dot_CreateArray (dotText) into dotArray
@@ -61,7 +51,7 @@ end menu_CreatePresentationStack
 on menu_Shapes
    put "https://graphviz.org/Gallery/gradient/colors.gv.txt" into dotURL
    --
-   display_DotArray dotURL
+   display_DotUrl dotURL
    --
    put _FetchText (dotURL, "plain")
 end menu_Shapes

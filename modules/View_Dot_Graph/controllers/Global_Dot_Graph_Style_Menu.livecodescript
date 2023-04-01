@@ -1,7 +1,7 @@
 ﻿script "Global | Dot | Graph | Style | Menu"
 --> MetaData
 -
-copyright: Anonymous
+copyright: David Bovill
 license: GPLv3
 name: Global | Dot | Graph | Style | Menu
 type: controller
@@ -17,6 +17,10 @@ local LocalArray
 
 --> Menu | Props
 -
+getprop menu_Target [tOject]
+   return the view_Object of tOject
+end menu_Target
+
 getprop checked_BrowserVisible [graphView]
    put the browser_Visible of graphView into oBoolean
    return oBoolean

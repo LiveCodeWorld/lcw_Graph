@@ -25,7 +25,7 @@ command dotArray_CreateObjects dotArray, dotGroup
          case nodeArray is an array
             break
          default
-            _CreateGraphic oArray, dotGroup
+            dotArray_CreateGraphic oArray, dotGroup
       end switch
       --
    end repeat
@@ -40,68 +40,6 @@ command dotArray_CreateEdges dotArray, dotGroup
       _CreateEdge edgeArray, dotGroup
    end repeat
 end dotArray_CreateEdges
-
-command _CreateGraphic oArray, dotGroup
-   put oArray ["name"] into oName
-   put oArray ["label"] into oLabel
-   put oArray ["shape"] into oShape
-   put oArray ["style"] is "filled" into isOpaque
-   --
-   reset templateGraphic
-   set the opaque of the templateGraphic to true
-   set the showName of the templateGraphic to true
-   --
-   create graphic oName in dotGroup -- card cardNum of stack stackName
-   put it into gObject
-   --
-   switch oLabel
-      case "\N"
-         break -- don't set (same as name)
-      default
-         set the label of gObject to oLabel
-   end switch
-   --
-   switch
-      case oArray ["nodes"] is an array
-         -- creeate a group
-         break
-      case oShape = "box"
-         -- set the style of gObject to "rectangle"
-         -- set the rect of gObject to oRect
-         put _GetDrawPoints (oArray, 3) into gPoints
-         set the style of gObject to "polygon"
-         set the points of gObject to gPoints
-         break
-      case oShape = "triangle"
-         -- set the style of gObject to "regular"
-         -- set the polysides of gObject to 3
-         set the style of gObject to "polygon"
-         put _GetDrawPoints (oArray, 3) into gPoints
-         set the points of gObject to gPoints
-         break
-      case oShape = "diamond"
-         -- set the style of gObject to "regular"
-         -- set the polysides of gObject to 4
-         --
-         set the style of gObject to "polygon"
-         put _GetDrawPoints (oArray, 3) into gPoints
-         set the points of gObject to gPoints
-         break
-      case oShape = "pentagon"
-         set the style of gObject to "regular"
-         set the polysides of gObject to 5
-         break
-      case oShape = "ellipse"
-      case oShape = "circle"
-      default
-         set the style of gObject to "oval"
-         --
-         put _GetDrawRect (oArray, 2) into oRect
-         set the rect of gObject to oRect
-   end switch
-   --
-   return gObject
-end _CreateGraphic
 
 command _CreateEdge edgeArray, dotGroup
    put edgeArray ["_draw_"][2]["points"] into pArray
@@ -139,25 +77,19 @@ function dot_FetchArray dotURL
    return dotArray
 end dot_FetchArray
 
-function dot_CreateArray dotText
-   put dot_CreateText (dotText, "json") into dotJSON
-   put json_ToArray(dotJSON) into dotArray
-   --
-   return dotArray
-end dot_CreateArray
-
-function dot_CreateText dotText, exportFormat
-   file_CreateText dotText
-   put the result into dotFile
-   -- 
-   put dot_DoShell (dotFile, "dot", exportFormat) into dotExport
-   --
-   return dotExport
-end dot_CreateText
+-- function dot_FetchArray dotURL
+put url dotURL into dotText
+--
+file_CreateText dotText
+put the result into dotFile
+-- 
+put dot_DoShell (dotFile, "dot", "json") into dotJSON
+put json_ToArray(dotJSON) into dotArray
+--
+return dotArray
+end dot_FetchArray
 
 
---> Working on
--
 --> Dot | Construct
 -
 function dot_FromLinkArray linkArray, pGraphStyle, pBgColour, pConcentrate, pDefaultShape, pDefSection, pGraphName
@@ -233,20 +165,28 @@ command dot_CreateGraph dotText, pTextFile, pGraphStyle
    end if
    --
    file_CreateText dotText, pTextFile
-   put the result into pTextFile
+   put the result into dotFile
    --
-   set the itemdelimiter to "."
-   if item -1 of pTextFile = "dot" then
-      put pTextFile into svgFile
-      put "svg" into item -1 of svgFile
-   else
-      put pTextFile & ".svg" into svgFile
-   end if
-   --
-   dot_RenderImage pTextFile, svgFile, dotCommand, "svg"
+   dot_CreateSvg dotFile, dotCommand
+   put the result into svgFile
    --
    return svgFile
 end dot_CreateGraph
+
+command dot_CreateSvg dotFile, dotCommand, pSvgFile
+   if pSvgFile is empty then
+      set the itemdelimiter to "."
+      if item -1 of dotFile = "dot" then
+         put dotFile into pSvgFile
+         put "svg" into item -1 of pSvgFile
+      else
+         put dotFile & ".svg" into pSvgFile
+      end if
+   end if
+   --
+   dot_RenderImage dotFile, pSvgFile, dotCommand, "svg"
+   return pSvgFile
+end dot_CreateSvg
 
 function dot_Render dotText, pDotCommand, pTextFile, pOutputFormat
    -- pDotCommand is an english equivalent of graphStyle
@@ -277,21 +217,6 @@ command dot_RenderImage dotFile, svgFile, pDotCommand, pImageFormat
    put shell (someShell) into gvResult
    return gvResult
 end dot_RenderImage
-
-function dot_DoShell dotFile, pDotCommand, pImageFormat
-   dot_NormalizeDotCommand pDotCommand
-   if pImageFormat is empty then put "svg" into pImageFormat
-   put graphViz_GetShellPath() into gvPath
-   
-   put gvPath & pDotCommand into someShell
-   put space & "-T" & pImageFormat after someShell
-   put space & quote & dotFile & quote after someShell
-   
-   put shell(someShell) into gvResult
-   --
-   put dot_CheckResult (gvResult, pImageFormat, someShell) into shellResult
-   return shellResult
-end dot_DoShell
 
 function dot_CommandFromGraphStyle pGraphStyle
    -- defaults to "dot"

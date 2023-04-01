@@ -30,11 +30,49 @@ end menu_Target
 
 --> Global | LinkArray | Menu
 -
-on menu_DisplayLinkArrayGraph displayView
+on menu_DisplaySvgGraph displayView
    put the displayed_Array of displayView into linkArray
    --
    display_LinkArrayGraph linkArray, "fast undirected spring"
-end menu_DisplayLinkArrayGraph
+end menu_DisplaySvgGraph
+
+on menu_DisplayCrudeGraph displayView
+   local graphStyle
+   put the displayed_Array of displayView into linkArray
+   --
+   ask file "Choose a file" with "some.dot"
+   put it into sFile
+   if sFile is empty then exit to top
+   --
+   put dotArray_FromLinkArray (linkArray, graphStyle, "Moti Graph", sFile) into dotArray
+   if dotArray is not an array then
+      breakpoint
+   end if
+   --
+   display_GraphFromDotArray dotArray
+   display_DotArray dotArray
+end menu_DisplayCrudeGraph
+
+on menu_TestFile
+   answer file "Choose..."
+   put it into dotFile
+   if dotFile is empty then exit to top
+   --
+   put dot_DoShell (dotFile, "dot", "json") into dotJSON
+   if word 1 of dotJSON = "Warning:" then
+      delete line 1 of dotJSON
+   end if
+   --
+   -- put json_ToArray (dotJSON) into dotArray
+   put JsonImport (dotJSON) into dotArray
+   
+   if dotArray is not an array then
+      breakpoint
+   end if
+   --
+   display_GraphFromDotArray dotArray
+   display_DotArray dotArray
+end menu_TestFile
 
 on _
 end _

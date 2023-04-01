@@ -35,27 +35,6 @@ function _FetchText dotURL, exportFormat
    return dotText
 end _FetchText
 
-function dot_FetchArray dotURL
-   put url dotURL into dotText
-   --
-   file_CreateText dotText
-   put the result into dotFile
-   -- 
-   put dot_DoShell (dotFile, "dot", "json") into dotJSON
-   put json_ToArray(dotJSON) into dotArray
-   --
-   return dotArray
-end dot_FetchArray
-
-command display_DotArray dotURL
-   put dot_FetchArray (dotURL) into dotArray
-   --
-   set the itemdelimiter to slash
-   put item -1 of dotURL into shortFile
-   display_Data dotArray, shortFile, "Dot"
-   return the result
-end display_DotArray
-
 command dotArray_CreateObjects dotArray, cardNum, stackName
    set the showName of templateGraphic to true
    --
@@ -225,7 +204,7 @@ end __
 on menu_Shapes
    put "https://graphviz.org/Gallery/gradient/colors.gv.txt" into dotURL
    --
-   display_DotArray dotURL
+   display_DotUrl dotURL
    --
    put _FetchText (dotURL, "plain")
 end menu_Shapes

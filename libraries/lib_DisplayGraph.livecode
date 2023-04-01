@@ -39,28 +39,6 @@ command display_Image someImage, pStackLabel, pCloneName, pStackStyle, pLocOrRec
    return viewObject
 end display_Image
 
-command display_DotText dotText, gTitle
-   put the dot_Name of graphView into gTitle
-   display_Text dotText, gTitle, "Global | Dot | Graph | Text | Menu"
-   put the result into displayView
-   --
-   -- set the graph_View of displayView to graphView
-   set the displayed_Object of displayView to graphView
-   
-end display_DotText
-
-
---> Display | Dot
--
-command display_DotArray dotURL
-   put dot_FetchArray (dotURL) into dotArray
-   --
-   set the itemdelimiter to slash
-   put item -1 of dotURL into shortFile
-   display_Data dotArray, shortFile, "Dot"
-   return the result
-end display_DotArray
-
 command display_Dot dotText, pGraphStyle, pGraphName, pDotFile
    dot_CreateGraph dotText, pDotFile, pGraphStyle
    --
@@ -93,6 +71,37 @@ command display_Dot dotText, pGraphStyle, pGraphName, pDotFile
    return pImageView
    */
 end display_Dot
+
+command display_DotText dotText, gTitle
+   -- put the dot_Name of graphView into gTitle
+   display_Text dotText, gTitle, "Global | Dot | Graph | Text | Menu"
+   put the result into displayView
+   --
+   -- set the graph_View of displayView to graphView
+   set the displayed_Object of displayView to graphView
+   return displayView
+end display_DotText
+
+
+--> Display | Dot
+-
+command display_DotArray dotArray
+   put dotArray ["name"] into graphTitle
+   display_Data dotArray, graphTitle, "Dot Array"
+   put the result into displayView
+   --
+   display_SetInteractions displayView, "Dot | Graph | Array", "mDouble_DotArray", "lcw_Graph"
+   return displayView
+end display_DotArray
+
+command display_DotUrl dotURL
+   put dot_FetchArray (dotURL) into dotArray
+   --
+   set the itemdelimiter to slash
+   put item -1 of dotURL into shortFile
+   display_Data dotArray, shortFile, "Dot"
+   return the result
+end display_DotUrl
 
 command display_SVG svgFile, pStackLabel, pStackStyle, pLocOrRect
    stack_CloneInvisible "View|Image|SVG", "Display SVG"

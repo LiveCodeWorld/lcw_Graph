@@ -170,7 +170,7 @@ function dot_Construct nodeSection, pGraphName, pGraphHeader
    
    put word 1 to -1 of pGraphHeader & CR&CR & nodeSection into dotBit
    --
-   put "digraph" && kwote (graphName) && "{" & CR into dotText
+   put "digraph" && kwote (pGraphName) && "{" & CR into dotText
    put word 1 to -1 of dotBit into dotBit
    line_Indent dotBit
    put dotBit & CR & "}" after dotText

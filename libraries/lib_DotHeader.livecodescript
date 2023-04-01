@@ -124,7 +124,7 @@ end dot_ConstructHeader
 
 function dot_ConstructHeaderBase graphSize, dotPropertyArray, graphStyle, pUseInches  
    _DeconstructDotHeaderArray dotPropertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
-   -- delete variable dotPropertyArray ["defaultShape"]
+   delete variable dotPropertyArray ["defaultShape"] -- this graph property does not exist and we set the node section of the graph
    --
    put CR into endChar
    if pUseInches is not false then

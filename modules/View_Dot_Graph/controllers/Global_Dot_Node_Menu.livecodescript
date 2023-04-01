@@ -21,9 +21,66 @@ getprop menu_Target [tObject]
    return tObject
 end menu_Target
 
+getprop nodeShape_Param [nodeObject]
+   put the node_Shape of nodeObject into nShape
+   if nShape is empty then
+      put "ellipse" into nShape
+   end if
+   return nShape
+end nodeShape_Param
+
+getprop nodeShape_Params
+   return dot_NodeShapes()
+end nodeShape_Params
+
 
 --> Global | Dot | Node | Menu
 -
+on menu_Create nodeObject
+   put the long id of the owner of nodeObject into dotGroup
+   --
+   dotArray_CreateGraphic oArray, dotGroup
+end menu_Create
+
+private command ___
+end ___
+
+on menu_NodeRect nodeObject
+   put the rect of nodeObject into oRect
+   put the node_Rect of nodeObject into nodeRect
+   set the rect of nodeObject to nodeRect
+   --
+   put oRect &CR& nodeRect
+end menu_NodeRect
+
+on menu_NodeShape nodeObject, nShape
+   set the node_Shape of nodeObject to nShape
+end menu_NodeShape
+
+on menu_NodeArray nodeObject
+   put the short name of nodeObject into nodeName
+   put the node_Array of nodeObject into pArray
+   --
+   display_Data pArray, nodeName, "node_Array"
+end menu_NodeArray
+
+private command ____
+end ____
+
+on menu_ParentArray nodeObject
+   put the short name of nodeObject into nodeName
+   put the parent_Array of nodeObject into pArray
+   --
+   display_Data pArray, "parent_Array", nodeName
+end menu_ParentArray
+
+on menu_NodeBehavior nodeObject
+   put the behavior of nodeObject
+end menu_NodeBehavior
+
+private command _
+end _
+
 on menu_ColourFamily nodeObject
    lock screen
    menu_AllWhite nodeObject
@@ -100,8 +157,8 @@ on menu_ColourOutEdges nodeObject
    set the edge_Colour [edgeNames] of nodeObject to "magenta"
 end menu_ColourOutEdges
 
-on _
-end _
+private command __
+end __
 
 on menu_FadeMe nodeObject
    put the short name of nodeObject into nodeName
@@ -109,13 +166,6 @@ on menu_FadeMe nodeObject
    set the faded_Nodes of nodeObject to nodeName
 end menu_FadeMe
 
-on submenu_Dev
-   return "Dev | Menu"
-end submenu_Dev
-
-
---> Dev | Menu
--
 on menu_AllWhite nodeObject
    lock screen
    set the node_Colour ["all"] of nodeObject to "white"
@@ -124,10 +174,3 @@ on menu_AllWhite nodeObject
    unlock screen
    return allNodeNames
 end menu_AllWhite
-
-on menu_ParentArray nodeObject
-   put the short name of nodeObject into nodeName
-   put the parent_Array of nodeObject into pArray
-   --
-   display_Data pArray, "parent_Array", nodeName
-end menu_ParentArray

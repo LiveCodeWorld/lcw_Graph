@@ -77,19 +77,27 @@ end testEdges_Params
 
 --> Global | Dot | Graph | Tools | Menu
 -
+on menu_TestNodeRects graphView
+   put the node_Objects of graphView into nodeObjects
+   --
+   lock screen
+   repeat for each line nodeObject in nodeObjects
+      put the node_Rect of nodeObject into nodeRect
+      set the rect of nodeObject to nodeRect
+   end repeat
+   unlock screen
+end menu_TestNodeRects
+
 on menu_DisplayDotArray graphView
    put the dot_Array of graphView into dotArray
    --
-   put dotArray ["name"] into gTitle
-   display_Data dotArray, gTitle, "Dot"
-   put the result into displayView
-   --
-   set the title_Menu of displayView to "Global | Dot | Graph | Array | Menu"
+   display_DotArray dotArray
 end menu_DisplayDotArray
 
 on menu_DisplayDotText graphView
    put the dot_Text of graphView into dotText
    --
+   display_Text dotText, "Dot"
 end menu_DisplayDotText
 
 on _

@@ -1,7 +1,7 @@
 ﻿script "Global | Dot | Graph | Menu"
 --> MetaData
 -
-copyright: David Menu
+copyright: David Bovill
 license: GPLv3
 name: Global | Dot | Graph | Menu
 type: controller
@@ -35,7 +35,7 @@ getprop disabled_RevealDotFolder [graphView]
    put the dot_Folder of graphView into dotFolder
    return dotFolder is empty
 end disabled_RevealDotFolder
-   
+
 getprop createFromDot_Param [graphView]
    return the dot_Name of graphView
 end createFromDot_Param
@@ -63,31 +63,73 @@ command display_DotGraph dotURL, pStackStyle, pLocOrRect
    return graphView
 end display_DotGraph
 
+getprop nodeShape_Param [nodeObject]
+   put the node_Shape of nodeObject into nShape
+   if nShape is empty then
+      put "ellipse" into nShape
+   end if
+   return nShape
+end nodeShape_Param
+
+getprop nodeShape_Params
+   return dot_NodeShapes()
+end nodeShape_Params
+
 
 --> Global | Dot | Graph | Menu
 -
 on menu_CreateFromDot graphView, dotName
+   put the view_RectOnCard of graphView into gRect
    switch dotName
       case "minimal"
-         put dot_GetMinimal() into dotText
+         put "minimal" into dotURL
          break
       default
          put LocalArray ["dotNameArray"][dotName] into dotURL
-         put url dotURL into dotText
+         -- put url dotURL into dotText
    end switch
    
-   put the view_RectOnCard of graphView into gRect
    set the dot_URL [gRect] of graphView to dotURL
    put the result into dotArray
    set the dot_Name of graphView to dotName
 end menu_CreateFromDot
 
--- on menu_DisplaySvg graphView
-   put the dot_URL of graphView into dotURL
-end menu_DisplaySvg
-   
+on menu_NodeShape graphView, defaultShape
+   put "World" into linkArray ["Hello"]
+   put "World" into linkArray ["Another"]
+   put "Green" into linkArray ["World"]
+   --
+   dotArray_Construct linkArray, dotArray, "dot", "Test Graph", defaultShape
+   put the result into dotText
+   --
+   set the dot_Array [1] of graphView to dotArray     
+   --
+   set the lockmessages to true
+   set the dot_Text of graphView to dotText
+   set the lockmessages to false
+end menu_NodeShape
+
 private command _
 end _
+
+on menu_CreateSvg graphView
+   local dotCommand
+   
+   put the dot_Text of graphView into dotText
+   put the dot_File of graphView into dotFile
+   --
+   dot_CreateSvg dotFile, dotCommand
+   put the result into svgFile
+   --
+   put the browser_View of graphView into browserView
+   set the svg_File [true] of browserView to svgFile
+   set the browser_Visible of graphView to true
+end menu_CreateSvg
+
+on menu_RevealDotFile graphView
+   put the dot_File of graphView into dotFile
+   finder_Reveal dotFile
+end menu_RevealDotFile
 
 on menu_SetDotFolder graphView
    answer folder "Select a folder to store the dot files in..."
@@ -122,6 +164,17 @@ on menu_AnotherSvg graphView, dotName
    finder_Reveal svgFile
 end menu_AnotherSvg
 
+on submenu_Style
+   return "Global | Dot | Graph | Style | Menu"
+end submenu_Style
+
+on submenu_Tools
+   return "Global | Dot | Graph | Tools | Menu"
+end submenu_Tools
+
+private command ___
+end ___
+
 on menu_GraphvizGallery graphView
    launch url "https://graphviz.org/gallery/"
    
@@ -139,10 +192,3 @@ on menu_GraphvizGallery graphView
    */
 end menu_GraphvizGallery
 
-on submenu_Style
-   return "Global | Dot | Graph | Style | Menu"
-end submenu_Style
-
-on submenu_Tools
-   return "Global | Dot | Graph | Tools | Menu"
-end submenu_Tools

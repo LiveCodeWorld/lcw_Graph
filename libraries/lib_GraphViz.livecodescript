@@ -87,7 +87,7 @@ on graph_ConstructPropertyArray @dotPropertyArray, nodeIDs, flattenNum
 end graph_ConstructPropertyArray
 
 
---> Dot
+--> Dot | Props
 -
 function dot_OutputFormats
    -- was "dot_GetOutputFormats"
@@ -658,28 +658,6 @@ function dot_RGBToHex rgbColour
       return webColour
    end if
 end dot_RGBToHex
-
-function dot_ConvertRevShape revShape, pSides
-   -- was "graphViz_ConvertRevShape"
-   if revShape is empty then
-      return "ellipse"
-   else if revShape is "regular" then
-      switch pSides
-         case 3
-            return "triangle"
-         case 4
-            return "rectangle"
-         case 5
-            return "pentagon"
-         case 6
-            return "hexagon"
-      end switch
-   else if revShape is "oval" then
-      return "ellipse"
-   else
-      return revShape
-   end if
-end dot_ConvertRevShape
 
 
 --> Dot | Utilities

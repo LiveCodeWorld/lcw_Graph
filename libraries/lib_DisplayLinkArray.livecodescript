@@ -178,37 +178,29 @@ function linkArray_DotNodeLinks linkArray, pNodeIDs
    -- this version uses nested array values
    repeat for each key someKey in linkArray
       put linkArray [someKey] into someLinkArray
-      if the number of words of someKey > 1 then put kwote(someKey) into someKey
-      
+      --
+      _QuoteNode someKey
       if someLinkArray is an array then
          repeat for each key someLink in someLinkArray
-            if the number of words of someLink > 1 then put kwote(someLink) into someLink
+            _QuoteNode someLink
             put someKey && "->" && someLink & ";" & CR after linkSection
          end repeat
       else
          put someLinkArray into someLinks
          repeat for each line someLink in someLinks
-            if the number of words of someLink > 1 then put kwote(someLink) into someLink
+            _QuoteNode someLink
             put someKey && "->" && someLink & ";" & CR after linkSection
          end repeat
       end if
    end repeat
    delete char -1 of linkSection
    return linkSection
-   
-   /*
-   -- without translating ids
-   if pNodeIDs is empty then put keys(linkArray) into pNodeIDs
-   repeat for each line someKey in pNodeIDs
-      put linkArray [someKey] into someLinks
-      repeat for each line someLink in someLinks
-         put someKey && "->" && someLink & ";" & CR after linkSection
-      end repeat
-   end repeat
-   delete char -1 of linkSection
-   return linkSection
-   */
 end linkArray_DotNodeLinks
+
+private command _QuoteNode @sNode
+   -- if the number of words of sNode > 1 then put kwote(sNode) into sNode
+   put kwote (word 1 to -1 of sNode) into sNode
+end _QuoteNode
 
 
 --> Private
