@@ -26,19 +26,6 @@ The data structure should perhaps be changed to the usual data/metadata arrangem
 
 --> Working On
 -
-command display_Image someImage, pStackLabel, pCloneName, pStackStyle, pLocOrRect
-   if pCloneName is empty then put "Image" into pCloneName
-   --
-   stack_CloneInvisible "View|Image|Fit Inside", pCloneName, true
-   put the result into cloneStackName
-   put the long id of control 1 of stack cloneStackName into viewObject
-   --
-   set the image_Contents of viewObject to someImage
-   --
-   stack_ShowAndGo viewObject, cloneStackName, pStackLabel, pStackStyle, pLocOrRect
-   return viewObject
-end display_Image
-
 command display_Dot dotText, pGraphStyle, pGraphName, pDotFile
    dot_CreateGraph dotText, pDotFile, pGraphStyle
    --
@@ -102,25 +89,6 @@ command display_DotUrl dotURL
    display_Data dotArray, shortFile, "Dot"
    return the result
 end display_DotUrl
-
-command display_SVG svgFile, pStackLabel, pStackStyle, pLocOrRect
-   stack_CloneInvisible "View|Image|SVG", "Display SVG"
-   put the result into cloneStackName
-   put the long id of widget 1 of cd 1 of stack cloneStackName into viewObject
-   --
-   if svgFile begins with "http" then
-      set the svg_URL [true] of viewObject to svgFile
-   else
-      set the svg_File [true] of viewObject to svgFile
-   end if
-   --
-   if pStackLabel is empty then
-      set the itemdelimiter to slash
-      put item -1 of svgFile into pStackLabel
-   end if
-   stack_ShowAndGo viewObject, cloneStackName, pStackLabel, pStackStyle, pLocOrRect
-   return viewObject
-end display_SVG
 
 
 --> Display | Events

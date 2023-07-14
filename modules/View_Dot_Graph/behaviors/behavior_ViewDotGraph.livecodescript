@@ -10,50 +10,73 @@ version: 0.1
 /*
 Here you make make notes as a basic form of help for this view.
 Full help text can be found on the linked wiki for the view.
-
-function dotArray_GetEdgePoints edgeArray, bbRect, bbCentre, pTopDown, pScaleFactor
-   put item 4 of bbRect - item 2 of bbRect into mY
-   --
-   put edgeArray ["_draw_"][2]["points"] into pArray
-   repeat with itemNum = 1 to item 2 of the extents of pArray
-      put pArray [itemNum][1] into sPoint
-      put pArray [itemNum][2] into sY
-      --
-      if pTopDown is true then
-         put mY - sY into item 2 of sPoint -- flip vertical
-      else
-         put sY into item 2 of sPoint
-      end if
-      --
-      if pScaleFactor is a number AND pScaleFactor is not 1 then
-         put loc_ScaleFromCentre (sPoint, pScaleFactor, bbCentre) into sPoint
-      end if
-      --
-      put sPoint & CR after edgePoints
-   end repeat
-   delete char -1 of edgePoints
-   return edgePoints
-end dotArray_GetEdgePoints
-
-private command _OldScaleNodes dotArray, pTopDown, sFactor, bbCentre
-   -- scales from centre and moves group hack
-   put dotArray ["objects"] into objectArray
-   repeat with nodeNum = 1 to item 2 of the extents of objectArray
-      put objectArray [nodeNum] into nodeArray
-      put nodeArray ["name"] into nodeName
-      --
-      if exists (graphic nodeName of me) is false then next repeat
-      put the long id of graphic nodeName of me into nodeObject
-      --
-      put graph_ScaledNodeRect (nodeArray, pTopDown, sFactor, bbCentre) into nodeRect      
-      set the rect of nodeObject to nodeRect
-   end repeat
-end _OldScaleNodes
 */
 
 --> Variables
 -
 local LocalArray
+
+
+--> Working on
+-
+getprop graph_Controls
+   put the number of graphics of me into gNums
+   repeat with gNum = 1 to gNums
+      get the long id of  graphic gNum of me
+      put it & CR after graphControls
+   end repeat
+   delete char -1 of graphControls
+   return graphControls
+end graph_Controls
+
+getprop node_Ids
+   put the controlids of me into nodeIDs
+   put the short id of _BrowserControl() into browserID
+   --
+   set the wholeMatches to true
+   put lineOffset (browserID, nodeIDs) into lineNum
+   delete line lineNum of nodeIDs
+   --
+   return nodeIDs
+end node_Ids
+
+getprop node_Objects
+   put the dot_Array of me into dotArray
+   put dotArray ["objects"] into objectArray
+   repeat with oNum = 1 to item 2 of the extents of objectArray
+      put objectArray [oNum]["name"] into oName
+      put _NodeObject (oName) into nodeObject
+      put nodeObject & CR after nodeObjects
+   end repeat
+   delete char -1 of nodeObjects
+   return nodeObjects
+end node_Objects
+
+getprop edge_Objects
+   put the dot_Array of me into dotArray
+   put dotArray ["edges"] into edgesArray
+   repeat with itemNum = 1 to item 2 of the extents of edgesArray
+      put edgesArray [itemNum] into edgeArray
+      put dotArray_ConstructEdgeName (edgeArray) into edgeName
+      put _EdgeObject (edgeName) into edgeObject
+      put edgeObject & CR after edgeObjects
+   end repeat
+   delete char -1 of edgeObjects
+   return edgeObjects
+end edge_Objects
+
+private function _NodeObject nodeName
+   -- put the top_Control [nodeName] of me into nodeObject
+   if exists (control nodeName of me) is false then return empty
+   put the long id of control nodeName of me into nodeObject
+   return nodeObject
+end _NodeObject
+
+private function _EdgeObject edgeName
+   if exists (graphic edgeName of me) is false then return empty
+   put the long id of graphic edgeName of me into edgeObject
+   return edgeObject
+end _EdgeObject
 
 
 --> Edge | Props
@@ -120,25 +143,22 @@ end edge_Array
 
 --> Events | Custom
 -
+getprop scale_Proportionally
+   return true
+end scale_Proportionally
+
 command LayoutControl pRect
    lock screen
    _SetFrameRect pRect
    -- 
+   put the scale_Proportionally of me into scaleProportionally
    put the inner_Rect [pRect] of me into innerRect
    put the dot_Array of me into dotArray
    put the top_Down of me into topDown
    put _GetBackgroudRect (dotArray) into bbRect
    
-   /*
-   if the auto_Scale of me is not false then
-   else
-      put rect_GetCentre (pRect) into newLoc
-      set the loc of me to newLoc
-   end if
-   */
-   
-   _ScaleNodes dotArray, innerRect, topDown, true
-   _ScaleEdges dotArray, bbRect, topDown, innerRect
+   _ScaleNodes dotArray, innerRect, topDown, scaleProportionally
+   _ScaleEdges dotArray, bbRect, topDown, innerRect, scaleProportionally
    --
    set the rect of _BrowserControl() to innerRect
    unlock screen
@@ -157,17 +177,37 @@ end _SetFrameRect
 
 --> Working on | Edges
 -
-private command _ScaleEdges dotArray, bbRect, topDown, targetFrameRect
-   put true into scaleProportionally
-   
+private command _ScaleNodes dotArray, pTargetRect, pTopDown, pScaleProportionally
+   if pTargetRect is empty then put the rect of me into pTargetRect
+   if pTopDown is empty then put true into pTopDown
+   if pScaleProportionally is empty then put true into pScaleProportionally
+   --
+   put _GetBackgroudRect (dotArray) into bbRect
+   put dotArray ["objects"] into objectArray
+   repeat with nodeNum = 1 to item 2 of the extents of objectArray
+      put objectArray [nodeNum] into nodeArray
+      put nodeArray ["name"] into nodeName
+      put _NodeObject (nodeName) into nodeObject
+      if exists (nodeObject) is false then next repeat
+      --
+      -- put _GetNodeRect (nodeArray, dotArray, pTargetRect, pTopDown, pScaleProportionally) into scaledNodeRect
+      put graph_OriginalNodeRect (nodeArray, pTopDown) into oNodeRect -- at origin
+      put rect_TransformFromOrigin (oNodeRect, bbRect, pTargetRect, pScaleProportionally) into scaledNodeRect
+      set the rect of nodeObject to scaledNodeRect
+   end repeat
+end _ScaleNodes
+
+private command _ScaleEdges dotArray, bbRect, topDown, targetFrameRect, pScaleProportionally
+   -- put true into pScaleProportionally
    put dotArray ["edges"] into edgesArray
    repeat with itemNum = 1 to item 2 of the extents of edgesArray
       put edgesArray [itemNum] into edgeArray
       put dotArray_ConstructEdgeName (edgeArray) into edgeName
-      if exists (graphic edgeName of me) is false then next repeat
-      put the long id of graphic edgeName of me into edgeObject
       --
-      put dotArray_TransformPoints (edgeArray, bbRect, targetFrameRect, topDown, scaleProportionally) into scaledEdgePoints
+      put _EdgeObject (edgeName) into edgeObject
+      if exists (edgeObject) is false then next repeat
+      --
+      put dotArray_TransformPoints (edgeArray, bbRect, targetFrameRect, topDown, pScaleProportionally) into scaledEdgePoints
       --
       set the points of edgeObject to scaledEdgePoints
    end repeat   
@@ -226,24 +266,6 @@ function loc_Transform someLoc, someScale, pScaleCentre
    return newLoc
 end loc_Transform
 
-function rect_Transform oRect, oFrameRect, targetFrameRect, pScaleProportionally
-   
-end rect_Transform
-
-function transform_RectFromOrigin rectArray, tObject, targetFrameRect, pScaleProportionally
-   -- Transformed means "scaled and translated"
-   -- We assume "target" "rect" is a card so has 0,0 topleft
-   
-   # No need to Translate
-   put rectArray ["target"]["rect"] into oCardRect
-   put rectArray_FindObjectArray (rectArray, tObject) into objectArray
-   put objectArray ["rect"] into oRect -- original object rect
-   
-   put rect_TransformFromOrigin (oRect, oCardRect, targetFrameRect, pScaleProportionally) into transformedRect
-   rect_Normalise transformedRect -- for animationEngine
-   return transformedRect
-end transform_RectFromOrigin
-
 setprop graphic_Rect gRect
    if the long id of the target = the long id of me then return false
    --
@@ -279,50 +301,6 @@ end graph_Scale
 
 --> Node
 -
-private command _ScaleNodes dotArray, pTargetRect, pTopDown, pScaleProportionally
-   if pTargetRect is empty then put the rect of me into pTargetRect
-   if pTopDown is empty then put true into pTopDown
-   if pScaleProportionally is empty then put true into pScaleProportionally
-   --
-   put _GetBackgroudRect (dotArray) into bbRect
-   put dotArray ["objects"] into objectArray
-   repeat with nodeNum = 1 to item 2 of the extents of objectArray
-      put objectArray [nodeNum] into nodeArray
-      put nodeArray ["name"] into nodeName
-      if exists (graphic nodeName of me) is false then next repeat
-      put the long id of graphic nodeName of me into nodeObject
-      --
-      -- put _GetNodeRect (nodeArray, dotArray, pTargetRect, pTopDown, pScaleProportionally) into scaledNodeRect
-      put graph_OriginalNodeRect (nodeArray, pTopDown) into oNodeRect -- at origin
-      put rect_TransformFromOrigin (oNodeRect, bbRect, pTargetRect, pScaleProportionally) into scaledNodeRect
-      set the rect of nodeObject to scaledNodeRect
-   end repeat
-end _ScaleNodes
-
-function rect_TransformFromOrigin oRect, oFrameRect, targetFrameRect, pScaleProportionally
-   # Get translation vectors
-   -- using topleft positions scaled graph in topleft of targetFrameRect
-   put item 1 to 2 of oFrameRect into fromPoint -- will be 0,0 for now
-   put item 1 to 2 of targetFrameRect into toPoint
-   
-   /*
-   put rect_GetCentre (oFrameRect) into fromPoint
-   put rect_GetCentre (targetFrameRect) into toPoint
-   */
-   loc_SetTranslationVector fromPoint, toPoint, xVector, yVector
-   
-   # Get scaleX, scaleY
-   rect_SetScaleVectors oFrameRect, targetFrameRect, scaleX, scaleY, pScaleProportionally
-   
-   # Scale before translating
-   put rect_ScaleByVectors (oRect, scaleX, scaleY) into transformedRect   
-   
-   # Translate
-   rect_Translate transformedRect, xVector, yVector
-   --
-   return transformedRect
-end rect_TransformFromOrigin
-
 private function _GetNodeRect nodeArray, dotArray, targetRect, pTopDown, pScaleProportionally
    put graph_OriginalNodeRect (nodeArray, pTopDown) into oNodeRect
    put _GetBackgroudRect (dotArray) into bbRect
@@ -457,10 +435,6 @@ getprop node_Object
       return nodeObject
    end if
 end node_Object
-
-getprop node_Number
-   
-end node_Number
 
 
 --> Array | Model
@@ -608,12 +582,14 @@ setprop fade_Level bLevel
    --
    put the parent_Edges of tNode into parentEdges
    repeat for each line edgeName in parentEdges
-      set the blendlevel of graphic edgeName of me to bLevel
+      put _EdgeObject (edgeName) into edgeObject
+      set the blendlevel of edgeObject to bLevel
    end repeat
    --
    put the child_Edges of tNode into childEdges
    repeat for each line edgeName in childEdges
-      set the blendlevel of graphic edgeName of me to bLevel
+      put _EdgeObject (edgeName) into edgeObject
+      set the blendlevel of edgeObject to bLevel
    end repeat
    --
    unlock screen
@@ -640,8 +616,9 @@ setprop edge_Colour [edgeNames] sColour
    
    lock screen
    repeat for each line edgeName in edgeNames
-      set the foregroundcolor of graphic edgeName of me to sColour
-      set the blendlevel of graphic edgeName of me to 0
+      put _EdgeObject (edgeName) into edgeObject
+      set the foregroundcolor of edgeName to sColour
+      set the blendlevel of edgeName to 0
    end repeat
    unlock screen
 end edge_Colour
@@ -975,18 +952,6 @@ getprop auto_ScaleFactor [targetRect]
    return min (scaleX, scaleY)
 end auto_ScaleFactor
 
-command rect_SetScaleVectors someRect, targetRect, @scaleX, @scaleY
-   put item 3 of someRect - item 1 of someRect into someWidth
-   put item 3 of targetRect - item 1 of targetRect into targetWidth
-   put targetWidth/someWidth into scaleX
-   
-   put item 4 of someRect - item 2 of someRect into someHeight
-   put item 4 of targetRect - item 2 of targetRect into targetHeight
-   put targetHeight/someHeight into scaleY
-   
-   return scaleX,scaleY
-end rect_SetScaleVectors
-
 
 --> Geometry
 -
@@ -1079,7 +1044,7 @@ setprop show_NodeLabels showNodeLabels
    lock screen
    repeat with oNum = 1 to item 2 of the extents of objectArray
       put objectArray [oNum]["name"] into oName
-      put the long id of graphic oName of me into nodeObject
+      put _NodeObject (oName) into nodeObject
       --
       if showNodeLabels is false then
          set the label of nodeObject to empty
@@ -1112,7 +1077,7 @@ setprop show_Names sBoolean
    lock screen
    repeat with oNum = 1 to item 2 of the extents of objectArray
       put objectArray [oNum]["name"] into oName
-      put the long id of graphic oName of me into nodeObject
+      put _NodeObject (oName) into nodeObject
       set the showname of nodeObject to sBoolean
    end repeat
    unlock screen
@@ -1154,31 +1119,6 @@ setprop edge_Width edgeWidth
    put edgeWidth into LocalArray ["edgeWidth"]
    return nodeObject
 end edge_Width
-
-getprop edge_Objects
-   put the dot_Array of me into dotArray
-   put dotArray ["edges"] into edgesArray
-   repeat with itemNum = 1 to item 2 of the extents of edgesArray
-      put edgesArray [itemNum] into edgeArray
-      put dotArray_ConstructEdgeName (edgeArray) into edgeName
-      put the long id of graphic edgeName of me into edgeObject
-      put edgeObject & CR after edgeObjects
-   end repeat
-   delete char -1 of edgeObjects
-   return edgeObjects
-end edge_Objects
-
-getprop node_Objects
-   put the dot_Array of me into dotArray
-   put dotArray ["objects"] into objectArray
-   repeat with oNum = 1 to item 2 of the extents of objectArray
-      put objectArray [oNum]["name"] into oName
-      put the long id of graphic oName of me into nodeObject
-      put nodeObject & CR after nodeObjects
-   end repeat
-   delete char -1 of nodeObjects
-   return nodeObjects
-end node_Objects
 
 getprop top_Down
    put LocalArray ["topDown"] is not false into topDown
@@ -1315,16 +1255,6 @@ end dot_Command
 
 --> Objects
 -
-getprop graph_Controls
-   put the number of graphics of me into gNums
-   repeat with gNum = 1 to gNums
-      get the long id of  graphic gNum of me
-      put it & CR after graphControls
-   end repeat
-   delete char -1 of graphControls
-   return graphControls
-end graph_Controls
-
 getprop browser_View
    return _BrowserControl()
 end browser_View

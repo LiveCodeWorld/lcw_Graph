@@ -109,7 +109,7 @@ on menu_NodeShape graphView, defaultShape
    set the lockmessages to false
 end menu_NodeShape
 
-private command _
+private on _
 end _
 
 on menu_CreateSvg graphView
@@ -144,12 +144,16 @@ on menu_RevealDotFolder graphView
    finder_Reveal dotFolder
 end menu_RevealDotFolder
 
-private command __
+private on __
 end __
 
 on menu_ClearGraphics graphView
    set the dot_Array of graphView to empty
 end menu_ClearGraphics
+
+on menu_ClearNodes graphView
+   set the dot_Array of graphView to empty
+end menu_ClearNodes
 
 on menu_AnotherSvg graphView, dotName
    -- sfdp -Goverlap=prism gd_1994_2007_8comp.gv | gvmap  -e | neato -Ecolor="#55555522" -n2 -Tpng > gd_1994_2007_8comp.png
@@ -172,7 +176,7 @@ on submenu_Tools
    return "Global | Dot | Graph | Tools | Menu"
 end submenu_Tools
 
-private command ___
+private on ___
 end ___
 
 on menu_GraphvizGallery graphView

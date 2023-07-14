@@ -33,17 +33,40 @@ getprop nodeShape_Params
    return dot_NodeShapes()
 end nodeShape_Params
 
+getprop disabled_NodeBehavior [nodeObject]
+   put the behavior of nodeObject into bObject
+   return exists (bObject) is false
+end disabled_NodeBehavior
+
+getprop setBehavior_Params
+   return "Placeholder"
+end setBehavior_Params
+
+function _GetBehaviorObject bName
+   put view_GetTemplateBehavior("Layout|Placeholder") into bObject
+   -- put the long id of stack "behavior_ViewLayoutPlaceholder" into bObject
+   return bObject
+end _GetBehaviorObject
+
 
 --> Global | Dot | Node | Menu
 -
+on submenu_Dev
+   return "Global | Dot | Graph | Test | Menu"
+end submenu_Dev
+
 on menu_Create nodeObject
    put the long id of the owner of nodeObject into dotGroup
    --
    dotArray_CreateGraphic oArray, dotGroup
 end menu_Create
 
-private command ___
-end ___
+on menu_Delete nodeObject
+   object_Delete nodeObject
+end menu_Delete
+
+private on _
+end _
 
 on menu_NodeRect nodeObject
    put the rect of nodeObject into oRect
@@ -57,15 +80,15 @@ on menu_NodeShape nodeObject, nShape
    set the node_Shape of nodeObject to nShape
 end menu_NodeShape
 
+private on ______
+end ______
+
 on menu_NodeArray nodeObject
    put the short name of nodeObject into nodeName
    put the node_Array of nodeObject into pArray
    --
    display_Data pArray, nodeName, "node_Array"
 end menu_NodeArray
-
-private command ____
-end ____
 
 on menu_ParentArray nodeObject
    put the short name of nodeObject into nodeName
@@ -74,12 +97,32 @@ on menu_ParentArray nodeObject
    display_Data pArray, "parent_Array", nodeName
 end menu_ParentArray
 
+on menu_DataModel nodeObject
+   put the short name of nodeObject into nodeName
+   put the data_Model of nodeObject into dModel
+   --
+   display_Data dModel, "data_Model", nodeName
+end menu_DataModel
+
+private on __
+end __
+
 on menu_NodeBehavior nodeObject
-   put the behavior of nodeObject
+   put the behavior of nodeObject into bObject
+   edit the script of bObject
 end menu_NodeBehavior
 
-private command _
-end _
+on menu_ReplaceWithPlaceholder nodeObject
+   set the control_Type  of nodeObject to "placeHolder"
+end menu_ReplaceWithPlaceholder
+
+on menu_SetBehavior nodeObject, bName
+   put _GetBehaviorObject (bName) into bObject
+   set the behavior of nodeObject to bObject
+end menu_SetBehavior
+
+private on ___
+end ___
 
 on menu_ColourFamily nodeObject
    lock screen
@@ -157,8 +200,8 @@ on menu_ColourOutEdges nodeObject
    set the edge_Colour [edgeNames] of nodeObject to "magenta"
 end menu_ColourOutEdges
 
-private command __
-end __
+private on _____
+end _____
 
 on menu_FadeMe nodeObject
    put the short name of nodeObject into nodeName

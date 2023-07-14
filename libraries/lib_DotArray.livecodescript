@@ -80,6 +80,22 @@ end _CreateGraphic
 
 --> Working on
 -
+private command _DeleteDotGraphics tGroup
+   put the node_Ids of tGroup into nodeIds
+   --
+   put the number of graphics of tGroup into gNums
+   repeat with gNum = gNums down to 1
+      delete graphic gNum of tGroup
+   end repeat
+end _DeleteDotGraphics
+
+private command _DeleteDotNodes tGroup
+   put the node_Ids of tGroup into nodeIds
+   repeat for each line nodeID in nodeIds
+      delete control id nodeID of tGroup
+   end repeat
+end _DeleteDotNodes
+
 function dotArray_FindPointArray edgeArray   
    put edgeArray ["_draw_"] into drawData
    put item 2 of the extents of drawData into maxItem
@@ -320,7 +336,8 @@ setprop dot_Array [edgeWidth] dotArray
    lock screen
    put the loc of tGroup into oLoc
    --
-   _DeleteDotGraphics tGroup
+   -- _DeleteDotGraphics tGroup
+   _DeleteDotNodes tGroup
    --
    if dotArray is an array then -- for safety?
       put _GetBackgroudRect (dotArray) into bbRect
@@ -349,13 +366,6 @@ private function _GetBackgroudRect dotArray
    --
    return bbRect
 end _GetBackgroudRect
-
-private command _DeleteDotGraphics tGroup
-   put the number of graphics of tGroup into gNums
-   repeat with gNum = gNums down to 1
-      delete graphic gNum of tGroup
-   end repeat
-end _DeleteDotGraphics
 
 private command _CreateObjects dotArray, dotGroup
    set the showName of templateGraphic to true
