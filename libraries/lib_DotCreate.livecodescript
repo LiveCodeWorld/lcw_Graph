@@ -12,6 +12,296 @@ version: 0.1
 
 --> Working on
 -
+
+--> Dot | Graph | Create
+-
+command dot_CreateGraph dotText, dotFile, pGraphStyle
+   local dotCommand
+   --
+   dot_SetText dotFile, dotText
+   put the result into dotFile
+   dot_SvgFromDotFile dotFile, pGraphStyle, dotCommand, svgFile, dotText
+   return svgFile
+end dot_CreateGraph
+
+command dot_CreateSvg dotFile, pGraphStyle, pSvgFile
+   local dotText, dotCommand
+   dot_SvgFromDotFile dotFile, pGraphStyle, dotCommand, pSvgFile, dotText
+   return pSvgFile
+end dot_CreateSvg
+
+command dot_SvgFromDotFile dotFile, pGraphStyle, @dotCommand, @pSvgFile, @pDotText
+   if pDotText is empty then put dot_GetText(dotFile) into pDotText
+   put dot_NormalizeCommand (pGraphStyle, pDotText) into dotCommand
+   --
+   dot_NormalizeSvgFile pSvgFile, dotFile
+   dot_RenderImage dotFile, pSvgFile, dotCommand, "svg"
+   return pSvgFile
+end dot_SvgFromDotFile
+
+command dot_NormalizeSvgFile @svgFile, dotFile
+   if svgFile is empty then
+      set the itemdelimiter to "."
+      if item -1 of dotFile = "dot" then
+         put dotFile into svgFile
+         put "svg" into item -1 of svgFile
+      else
+         put dotFile & ".svg" into svgFile
+      end if
+   end if
+end dot_NormalizeSvgFile
+
+
+command dot_RenderImage dotFile, svgFile, pDotCommand, pImageFormat
+   if pDotCommand is empty then put "dot" into pDotCommand
+   if pImageFormat is empty then put "svg" into pImageFormat
+   --
+   put pDotCommand into someShell
+   put space & kwote (dotFile) after someShell
+   put space & "-T" & pImageFormat after someShell
+   put space & "-o" && kwote (svgFile) after someShell
+   --
+   put shell (someShell) into gvResult
+   return gvResult
+end dot_RenderImage
+
+function dot_NormalizeCommand pGraphStyle, pDotText
+   switch
+      case pGraphStyle is empty AND pDotText is empty
+         return "dot"
+      case pGraphStyle is empty
+         put dot_GetLayout (pDotText) into dotCommand
+         return dotCommand
+      default
+         put dot_CommandFromGraphStyle (pGraphStyle) into dotCommand
+         return dotCommand
+   end switch
+end dot_NormalizeCommand
+
+
+--> File
+-
+function file_GetExtension sFile
+   set the itemDelimiter to "."
+   return item -1 of sFile
+end file_GetExtension
+
+function file_SetExtension sFile, fExt, pShortFile
+   set the itemDelimiter to "."
+   put fExt into item-1 of sFile
+   if pShortFile is true then
+      set the itemdelimiter to slash
+      return item -1 of sFile
+   else
+      return sFile
+   end if
+end file_SetExtension
+
+function dot_CreateText dotText, pImageFormat, pDotCommand, pDotFile, pOutputFile
+   ## Save dotText 
+   dot_SetText pDotFile, dotText
+   put the result into pDotFile
+   
+   ## Use Dot to create text export
+   gv_DoShell pDotFile, pDotCommand, pExportFormat, pOutputFile
+   put the result into dotExport
+   return dotExport
+end dot_CreateText
+
+function dot_DoShell dotFile, pDotCommand, pExportFormat, pOutputFile
+   put gv_ConstructShell (dotFile, pDotCommand, pExportFormat, pOutputFile) into someShell
+   put shell (someShell) into gvResult
+   put dot_CheckResult (gvResult, pExportFormat, someShell) into shellResult
+   return shellResult
+end dot_DoShell
+
+command gv_DoShell dotFile, pDotCommand, pExportFormat, pOutputFile
+   put folder_Above (dotFile) into dotFolder
+   put the defaultfolder into oFolder
+   set the defaultfolder to dotFolder
+   --
+   set the itemdelimiter to slash
+   put item -1 of dotFile into shortDotFile
+   --
+   switch
+      case the number of items of pOutputFile = 1
+         ## Assume it should be in dotFolder (do nothing)
+         break
+      case item 1 to -2 of pOutputFile = dotFolder
+         -- tidy it
+         put shortDotFile into pOutputFile
+         set the itemdelimiter to "."
+         put pExportFormat into item -1 of pOutputFile
+         break
+   end switch
+   --
+   put gv_ConstructShell (shortDotFile, pDotCommand, pExportFormat, pOutputFile) into shortShell
+   put shell (shortShell) into gvResult
+   --
+   switch
+      case pOutputFile is empty
+         return gvResult -- STDOUT
+      case gvResult is not empty
+         breakpoint -- some error saving file
+         break
+      default
+         -- Succesfully saved result to pOutputFile
+         return dotFolder & pOutputFile
+   end switch
+end gv_DoShell
+
+function gv_ConstructShell dotFile, pDotCommand, pExportFormat, pOutputFile
+   dot_NormalizeDotCommand pDotCommand
+   if pExportFormat is empty then put "svg" into pExportFormat
+   put graphViz_GetShellPath() into gvPath
+   --
+   put gvPath & pDotCommand into someShell
+   put space & "-T" & pExportFormat after someShell
+   --
+   if pOutputFile is not empty then
+      put space & "-o" && kwote (pOutputFile) after someShell
+   end if
+   put space & quote & dotFile & quote after someShell
+   --
+   return someShell
+end gv_ConstructShell
+
+command gv_ExportDot dotFile, pOutputFile
+   if pOutputFile is empty then
+      put file_SetExtension (dotFile, "dot", true) into pOutputFile
+   end if
+   gv_DoShell dotFile, "dot", "dot", pOutputFile
+   put the result into outputFile
+   return outputFile
+end gv_ExportDot
+
+command gv_ExportCanon dotFile, pOutputFile
+   if pOutputFile is empty then
+      put file_SetExtension (dotFile, "canon", true) into pOutputFile
+   end if
+   gv_DoShell dotFile, "dot", "canon", pOutputFile
+   put the result into outputFile
+   return outputFile
+end gv_ExportCanon
+
+command gv_ExportXdot dotFile, pOutputFile
+   if pOutputFile is empty then
+      put file_SetExtension (dotFile, "xdot", true) into pOutputFile
+   end if
+   gv_DoShell dotFile, "dot", "xdot", pOutputFile
+   put the result into outputFile
+   return outputFile
+end gv_ExportXdot
+
+
+--> HkeyArray | Construct
+-
+function hkeyArray_ConstructDot hkeyArray, graphName, graphStyle, graphSize
+   local graphDirection, graphOrder, defaultShape
+   
+   set the cursor to watch
+   
+   if the filter_System of me is true then hKeyArray_FilterSystemMessages hkeyArray
+   if the fllter_CustomMissing of me  is true then hKeyArray_FilterCustomMissing hkeyArray
+   if graphSize is empty then
+      put the dot_GraphSize of me into graphSize
+      put dot_RectFromSize(graphSize) into graphRect
+   end if
+   
+   put the overlay_Overlap of me into overlap
+   put the concentrate_Graph of me into concentrate
+   put true into splines
+   if graphstyle = "clusters" then
+      put true into clusterGraph
+   else
+      put false into clusterGraph
+   end if
+   
+   dotHeader_ConstructArray dotPropertyArray, overlap, concentrate, true
+   -- 
+   put dot_ConstructHeader (graphRect, dotPropertyArray) into graphHeader
+   put dot_NestedSubgraphsFromhkeyArray (hkeyArray, clusterGraph, graphName, graphHeader) into dotText
+   
+   return dotText
+end hkeyArray_ConstructDot
+
+
+--> Dot | From
+-
+function dot_CommandFromGraphStyle pGraphStyle
+   -- defaults to "dot"
+   dot_NormalizeDotCommand pGraphStyle
+   return pGraphStyle
+end dot_CommandFromGraphStyle
+
+command dot_NormalizeDotCommand @graphStyle
+   switch
+      case graphStyle is among the items of "tree map,patchwork"
+         put "patchwork" into graphStyle
+         break
+      case graphStyle is among the items of "nested,osage"
+         put "osage" into graphStyle
+         break
+      case graphStyle is among the items of "spring,neato"
+         /*
+         draws undirected graphs using ``spring'' models
+         (see Kamada and Kawai, Information Processing Letters 31:1, April 1989).
+         */
+         put "neato" into graphStyle
+         break
+      case graphStyle is among the items of "circular,circo"
+         /*
+         draws graphs using a circular layout (see Six and Tollis, GD '99 and ALENEX '99, and Kaufmann and Wiese, GD '02.)  
+         The tool identifies biconnected components and draws the nodes of the component on a circle. 
+         The block-cutpoint tree is then laid out using a recursive radial algorithm. 
+         Edge crossings within a circle are minimized by placing as many edges on the circle's perimeter as possible.  
+         In particular, if the component is outerplanar, the component will have a planar layout.
+         
+         If a node belongs to multiple non-trivial biconnected components, the layout puts the node in one of them.
+         By default, this is the first non-trivial component found in the search from the root component.
+         */
+         put "circo" into graphStyle
+         break
+      case graphStyle is among the items of "radial,twopi"
+         /*
+         draws graphs using a radial layout (see G. Wills, Symposium on Graph Drawing GD'97, September, 1997).  
+         Basically, one node is chosen as the center and put at the origin.  
+         The remaining nodes are placed on a sequence of concentric circles centered about the origin, 
+         each a fixed radial distance from the  previous  circle.   
+         All  nodes distance 1 from the center are placed on the first circle;
+         all nodes distance 1 from a node on the first circle are placed on the second circle; and so forth.
+         */
+         put "twopi" into graphStyle
+         break
+      case graphStyle is among the items of "undirected spring,fdp"
+         /*
+         filter for drawing undirected graphs
+         draws undirected graphs using a "spring'' model. 
+         It relies on a force-directed approach in the spirit of Fruchterman and Reingold 
+         (cf. Software-Practice & Experience 21(11), 1991, pp. 1129-1164).
+         */
+         put "fdp" into graphStyle
+         break
+      case graphStyle is among the items of "fast spring,fast undirected spring,sfdp"
+         -- sfdp - filter for drawing large undirected graphs
+         /*
+         also draws undirected graphs using the "spring'' model described above, 
+         but it uses a multi-scale approach to produce layouts of large graphs in a reasonably short time.
+         */
+         put "sfdp" into graphStyle
+         break
+      default
+         /*
+         draws  directed  graphs.
+         It works well on DAGs and other graphs that can be drawn as hierarchies.  
+         */
+         put "dot" into graphStyle
+   end switch
+end dot_NormalizeDotCommand
+
+
+--> Dot | Create
+-
 command dotArray_CreateObjects dotArray, dotGroup
    set the showName of templateGraphic to true
    --
@@ -77,18 +367,6 @@ function dot_FetchArray dotURL
    return dotArray
 end dot_FetchArray
 
--- function dot_FetchArray dotURL
-put url dotURL into dotText
---
-file_CreateText dotText
-put the result into dotFile
--- 
-put dot_DoShell (dotFile, "dot", "json") into dotJSON
-put json_ToArray(dotJSON) into dotArray
---
-return dotArray
-end dot_FetchArray
-
 
 --> Dot | Construct
 -
@@ -105,7 +383,7 @@ function dot_FromLinkArray linkArray, pGraphStyle, pBgColour, pConcentrate, pDef
    put "" into defaultUrl
    put "" into pDirection
    --
-   _ConstructDotHeaderArray dotPropertyArray, overlap, pConcentrate, splines, cluster, pDirection, dotOrder, pDefaultShape, defaultUrl
+   dotHeader_ConstructArray dotPropertyArray, overlap, pConcentrate, splines, cluster, pDirection, dotOrder, pDefaultShape, defaultUrl
    put dot_ConstructHeaderBase (graphSize, dotPropertyArray, pGraphStyle) into graphHeader
    dot_AddDefaultNode graphHeader, pDefaultShape
    --
@@ -128,7 +406,7 @@ function dot_ConstructSingleNodeGraph nodeDotParams, graphName, someNodeID, grap
    local dotNodeDefs, dotNodeLinks
    
    if someNodeID is empty then put the text of the nodeID_Field of me into someNodeID
-   _ConstructDotHeaderArray dotPropertyArray
+   dotHeader_ConstructArray dotPropertyArray
    put dot_ConstructHeader (graphSize) into graphHeader
    
    put dot_QuoteNode (someNodeID) into someNodeID
@@ -154,40 +432,6 @@ command dot_AddDefaultNode @graphHeaderBase, defaultShape
    put CR&CR & defaultNodeBit after graphHeaderBase
 end dot_AddDefaultNode
 
-command dot_CreateGraph dotText, pTextFile, pGraphStyle
-   if pGraphStyle is empty then
-      put dot_GetLayout (dotText) into dotCommand
-      if dotCommand is empty then
-         put "dot" into dotCommand
-      end if
-   else
-      put dot_CommandFromGraphStyle (pGraphStyle) into dotCommand
-   end if
-   --
-   file_CreateText dotText, pTextFile
-   put the result into dotFile
-   --
-   dot_CreateSvg dotFile, dotCommand
-   put the result into svgFile
-   --
-   return svgFile
-end dot_CreateGraph
-
-command dot_CreateSvg dotFile, dotCommand, pSvgFile
-   if pSvgFile is empty then
-      set the itemdelimiter to "."
-      if item -1 of dotFile = "dot" then
-         put dotFile into pSvgFile
-         put "svg" into item -1 of pSvgFile
-      else
-         put dotFile & ".svg" into pSvgFile
-      end if
-   end if
-   --
-   dot_RenderImage dotFile, pSvgFile, dotCommand, "svg"
-   return pSvgFile
-end dot_CreateSvg
-
 function dot_Render dotText, pDotCommand, pTextFile, pOutputFormat
    -- pDotCommand is an english equivalent of graphStyle
    if pDotCommand is empty then put "dot" into pDotCommand
@@ -196,7 +440,8 @@ function dot_Render dotText, pDotCommand, pTextFile, pOutputFormat
    dot_SaveTemporaryFile dotText, pTextFile
    put the result into pTextFile
    --
-   put dot_DoShell (pTextFile, pDotCommand, pImageFormat) into shellResult
+   gv_DoShell pTextFile, pDotCommand, pImageFormat
+   put the result into shellResult
    --
    if shellResult is false or shellResult is empty then
       exit to top
@@ -204,85 +449,6 @@ function dot_Render dotText, pDotCommand, pTextFile, pOutputFormat
       return shellResult
    end if
 end dot_Render
-
-command dot_RenderImage dotFile, svgFile, pDotCommand, pImageFormat
-   if pDotCommand is empty then put "dot" into pDotCommand
-   if pImageFormat is empty then put "svg" into pImageFormat
-   --
-   put pDotCommand into someShell
-   put space & kwote (dotFile) after someShell
-   put space & "-T" & pImageFormat after someShell
-   put space & "-o" && kwote (svgFile) after someShell
-   --
-   put shell (someShell) into gvResult
-   return gvResult
-end dot_RenderImage
-
-function dot_CommandFromGraphStyle pGraphStyle
-   -- defaults to "dot"
-   dot_NormalizeDotCommand pGraphStyle
-   return pGraphStyle
-end dot_CommandFromGraphStyle
-
-command dot_NormalizeDotCommand @graphStyle
-   switch
-      case graphStyle is among the items of "spring,neato"
-         /*
-         draws undirected graphs using ``spring'' models
-         (see Kamada and Kawai, Information Processing Letters 31:1, April 1989).
-         */
-         put "neato" into graphStyle
-         break
-      case graphStyle is among the items of "circular,circo"
-         /*
-         draws graphs using a circular layout (see Six and Tollis, GD '99 and ALENEX '99, and Kaufmann and Wiese, GD '02.)  
-         The tool identifies biconnected components and draws the nodes of the component on a circle. 
-         The block-cutpoint tree is then laid out using a recursive radial algorithm. 
-         Edge crossings within a circle are minimized by placing as many edges on the circle's perimeter as possible.  
-         In particular, if the component is outerplanar, the component will have a planar layout.
-         
-         If a node belongs to multiple non-trivial biconnected components, the layout puts the node in one of them.
-         By default, this is the first non-trivial component found in the search from the root component.
-         */
-         put "circo" into graphStyle
-         break
-      case graphStyle is among the items of "radial,twopi"
-         /*
-         draws graphs using a radial layout (see G. Wills, Symposium on Graph Drawing GD'97, September, 1997).  
-         Basically, one node is chosen as the center and put at the origin.  
-         The remaining nodes are placed on a sequence of concentric circles centered about the origin, 
-         each a fixed radial distance from the  previous  circle.   
-         All  nodes distance 1 from the center are placed on the first circle;
-         all nodes distance 1 from a node on the first circle are placed on the second circle; and so forth.
-         */
-         put "twopi" into graphStyle
-         break
-      case graphStyle is among the items of "undirected spring,fdp"
-         /*
-         filter for drawing undirected graphs
-         draws undirected graphs using a "spring'' model. 
-         It relies on a force-directed approach in the spirit of Fruchterman and Reingold 
-         (cf. Software-Practice & Experience 21(11), 1991, pp. 1129-1164).
-         */
-         put "fdp" into graphStyle
-         break
-      case graphStyle is among the items of "fast spring,fast undirected spring,sfdp"
-         -- sfdp - filter for drawing large undirected graphs
-         /*
-         also draws undirected graphs using the "spring'' model described above, 
-         but it uses a multi-scale approach to produce layouts of large graphs in a reasonably short time.
-         */
-         -- changed to "fdp" as the graphs are ugly otherwise -- hack
-         put "fdp" into graphStyle
-         break
-      default
-         /*
-         draws  directed  graphs.
-         It works well on DAGs and other graphs that can be drawn as hierarchies.  
-         */
-         put "dot" into graphStyle
-   end switch
-end dot_NormalizeDotCommand
 
 
 --> Private
@@ -354,13 +520,13 @@ private function kwote someText, pQuoteChar
    return pQuoteChar & someText & pQuoteChar
 end kwote
 
-private command array_AddToIndex newLines, someKey, @someArray
+private command indexArray_Add newLines, someKey, @someArray
    -- if the number of lines of keys(someArray) > 5 and someKey contains "form_IsRed" then breakpoint
    put someArray [someKey] into someIndex
    line_AddToIndex newLines, someIndex
    put word 1 to -1 of someIndex into someArray [someKey]
    return the number of lines of someIndex
-end array_AddToIndex
+end indexArray_Add
 
 private command line_AddToIndex newLines, @someIndex
    repeat for each line someLine in newLines
@@ -402,27 +568,3 @@ end text_RepeatString
 
 --> Private
 -
-command _ConstructDotHeaderArray @propertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
-   put overlap into propertyArray ["overlap"]
-   put concentrate into propertyArray ["concentrate"]
-   put splines into propertyArray ["splines"]
-   put cluster into propertyArray ["cluster"]
-   put direction into propertyArray ["direction"]
-   put dotOrder into propertyArray ["dotOrder"]
-   put defaultShape into propertyArray ["defaultShape"]
-   put defaultUrl into propertyArray ["defaultUrl"]
-end _ConstructDotHeaderArray
-
-private command _DeconstructDotHeaderArray pDotPropertyArray, @overlap, @concentrate, @splines, @cluster, @direction, @dotOrder, @defaultShape, @defaultUrl
-   put pDotPropertyArray ["graphRect"] into graphRect
-   put pDotPropertyArray ["overlap"] into overlap
-   put pDotPropertyArray ["concentrate"] into concentrate
-   put pDotPropertyArray ["splines"] into splines
-   put pDotPropertyArray ["cluster"] into cluster
-   put pDotPropertyArray ["direction"] into direction
-   put pDotPropertyArray ["dotOrder"] into dotOrder
-   put pDotPropertyArray ["defaultShape"] into defaultShape
-   put pDotPropertyArray ["defaultUrl"] into defaultUrl
-end _DeconstructDotHeaderArray
-
-

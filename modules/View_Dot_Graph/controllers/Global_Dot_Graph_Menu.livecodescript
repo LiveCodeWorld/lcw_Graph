@@ -11,8 +11,6 @@ version: 0.1
 This menu is for use with the "View|Dot|Graph" module.
 */
 
--- put LocalArray ["dotNameArray"] into dotNameArray
-
 --> Variables
 -
 local LocalArray
@@ -20,7 +18,9 @@ local LocalArray
 --> Menu | Props
 -
 getprop menu_Target [tObject]
-   put dot_ConstructDotNameArray() into dotNameArray
+   put tObject into LocalArray [tObject]
+   
+   put dot_MenuNameParamArray() into dotNameArray
    put keys (dotNameArray) into nameMenu
    replace CR with comma in nameMenu
    --
@@ -36,32 +36,21 @@ getprop disabled_RevealDotFolder [graphView]
    return dotFolder is empty
 end disabled_RevealDotFolder
 
-getprop createFromDot_Param [graphView]
+getprop displayDotUrl_Param [graphView]
    return the dot_Name of graphView
-end createFromDot_Param
+end displayDotUrl_Param
 
-getprop createFromDot_Params
+getprop displayDotUrl_Params
    return LocalArray ["nameMenu"] -- dot_UrlNameMenu()
-end createFromDot_Params
+end displayDotUrl_Params
 
-getprop anotherSvg_Params
+getprop setDotUrl_Param [graphView]
+   return the dot_Name of graphView
+end setDotUrl_Param
+
+getprop setDotUrl_Params
    return LocalArray ["nameMenu"] -- dot_UrlNameMenu()
-end anotherSvg_Params
-
-command display_DotGraph dotURL, pStackStyle, pLocOrRect
-   stack_CloneInvisible "View|Dot|Graph", "Display Dot Graph"
-   put the result into cloneStackName
-   put the long id of widget 1 of cd 1 of stack cloneStackName into graphView
-   --
-   put the view_RectOnCard of graphView into gRect
-   set the dot_URL [gRect] of graphView to dotURL
-   put the result into dotArray
-   --
-   set the dot_Name of graphView to dotName
-   --
-   stack_ShowAndGo graphView, cloneStackName, gName, pStackStyle, pLocOrRect
-   return graphView
-end display_DotGraph
+end setDotUrl_Params
 
 getprop nodeShape_Param [nodeObject]
    put the node_Shape of nodeObject into nShape
@@ -75,56 +64,60 @@ getprop nodeShape_Params
    return dot_NodeShapes()
 end nodeShape_Params
 
+getprop graphStyle_Param [graphView]
+   return the graph_Style of graphView
+end graphStyle_Param
+
+getprop graphStyle_Params
+   return dot_ListGraphStyles()
+end graphStyle_Params
+
+getprop checked_ShowBrowser [graphView]
+   put the browser_Visible of graphView into sBoolean
+   return sBoolean
+end checked_ShowBrowser
+
+getprop checked_ScreenDimensions [graphView]
+   put the stack_IsProportional of graphView into sBoolean
+   return sBoolean
+end checked_ScreenDimensions
+
 
 --> Global | Dot | Graph | Menu
 -
-on menu_CreateFromDot graphView, dotName
-   put the view_RectOnCard of graphView into gRect
-   switch dotName
-      case "minimal"
-         put "minimal" into dotURL
-         break
-      default
-         put LocalArray ["dotNameArray"][dotName] into dotURL
-         -- put url dotURL into dotText
-   end switch
-   
-   set the dot_URL [gRect] of graphView to dotURL
-   put the result into dotArray
-   set the dot_Name of graphView to dotName
-end menu_CreateFromDot
-
-on menu_NodeShape graphView, defaultShape
-   put "World" into linkArray ["Hello"]
-   put "World" into linkArray ["Another"]
-   put "Green" into linkArray ["World"]
-   --
-   dotArray_Construct linkArray, dotArray, "dot", "Test Graph", defaultShape
-   put the result into dotText
-   --
-   set the dot_Array [1] of graphView to dotArray     
-   --
-   set the lockmessages to true
+on menu_SetDotUrl graphView, dotName
+   put dot_MenuNameText (dotName) into dotText
    set the dot_Text of graphView to dotText
-   set the lockmessages to false
-end menu_NodeShape
+   set the dot_Name of graphView to dotName
+end menu_SetDotUrl
+
+on menu_DisplayDotUrl graphView, dotName
+   put dot_MenuNameText (dotName) into dotText
+   display_DotText dotText, dotName
+end menu_DisplayDotUrl
+   
+on menu_GraphStyle graphView, graphStyle
+   set the graph_Style of graphView to graphStyle
+end menu_GraphStyle
 
 private on _
 end _
 
-on menu_CreateSvg graphView
-   local dotCommand
-   
-   put the dot_Text of graphView into dotText
-   put the dot_File of graphView into dotFile
-   --
-   dot_CreateSvg dotFile, dotCommand
-   put the result into svgFile
-   --
-   put the browser_View of graphView into browserView
-   set the svg_File [true] of browserView to svgFile
-   set the browser_Visible of graphView to true
-end menu_CreateSvg
+on menu_ScreenDimensions graphView
+   put the screen_ProportionalStackRect of graphView into nRect
+   set the stack_Rect of graphView to nRect
+end menu_ScreenDimensions
+
+on submenu_Geometry
+   return menu_CreateTitle ("Global | Dot | Graph | Geometry | Menu")
+end submenu_Geometry
+
+on submenu_Props
+   return "Global | Dot | Graph | Style | Menu"
+end submenu_Props
+
+on ____
+end ____
 
 on menu_RevealDotFile graphView
    put the dot_File of graphView into dotFile
@@ -132,7 +125,8 @@ on menu_RevealDotFile graphView
 end menu_RevealDotFile
 
 on menu_SetDotFolder graphView
-   answer folder "Select a folder to store the dot files in..."
+   put the dot_Folder of graphView into dotFolder
+   answer folder "Select a folder to store the dot files in..." with dotFolder
    put it into dotFolder
    if dotFolder is empty then exit to top
    
@@ -155,44 +149,25 @@ on menu_ClearNodes graphView
    set the dot_Array of graphView to empty
 end menu_ClearNodes
 
-on menu_AnotherSvg graphView, dotName
-   -- sfdp -Goverlap=prism gd_1994_2007_8comp.gv | gvmap  -e | neato -Ecolor="#55555522" -n2 -Tpng > gd_1994_2007_8comp.png
-   
-   put LocalArray ["dotNameArray"][dotName] into dotURL
-   put url dotURL into dotText
-   --
-   display_Dot dotText
-   put the result into svgFile
-   --
-   display_Text dotText
-   finder_Reveal svgFile
-end menu_AnotherSvg
+private on ___
+end ___
 
-on submenu_Style
-   return "Global | Dot | Graph | Style | Menu"
-end submenu_Style
+on menu_ShowBrowser graphView
+   put the browser_Visible of graphView into sBoolean
+   set the browser_Visible of graphView to (sBoolean is false)
+end menu_ShowBrowser
 
 on submenu_Tools
    return "Global | Dot | Graph | Tools | Menu"
 end submenu_Tools
 
-private on ___
-end ___
+private on ____
+end ____
 
 on menu_GraphvizGallery graphView
    launch url "https://graphviz.org/gallery/"
-   
-   /*
-   switch dotName
-      case "minimal"
-         put dot_GetMinimal() into dotText
-         display_Text dotText, "Dot", "Minimal"
-         break
-      default
-         put LocalArray ["dotNameArray"] into dotNameArray
-         put dotNameArray [dotName] into dotURL
-         launch url dotURL
-   end switch
-   */
 end menu_GraphvizGallery
 
+on submenu_Dev
+   return menu_DevTitle ("Global | Dot | Graph | Menu")
+end submenu_Dev

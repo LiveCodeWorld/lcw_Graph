@@ -12,6 +12,22 @@ version: 0.1
 
 --> Working on
 -
+private function _ConstructDefSection linkArray, nodeTypeArray
+   if pNodeTypeArray is an array then
+      return empty -- stub
+   end if
+   
+   repeat for each key fromKey in linkArray
+      put linkArray [fromKey] into toArray
+      repeat for each key toKey in toArray
+         put toArray [toKey] ["label"] into toLabel
+         if toLabel is not empty then
+            -- put 
+         end if
+      end repeat
+   end repeat
+end _ConstructDefSection
+
 
 --> OverlayArray
 -
@@ -91,8 +107,6 @@ end mDouble_DisplayLinkArray
 command display_LinkArrayGraph linkArray, pGraphStyle, pFile, pBgColour, pGraphName, pDefSection, pConcentrate, pDefaultShape
    if pGraphName is empty then put "Link Array" into pGraphName
    --
-   -- put linkArray_DotNodeLinks (linkArray, empty) into nodeSection
-   -- put dot_Construct (nodeSection, pGraphName) into dotText
    put dot_FromLinkArray (linkArray, pGraphStyle, pBgColour, pConcentrate, pDefaultShape, pDefSection, pGraphName) into dotText
    dot_CreateGraph dotText, pFile, pGraphStyle
    put the result into svgFile
@@ -149,19 +163,15 @@ end linkArray_ConstructDot
 
 function linkArray_ConstructLinkSection linkArray, pNodeTypeArray, pClusterArray, pGraphController
    -- all from arrays (with an optional script override in pGraphController)
-   -- cloned from "hKeyArray_ConstructNodeSection", see also "hKeyArray_DotNestedObjectClusters"
    
-   -- node defs
-   if pNodeTypeArray is an array then
-      put _ConstructDefSection (nodeTypeArray, pGraphController) into nodeDefs
-   end if
+   ## Node defs
+   put _ConstructDefSection (linkArray, nodeTypeArray) into nodeDefs
    if pClusterArray is an array then
-      -- specific (construct object clusters)
       put _ConstructClusterDefs (clusterArray, pGraphController) into clusterDefs
    end if
    put nodeDefs & CR & CR & clusterDefs into defSection
    
-   -- node links
+   ## Node links
    put linkArray_DotNodeLinks (linkArray) into linkSection
    if defSection is empty then
       return word 1 to -1 of linkSection
@@ -198,8 +208,10 @@ function linkArray_DotNodeLinks linkArray, pNodeIDs
 end linkArray_DotNodeLinks
 
 private command _QuoteNode @sNode
-   -- if the number of words of sNode > 1 then put kwote(sNode) into sNode
-   put kwote (word 1 to -1 of sNode) into sNode
+   if the number of words of sNode > 1 then
+      put kwote(sNode) into sNode
+      -- put kwote (word 1 to -1 of sNode) into sNode
+   end if
 end _QuoteNode
 
 
@@ -209,8 +221,3 @@ private function _ConstructClusterDefs idArray, hLinkArray
    -- put hKeyArray_DotNestedObjectClusters (idArray, hLinkArray) into clusterDefs
    return empty
 end _ConstructClusterDefs
-
-private function _ConstructDefSection nodeTypeArray, pGraphController
-   -- stub
-   return empty
-end _ConstructDefSection

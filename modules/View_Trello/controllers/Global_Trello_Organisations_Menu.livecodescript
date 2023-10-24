@@ -38,6 +38,13 @@ end menu_DisplayMyOrgs
 private on _
 end _
 
+on menu_DisplayRocketBook leftView
+   -- display_TrelloRocketBook pDisplayView
+   
+   put "Rocketbook" into boardName
+   dispatch "mDoubleUp_TrelloBoards" to leftView with leftView,boardName
+end menu_DisplayRocketBook
+
 on menu_DisplayOrganisations leftView
    display_TrelloOrganisations leftView
 end menu_DisplayOrganisations

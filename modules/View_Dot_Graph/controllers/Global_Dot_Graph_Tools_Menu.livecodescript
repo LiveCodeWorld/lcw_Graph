@@ -18,7 +18,6 @@ local LocalArray
 --> Menu | Props
 -
 getprop menu_Target [tObject]
-   -- put dot_ConstructDotNameArray() into LocalArray ["dotNameArray"]
    put the graph_View of tObject into graphView
    return graphView
 end menu_Target
@@ -29,7 +28,7 @@ private function _ChooseDot dotName
          put dot_GetMinimal() into dotText
          break
       default
-         put dot_ConstructDotNameArray() into dotNameArray
+         put dot_MenuNameParamArray() into dotNameArray
          put dotNameArray [dotName] into dotURL
          put url dotURL into dotText
    end switch
@@ -45,7 +44,8 @@ private function _FetchText dotURL, exportFormat
    file_CreateText dotText
    put the result into dotFile
    -- 
-   put dot_DoShell (dotFile, dotCommand, exportFormat) into dotText
+   gv_DoShell dotFile, dotCommand, exportFormat
+   put the result into dotText
    --
    return dotText
 end _FetchText
@@ -129,12 +129,6 @@ on menu_FetchCmapx indexView, whichDot
    --
    put graphViz_CreateCmapx (dotText)
 end menu_FetchCmapx
-
-on menu_FetchPlain indexView, whichDot
-   put _ChooseDot (whichDot) into dotText
-   --
-   put dot_CreateText (dotText, "plain-ext") -- into dotText
-end menu_FetchPlain
 
 on _
 end _

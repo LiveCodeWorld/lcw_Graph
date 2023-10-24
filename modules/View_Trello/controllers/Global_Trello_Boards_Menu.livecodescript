@@ -1,9 +1,9 @@
-﻿script "Global | Trello | Boards | Line | Menu"
+﻿script "Global | Trello | Boards | Menu"
 --> MetaData
 -
 copyright: David Bovill
 license: GPLv3
-name: Global | Trello | Boards | Line | Menu
+name: Global | Trello | Boards | Menu
 type: controller
 version: 0.1
 
@@ -23,9 +23,16 @@ getprop menu_Target [tObject]
 end menu_Target
 
 
---> Global | Trello | Boards | Line | Menu
+--> Global | Trello | Boards | Menu
 -
-on menu_DisplayBoard displayView
-   put the selected_Line of displayView into boardName
-   dispatch "mDoubleUp_TrelloBoard" to displayView with displayView, boardName
-end menu_DisplayBoard
+on menu_DisplayRocketBook leftView
+   display_TrelloRocketBook leftView
+end menu_DisplayRocketBook
+
+private on _
+end _
+
+on menu_DisplayOrganisations leftView
+   display_TrelloOrganisations leftView
+end menu_DisplayOrganisations
+

@@ -87,7 +87,7 @@ command hkey_ObjectWalkDeps shortCall, hKey, @hKeyLinkArray, pExternalObjects, p
          lcw_Notify someMessage, true
          
          put hkey_Construct (callName, callType, "missing", 1) into foundCall
-         array_AddToIndex foundCall, hKey, hKeyLinkArray
+         indexArray_Add foundCall, hKey, hKeyLinkArray
          return empty
       case foundCall is among the keys of hKeyLinkArray
          -- already indexed so no need to recurse
@@ -97,7 +97,7 @@ command hkey_ObjectWalkDeps shortCall, hKey, @hKeyLinkArray, pExternalObjects, p
    -- add it to the array
    put merge ("Added [[foundCall]] to hKeyArray!") into someMessage
    lcw_Notify someMessage
-   array_AddToIndex foundCall, hKey, hKeyLinkArray
+   indexArray_Add foundCall, hKey, hKeyLinkArray
    
    -- now lets repeat and recurse for each call found
    put handler_Get (foundCall) into callHandler
@@ -161,7 +161,7 @@ command hkey_ObjectWalk shortCall, hKey, @hKeyLinkArray, pProjectName, pAllCalls
          lcw_Notify someMessage, true
          
          put hkey_Construct (callName, callType, "missing", 1) into foundCall
-         array_AddToIndex foundCall, hKey, hKeyLinkArray
+         indexArray_Add foundCall, hKey, hKeyLinkArray
          return empty
       case foundCall is among the keys of hKeyLinkArray
          -- already indexed so no need to recurse
@@ -171,7 +171,7 @@ command hkey_ObjectWalk shortCall, hKey, @hKeyLinkArray, pProjectName, pAllCalls
    -- add it to the array
    put merge ("Added [[foundCall]] to hKeyArray!") into someMessage
    lcw_Notify someMessage
-   array_AddToIndex foundCall, hKey, hKeyLinkArray
+   indexArray_Add foundCall, hKey, hKeyLinkArray
    
    -- now lets repeat and recurse for each call found
    put handler_Get (foundCall) into callHandler
@@ -320,7 +320,7 @@ command hkey_ObjectWalk shortCall, hKey, @hKeyLinkArray, pSetName, pAllCalls
          lcw_Notify someMessage, true
          
          put hkey_Construct (callName, callType, "missing", 1) into foundCall
-         array_AddToIndex foundCall, hKey, hKeyLinkArray
+         indexArray_Add foundCall, hKey, hKeyLinkArray
          return empty
       case foundCall is among the keys of hKeyLinkArray
          -- already indexed so no need to recurse
@@ -330,7 +330,7 @@ command hkey_ObjectWalk shortCall, hKey, @hKeyLinkArray, pSetName, pAllCalls
    -- add it to the array
    put merge ("Added [[foundCall]] to hKeyArray!") into someMessage
    lcw_Notify someMessage
-   array_AddToIndex foundCall, hKey, hKeyLinkArray
+   indexArray_Add foundCall, hKey, hKeyLinkArray
    
    -- now lets repeat and recurse for each call found
    put handler_Get (foundCall) into callHandler

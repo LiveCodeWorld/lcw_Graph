@@ -37,46 +37,34 @@ end nodeShape_Params
 
 --> Global | Dot | Graph | Array | Menu
 -
-on menu_DotTextEditor
-   display_Text empty, "Dot Text", "Global | Dot | Text | Editor | Menu"
-end menu_DotTextEditor
+on submenu_DotArray
+   return "Global | DotArray | Menu"
+end submenu_DotArray
 
-on menu_NodeShape gridView, defaultShape
-   put "World" into linkArray ["Hello"]
-   put "World" into linkArray ["Another"]
-   put "Green" into linkArray ["World"]
-   --
-   put "Test Graph" into gTitle
-   dotArray_Construct linkArray, dotArray, "fdp", gTitle, defaultShape
-   put the result into dotText
-   --
-   display_GraphFromDotArray dotArray, dotText
-   --
-   display_DotArray dotArray
-   display_DotText dotText, gTitle
-end menu_NodeShape
+on submenu_Save
+   return menu_CreateTitle ("Global | Dot | Save | Menu")
+end submenu_Save
 
-on menu_TestCoda graphView
-   display_MotiGraph
-end menu_TestCoda
-
-on menu_DotArrayJson displayView
-   put the displayed_Data of displayView into dotArray
-   put json_FromArray (dotArray, false, true) into dotText
-   --
-   display_Text dotText, "Dot Array JSON"
-end menu_DotArrayJson
-
-on _
+private command _
 end _
 
+on menu_DotTextEditor displayView
+   put the dot_File of displayView into dotFile
+   if there is a file dotFile then
+      display_DotText dotFile
+   else
+      -- put url ("binfile:" & textFile) into utf8Text
+      -- put textDecode (utf8Text, "UTF-8") into someText
+      put the displayed_Data of displayView into dotArray
+      put dot_FromArray (dotArray) into dotText
+      --
+      display_DotText dotText
+   end if
+end menu_DotTextEditor
+
+private command __
+end __
+
 on submenu_Dev
-   return "Dev | Menu"
+   return menu_DevTitle ("Global | Dot | Graph | Array | Menu")
 end submenu_Dev
-
-
---> Dev | Menu
--
-on menu_Experiment displayView
-   put displayView
-end menu_Experiment

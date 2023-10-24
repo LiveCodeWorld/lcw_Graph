@@ -213,7 +213,7 @@ command hkey_ObjectWalkSearchHierarchy shortCall, hKey, @hKeyLinkArray, searchHi
    switch
       case foundCall is empty
          put hkey_Construct (callName, callType, "missing", 1) into foundCall
-         array_AddToIndex foundCall, hKey, hKeyLinkArray
+         indexArray_Add foundCall, hKey, hKeyLinkArray
          return empty
       case foundCall is among the keys of hKeyLinkArray
          -- already indexed so no need to recurse
@@ -221,7 +221,7 @@ command hkey_ObjectWalkSearchHierarchy shortCall, hKey, @hKeyLinkArray, searchHi
    end switch
    
    -- add it to the array
-   array_AddToIndex foundCall, hKey, hKeyLinkArray
+   indexArray_Add foundCall, hKey, hKeyLinkArray
    
    -- now lets repeat and recurse for each call found
    put handler_Get (foundCall) into callHandler

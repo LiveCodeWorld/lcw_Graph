@@ -132,12 +132,12 @@ command hkey_SimpleWalk shortCall, hKey, @hKeyLinkArray, pSetName, pTestExceptio
          lcw_Notify someMessage, true
          
          put hkey_Construct (callName, callType, "missing", 1) into foundCall
-         array_AddToIndex foundCall, hKey, hKeyLinkArray
+         indexArray_Add foundCall, hKey, hKeyLinkArray
          return empty
       case foundCall is among the keys of hKeyLinkArray
          -- found it (ie not empty), but...
          -- but we do need to add it to the array!
-         array_AddToIndex foundCall, hKey, hKeyLinkArray
+         indexArray_Add foundCall, hKey, hKeyLinkArray
          
          -- already indexed so no need to recurse
          return empty
@@ -155,7 +155,7 @@ command hkey_SimpleWalk shortCall, hKey, @hKeyLinkArray, pSetName, pTestExceptio
    -- add it to the array
    put merge ("Added [[foundCall]] to hKeyArray!") into someMessage
    lcw_Notify someMessage
-   array_AddToIndex foundCall, hKey, hKeyLinkArray
+   indexArray_Add foundCall, hKey, hKeyLinkArray
    
    -- now lets repeat and recurse for each call found
    put handler_Get (foundCall) into callHandler
@@ -836,12 +836,12 @@ command hArray_SimpleWalk shortCall, hKey, @hKeyLinkArray, pSetName, pTestExcept
          
          put hkey_Construct (callName, callType, "missing", 1) into foundCall
          
-         -- array_AddToIndex foundCall, hKey, hKeyLinkArray
+         -- indexArray_Add foundCall, hKey, hKeyLinkArray
          put empty into hKeyLinkArray [hKey][foundCall]
          return empty
       case foundCall is among the keys of hKeyLinkArray
          -- found it, but we do need to add it to the array!
-         -- array_AddToIndex foundCall, hKey, hKeyLinkArray
+         -- indexArray_Add foundCall, hKey, hKeyLinkArray
          put empty into hKeyLinkArray [hKey][foundCall]
          
          -- already indexed so no need to recurse
@@ -856,7 +856,7 @@ command hArray_SimpleWalk shortCall, hKey, @hKeyLinkArray, pSetName, pTestExcept
    -- add it to the array
    put merge ("Added [[foundCall]] to hKeyArray!") into someMessage
    lcw_Notify someMessage
-   -- array_AddToIndex foundCall, hKey, hKeyLinkArray
+   -- indexArray_Add foundCall, hKey, hKeyLinkArray
    put empty into hKeyLinkArray [hKey][foundCall]
    
    
@@ -1016,7 +1016,7 @@ command hkey_WalkHierarchy hKey, @hKeyLinkArray, thisDepth, pMaxDepth, pDontRecu
                end if
                
                -- add and recurse
-               array_AddToIndex linkCall, foundHkey, hKeyLinkArray
+               indexArray_Add linkCall, foundHkey, hKeyLinkArray
                hkey_WalkHierarchy linkCall, hKeyLinkArray, nextDepth, pMaxDepth, pDontRecurseOutside, pOriginalHkey, pEnvironmentFilter, pTestExceptions, pForceSearch
             end repeat
          end if
@@ -1030,7 +1030,7 @@ command hkey_WalkHierarchy hKey, @hKeyLinkArray, thisDepth, pMaxDepth, pDontRecu
       else
          breakPoint 
          put hkey_Construct (handlerName, handlerType, messagePassObject) into messagePassHkey
-         array_AddToIndex messagePassHkey, foundHkey, hKeyLinkArray
+         indexArray_Add messagePassHkey, foundHkey, hKeyLinkArray
       end if
    end repeat
    
@@ -1054,9 +1054,9 @@ command hkey_WalkHierarchy hKey, @hKeyLinkArray, thisDepth, pMaxDepth, pDontRecu
             return empty
          default
             put hkey_Construct (handlerName, handlerType, "Missing") into pKey
-            array_AddToIndex pKey, foundHkey, hKeyLinkArray
+            indexArray_Add pKey, foundHkey, hKeyLinkArray
             if hKeyLinkArray [pKey] is empty then
-               array_AddToIndex empty, pKey, hKeyLinkArray
+               indexArray_Add empty, pKey, hKeyLinkArray
             end if
       end switch
    end if

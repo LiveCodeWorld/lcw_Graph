@@ -11,75 +11,628 @@ version: 0.1
 DotArray is an array in the form returned as json by graphviz.
 It is rich complicated and we use it as the canonical standard.
 However we need simpler stuff to work with - such as linkArrays.
+*/
 
-command _CreateGraphic nArray, dotGroup
-   -- lib_DotCreate
+--> Variables
+-
+constant TemplateBorderWidth = 2
+
+
+--> Working on
+- 
+
+
+--> Dot | Construct
+-
+function dot_ConstructNodeParamBit nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip
+   -- was "node_ConstructParamLine"
+   local nodeLine
+   
+   if nodeLabel is not empty then
+      put "label='[[nodeLabel]]'" into nodeLine
+   end if
+   
+   if nodeShape is not empty then
+      if nodeLine is not empty then
+         put "," & space after nodeLine
+      end if
+      put "shape=[[nodeShape]]" after nodeLine
+      if nodeShape is "polygon" then
+         if polyParams is not empty then
+            put "," && polyParams after nodeLine
+         end if
+      end if
+   end if
+   
+   dot_AddStyleToNodeDef nodeStyle, nodeLine, false
+   dot_AddParamToNodeDef "color", nodeColour, nodeLine, false
+   dot_AddParamToNodeDef "fillcolor", nodeFillColour, nodeLine, false
+   dot_AddParamToNodeDef "URL", nodeUrl, nodeLine
+   dot_AddParamToNodeDef "tooltip", nodeToolTip, nodeLine
+   -- dot_AddParamToNodeDef "shapefile", nodeShapeFile, nodeLine
+   
+   replace "'" with quote in nodeLine
+   put merge(nodeLine) into nodeLine
+   
+   return nodeLine
+end dot_ConstructNodeParamBit
+
+function dot_NodeObjectArray propArray, pNodeUrl
+   put propArray ["id"] into objectArray ["_gvid"]
+   --
+   put propArray ["name"] into nodeName
+   dot_NormalizeName nodeName
+   put nodeName into objectArray ["name"]
+   --
+   dot_SetObjectArray "name", "name", propArray, objectArray
+   dot_SetObjectArray "label", "label", propArray, objectArray
+   dot_SetObjectArray "toolTip", "toolTip", propArray, objectArray
+   
+   put propArray ["backColor"] into bColour
+   if bColour is not empty then
+      put dot_GetColour (bColour) into objectArray ["fillcolor"]
+   end if
+   --
+   put propArray ["foreColor"] into fColour
+   if bColour is not empty then
+      put dot_GetColour (fColour) into objectArray ["color"]
+   end if
+   --
+   put dot_ShapeFromStyle (propArray) into objectArray ["shape"]
+   dot_SetObjectArrayStyle objectArray, propArray
+   if propArray ["style"] = "regular" then
+      put propArray ["polySides"] into objectArray ["polySides"]
+   end if
+   --
+   if pNodeUrl is not empty then
+      put pNodeUrl into objectArray ["URL"]
+   end if
+   --
+   -- display_Data propArray
+   put propArray ["rect"] into sRect
+   put dot_GraphInchSize (sRect) into dotPos
+   --
+   return objectArray
+end dot_NodeObjectArray
+
+command dot_NormalizeName @sName
+   put word 1 to -1 of sName into sName
+   replace "|" with space in sName
+end dot_NormalizeName
+
+private command dot_SetObjectArray propKey, objectKey, propArray, @objectArray
+   put propArray [propKey] into propValue
+   dot_SetObjectArrayValue propValue, objectKey, objectArray
+end dot_SetObjectArray
+
+private command dot_SetObjectArrayValue propValue, objectKey, @objectArray
+   if propValue is not empty then
+      put propValue into objectArray [objectKey]
+   end if
+end dot_SetObjectArrayValue
+
+command dot_SetLivecodePropertyArray @propArray, dotStyle   
+   switch dotStyle
+      case "striped" -- Fills the node with stripes. The colors of the stripes can be specified using the fillcolor attribute with a colon-separated list of colors.
+      case "wedged" -- Similar to striped, but used for elliptical shapes.
+      case "diagonals" -- Adds diagonal lines to the node.
+      case "dashed" -- Draws the node with a dashed outline.
+         put "4,2" into propArray ["dashes"]
+         break
+      case "dotted" -- Draws the node with a dotted outline.
+         put "1,1" into propArray ["dashes"]
+         break
+      case "bold" -- Draws the node with a bold outline.
+         put 2 into propArray ["linesize"]
+         break
+      case "rounded" -- Gives the node rounded corners (this is often combined with the shape=box attribute).
+         put "roundrect" into propArray ["style"]
+         break
+      case "filled" -- Fills the node with a solid color. The color can be specified using the fillcolor attribute.
+         put true into propArray ["opaque"]
+         break
+      case "invis" -- Makes the node invisible in the rendered output.
+         put false into propArray ["visible"]
+         break
+      case "solid" -- (default): Draws the node with a solid outline.
+      default
+         put empty into propArray ["dashes"]
+   end switch
+end dot_SetLivecodePropertyArray
+
+private command dot_SetObjectArrayStyle @objectArray, propArray 
+   _AddStyleIf "visible", false, "invis", propArray, objectArray
+   _AddStyleIf "opaque", true, "filled", propArray, objectArray
+   _AddStyleIf "style", "roundrect", "rounded", propArray, objectArray
+   --
+   switch propArray ["dashes"]
+      case empty
+         _AddStyleItem objectArray, "solid"
+         break
+      case "1,1"
+         _AddStyleItem objectArray, "dotted"
+         break
+      case "4,2"
+         _AddStyleItem objectArray, "dashed"
+         break
+   end switch
+   --
+   if propArray ["linesize"] > 1 then
+      _AddStyleItem objectArray, "bold"
+   end if
+end dot_SetObjectArrayStyle
+
+private command _AddStyleIf ifItem, ifValue, addItem, propArray, @objectArray
+   if propArray [ifItem] is ifValue then
+      _AddStyleItem objectArray, addItem
+   end if
+end _AddStyleIf
+
+private command _AddStyleItem @objectArray, addItem
+   get objectArray ["style"]
+   put item_Add (addItem, it) into objectArray ["style"]
+end _AddStyleItem
+
+function dot_ShapeFromStyle pArray
+   put pArray ["style"] into graphicStyle
+   switch graphicStyle
+      case "roundrect"
+      case "rectangle"
+         return "rectangle"
+         return "box"
+      case "regular"
+         put pArray ["polySides"] - 2 into itemNum
+         return item itemNum of "triangle,diamond,pentagon,hexagon,septagon,octagon"
+      case "oval"
+         -- ellipse,circle,
+         put pArray ["rect"] into pRect
+         put item 3 of pRect - item 1 of pRect into pWidth
+         put item 4 of pRect - item 2 of pRect into pHeight
+         if pWidth = pHeight then
+            return "circle"
+         else
+            return "ellipse"
+         end if
+      default
+         return graphicStyle
+   end switch
+end dot_ShapeFromStyle
+
+function dot_ShapeToStyle
+   switch someShape
+      case "triangle"
+         set the style of gView to regular
+         set the polysides of gView to 3
+         set the angle of gView to 270
+         break
+      case "diamond"
+         set the style of gView to regular
+         set the polysides of gView to 4
+         set the angle of gView to 0
+         break
+      case "pentagon"
+         set the style of gView to regular
+         set the polysides of gView to 5
+         set the angle of gView to 53
+         break
+      case "hexagon"
+         set the style of gView to regular
+         set the polysides of gView to 6
+         set the angle of gView to 0
+         break
+      default
+         set the style of gView to someShape
+   end switch
+end dot_ShapeToStyle
+
+function dot_GetColour sColour
+   put the colornames into cNames
+   if sColour is among the lines of cNames then
+      return sColour
+   end if
+   
+   put colour_RgbToName (sColour) into namedColour
+   if namedColour = sColour then
+      put colour_RgbToHex (sColour) into hexColour
+      return hexColour
+   else
+      return namedColour
+   end if
+end dot_GetColour
+
+command dotArray_Construct linkArray, @dotArray, pGraphStyle, pGraphName, pDefaultShape, pFile, pBgColour, pConcentrate, pDefSection 
+   if pGraphName is empty then put "Link Array" into pGraphName
+   --
+   put dot_FromLinkArray (linkArray, pGraphStyle, pBgColour, pConcentrate, pDefaultShape, pDefSection, pGraphName) into dotText
+   put dot_CreateArray (dotText, pFile) into dotArray
+   --
+   return dotText
+end dotArray_Construct
+
+function dot_CreateArray dotText, pDotFile
+   dot_SetText pDotFile, dotText
+   put dot_CreateText (dotText, "json", pDotCommand, pDotFile) into dotJSON
+   --
+   if word 1 of dotJSON = "Warning:" then
+      delete line 1 of dotJSON
+   end if
+   --
+   put json_ToArray (dotJSON) into dotArray
+   return dotArray
+end dot_CreateArray
+
+command dot_CleanJSON @dotJSON
+   -- hack
+   get token 1 of dotJSON
+   if it = "Error" then breakpoint
+   --
+   if char 1 of dotJSON is not "{" then
+      put offset ("{", dotJSON) into charNum
+      delete char 1 to (charNum - 1) of dotJSON
+      -- put textDecode (dotJSON, "UTF-8") into dotJSON -- strips funny chars
+   end if
+end dot_CleanJSON
+
+getprop dot_ScreenRect
+   put the screen_Rect of the target into sRect
+   --
+   put dot_BoundingRect(sRect) into bbRect
+   return bbRect
+end dot_ScreenRect
+
+function dot_BoundingRect sRect
+   constant DPI = 96
+   put item 3 of sRect - item 1 of sRect into sWidth
+   put item 4 of sRect - item 2 of sRect into sHeight
+   --
+   put sWidth * 72 / DPI into dotWidth
+   put sHeight * 72 / DPI into dotHeight
+   --
+   put 0,0,dotWidth,dotHeight into bbRect
+   rect_Normalise sRect
+   return bbRect
+end dot_BoundingRect
+
+function dotArray_Get dotFile, pGraphStyle, pDontCreateJsonFile, pClean
+   if there is not a file dotFile then return empty
+   --
+   put dotJson_FromDotFile (dotFile, pGraphStyle) into dotJSON
+   if pClean is true then
+      dot_CleanJSON dotJSON
+   end if
+   if pDontCreateJsonFile is not true then
+      dotJson_Set dotFile, dotJSON
+   end if
+   --
+   put json_ToArray (dotJSON) into dotArray
+   return dotArray
+end dotArray_Get
+
+command dotArray_Set dotFile, dotArray
+   put json_FromArray (dotArray) into dotJSON
+   put dotJson_File (dotFile) into dotJsonFile
+   dot_SetText dotJsonFile, dotJSON
+   return dotJSON
+end dotArray_Set
+
+function dotJson_FromDotFile dotFile, pGraphStyle, pClean
+   put dot_CommandFromGraphStyle (pGraphStyle) into dotCommand
+   gv_DoShell dotFile, dotCommand, "json"
+   put the result into dotJSON
+   if pClean is true then
+      dot_CleanJSON dotJSON
+   end if
+   return dotJSON
+end dotJson_FromDotFile
+
+command dotJson_Create dotFile, pGraphStyle
+   put dotJson_FromDotFile (dotFile, pGraphStyle) into dotJSON
+   --
+   dotJson_Set dotFile, dotJSON
+   return dotJsonFile
+end dotJson_Create
+
+function dotArray_FromJsonFile dotJsonFile
+   put dot_GetText (dotJsonFile) into dotJSON
+   put json_ToArray (dotJSON) into dotArray
+   return dotArray
+end dotArray_FromJsonFile
+
+function dotJson_Get dotFile
+   put dotJson_File (dotFile) into dotJsonFile
+   put dot_GetText (dotJsonFile) into dotJSON
+   return dotJSON
+end dotJson_Get
+
+command dotJson_Set dotFile, dotJSON
+   put dotJson_File (dotFile) into dotJsonFile
+   dot_SetText dotJsonFile, dotJSON
+   return dotJsonFile
+end dotJson_Set
+
+function dotJson_File dotFile
+   set the itemdelimiter to "."
+   put json into item -1 of dotFile
+   return dotFile
+end dotJson_File
+
+command dot_SplitAndSaveGraphs dotGraphs, dotFolder
+   put dot_ConstructNamedGraphArray (dotGraphs) into namedGraphArray
+   repeat for each key gName in namedGraphArray
+      put gName & ".gv" into shortFile
+      put dotFolder & shortFile into subGraphFile
+      --
+      put namedGraphArray [gName] into dotText
+      dot_SetText subGraphFile, dotText
+   end repeat
+   return namedGraphArray
+end dot_SplitAndSaveGraphs
+
+function dotArray_FindNodeArray nodeID, dotArray
+   put dotArray ["objects"] into objectData
+   put indexArray_Find (objectData, "_gvid", nodeID) into indexNum
+   put objectData [indexNum] into nodeArray
+   return nodeArray
+end dotArray_FindNodeArray
+
+function dot_ConstructNamedGraphArray dotGraphs
+   put "}" & CR & "digraph " into charsToFind
+   repeat
+      put offset (charsToFind, dotGraphs) into charNum
+      if charNum = 0 then exit repeat
+      
+      put char 1 to charNum of dotGraphs into subGraph
+      delete char 1 to (charNum + 1) of dotGraphs
+      --
+      put word 2 of line 1 of subGraph into subGraphName
+      put subGraph into namedGraphArray [subGraphName]
+   end repeat
+   --
+   put word 1 to -1 of dotGraphs into subGraph
+   put word 2 of line 1 of subGraph into subGraphName
+   if subGraphName is not empty then
+      put subGraph into namedGraphArray [subGraphName]
+   end if
+   return namedGraphArray
+end dot_ConstructNamedGraphArray
+
+function dotArray_GetSubraphArray dotArray
+   put dotArray ["_subgraph_cnt"] into subgraphNum
+   put dotArray ["objects"] into objectData
+   repeat with indexNum = 1 to item 2 of the extents of objectData
+      put objectData [indexNum] into objectArray
+      put objectArray ["nodes"] into nodeArray
+      if nodeArray is not an array then next repeat
+      
+      put objectArray ["name"] into subgraphName
+      if subgraphName begins with "cluster" then
+         put objectArray ["_gvid"] into subgraphID
+         put objectArray ["bb"] into bb
+         --
+         -- put subgraphName into subGraphData ["subgraphIDs"][subgraphID]["name"]
+         -- put bb into subGraphData ["subgraphIDs"][subgraphID]["bb"]
+         put objectArray into subGraphData ["subgraphs"][subgraphID]
+         --
+         repeat with nodeNum = 1 to item 2 of the extents of nodeArray
+            put nodeArray [nodeNum] into subgraphNodeID
+            -- put subgraphID into subGraphData [subgraphNodeID]["subgraphID"]
+            put objectArray into subGraphData ["nodeIDs"][subgraphNodeID]["objectArray"]
+         end repeat
+      end if
+   end repeat
+   return subGraphData
+end dotArray_GetSubraphArray
+
+private command _SetTemplateGroup dotGroup
+   put the template_Margin of dotGroup into tMargin
+   --
+   -- set the lockloc of the templategroup to true
+   set the margins of the templategroup to tMargin
+   set the borderwidth of the templategroup to TemplateBorderWidth
+   set the showborder of the templategroup to true
+   set the opaque of the templategroup to true
+   set the threeD of the templategroup to false
+   set the backgroundcolor of the templategroup to "red"
+end _SetTemplateGroup
+
+
+--> Dot | Create | Array
+-
+getprop dot_Array
+   set the lockmessages to true
+   put the dot_Array of the target into dotArray
+   set the lockmessages to false
+   return dotArray
+end dot_Array
+
+setprop dot_Array [edgeWidth] dotArray
+   put the long id of the target into tGroup
+   
+   lock screen
+   -- put the loc of tGroup into oLoc
+   put the rect of tGroup into oRect
+   --
+   -- _DeleteDotGraphics tGroup
+   _DeleteDotNodes tGroup
+   --
+   if dotArray is an array then -- for safety?
+      set the lockloc of tGroup to true
+      --
+      put _GetBackgroudRect (dotArray) into bbRect
+      set the bb_Rect of tGroup to bbRect
+      --
+      put dotArray_GetSubraphArray (dotArray) into subGraphData
+      _CreateGroups subGraphData, tGroup
+      _CreateEdges dotArray, tGroup, edgeWidth
+      _CreateObjects dotArray, tGroup, subGraphData
+      --
+      set the lockmessages to true
+      set the dot_Array of tGroup to dotArray
+      set the lockmessages to false
+   end if
+   --
+   -- set the loc of tGroup to oLoc
+   dispatch "Layoutcontrol" to tGroup with oRect -- should not need
+   unlock screen
+   return bbRect
+end dot_Array
+
+command dotArray_CreateGraphic nArray, dotGroup, nodeIDArray
+   put view_GetTemplateBehavior("View|Node|Graphic") into bObject
+   
+   put nArray ["_gvid"] into nodeID
    put nArray ["name"] into oName
    put nArray ["label"] into oLabel
+   if oLabel = "\N" then
+      put empty into oLabel
+   else
+      replace "\n" with CR in oLabel
+   end if
+   --
    put nArray ["shape"] into nShape
    put nArray ["style"] is "filled" into isOpaque
    --
    reset templateGraphic
    set the opaque of the templateGraphic to true
    set the showName of the templateGraphic to true
+   set the behavior of the templateGraphic to bObject
    --
-   create graphic oName in dotGroup -- card cardNum of stack stackName
+   put nodeIDArray [nodeID]["objectArray"] into objectArray
+   if objectArray is an array then
+      put objectArray ["name"] into clusterName
+      create graphic oName in group clusterName of dotGroup
+   else
+      create graphic oName in dotGroup
+   end if
    put it into nodeObject
    --
-   switch oLabel
-      case "\N"
-         break -- don't set (same as name)
-      default
-         set the label of nodeObject to oLabel
-   end switch
+   set the label of nodeObject to oLabel
    --
-   switch
-      case nArray ["nodes"] is an array
-         -- creeate a group
-         break
-      case nShape = "box"
-         -- set the style of nodeObject to "rectangle"
-         -- set the rect of nodeObject to oRect
-         put dotArray_GetDrawPoints (nArray, 3) into gPoints
-         set the style of nodeObject to "polygon"
-         set the points of nodeObject to gPoints
-         break
-      case nShape = "triangle"
-         -- set the style of nodeObject to "regular"
-         -- set the polysides of nodeObject to 3
-         set the style of nodeObject to "polygon"
-         put dotArray_GetDrawPoints (nArray, 3) into gPoints
-         set the points of nodeObject to gPoints
-         break
-      case nShape = "diamond"
-         -- set the style of nodeObject to "regular"
-         -- set the polysides of nodeObject to 4
-         --
-         set the style of nodeObject to "polygon"
-         put dotArray_GetDrawPoints (nArray, 3) into gPoints
-         set the points of nodeObject to gPoints
-         break
-      case nShape = "pentagon"
-         set the style of nodeObject to "regular"
-         set the polysides of nodeObject to 5
-         break
-      case nShape = "ellipse"
-      case nShape = "circle"
-      default
-         set the style of nodeObject to "oval"
-         --
-         put dotArray_GetDrawRect (nArray, 2) into oRect
-         set the rect of nodeObject to oRect
-   end switch
+   put _CreateProps (nShape, nArray) into pArray
+   set the node_Properties of nodeObject to pArray
    --
-   set the node_Array of nodeObject to nArray
+   set the dot_ObjectArray of nodeObject to nArray
    return nodeObject
-end _CreateGraphic
-*/
+end dotArray_CreateGraphic
 
+private function _GetBackgroudRect dotArray
+   put dotArray ["bb"] into bb
+   put trunc (item 3 of bb) into sWidth
+   put trunc (item 4 of bb) into sHeight
+   -- put rect_FromWidthAndHeight (cRect, sWidth, sHeight) into bbRect
+   put 0,0,sWidth,sHeight into bbRect
+   --
+   return bbRect
+end _GetBackgroudRect
 
---> Working on
--
+private command _CreateObjects dotArray, dotGroup, subGraphData
+   set the showName of templateGraphic to true
+   --
+   put subGraphData ["nodeIDs"] into nodeIDArray
+   put dotArray ["objects"] into objectsArray
+   repeat with itemNum = 1 to item 2 of the extents of objectsArray
+      put objectsArray [itemNum] into nArray
+      put nArray ["name"] into oName
+      --
+      put nArray ["nodes"] into nodeArray
+      switch
+         case nodeArray is an array
+            break
+         default
+            dotArray_CreateGraphic nArray, dotGroup, nodeIDArray
+      end switch
+      --
+   end repeat
+end _CreateObjects
+
+private command _CreateEdges dotArray, dotGroup, pEdgeWidth
+   set the showName of templateGraphic to true
+   --
+   put dotArray ["edges"] into edgesArray
+   repeat with itemNum = 1 to item 2 of the extents of edgesArray
+      put edgesArray [itemNum] into edgeArray
+      _CreateEdge edgeArray, dotGroup, pEdgeWidth
+   end repeat
+end _CreateEdges
+
+command _TweakEdgePoints @edgePoints
+   -- hack
+   get line -2 of edgePoints
+   if it = line -1 of edgePoints then
+      delete line -1 of edgePoints
+   end if
+   get line 2 of edgePoints
+   if it = line 1 of edgePoints then
+      delete line 1 of edgePoints
+   end if
+end _TweakEdgePoints
+
+private command _CreateEdge edgeArray, dotGroup, pEdgeWidth
+   if pEdgeWidth is not a number then
+      put 4 into pEdgeWidth
+   end if
+   --
+   -- put the edge_OriginalPoints [edgeArray] of dotGroup into edgePoints
+   put the top_Down of dotGroup into topDown
+   put the bb_Rect of dotGroup into bbRect
+   put dotArray_GetOriginalEdgePoints (edgeArray, bbRect, topDown) into edgePoints
+   -- _TweakEdgePoints edgePoints
+   --
+   put dotArray_ConstructEdgeName (edgeArray) into edgeName
+   --
+   reset templateGraphic
+   --
+   put edgeArray ["arrowhead"] into aHead --"vee"
+   --
+   switch edgeArray ["dir"]
+      case "back"
+         set the startArrow of the templateGraphic to true
+         break
+      default
+         set the endArrow of the templateGraphic to true
+   end switch
+   --
+   switch edgeArray ["style"]
+      case "invis"
+         set the visible of the templateGraphic to false
+         break
+      default
+   end switch
+   --
+   put edgeArray ["_draw_"][1]["color"] into aColour
+   set the backgroundcolor of the templateGraphic to aColour
+   --
+   set the style of the templateGraphic to curve
+   set the lineSize of the templateGraphic to pEdgeWidth
+   set the showName of the templateGraphic to false
+   --
+   lock screen
+   create graphic edgeName in dotGroup
+   put it into edgeObject
+   set the points of edgeObject to edgePoints
+   set the uGraphic ["edge_Array"] of edgeObject to edgeArray
+   unlock screen
+   --
+   reset templateGraphic
+   return edgeObject
+end _CreateEdge
+
+private command _CreateGroups subGraphData, dotGroup
+   put subGraphData ["subgraphs"] into subGraphArray
+   --
+   put item 2 of the extents of subGraphArray into maxNum -- not starting from 1
+   repeat for each key gNum in subGraphArray
+      put subGraphArray [gNum]["name"] into gName
+      put subGraphArray [gNum]["bb"] into gRect
+      --
+      _SetTemplateGroup dotGroup
+      create group gName in dotGroup
+      put it into gObject
+      set the rect of gObject to gRect
+   end repeat
+   reset templategroup
+end _CreateGroups
+
 private command _DeleteDotGraphics tGroup
    put the node_Ids of tGroup into nodeIds
    --
@@ -92,7 +645,9 @@ end _DeleteDotGraphics
 private command _DeleteDotNodes tGroup
    put the node_Ids of tGroup into nodeIds
    repeat for each line nodeID in nodeIds
-      delete control id nodeID of tGroup
+      if exists (control id nodeID of tGroup) then
+         delete control id nodeID of tGroup
+      end if
    end repeat
 end _DeleteDotNodes
 
@@ -183,6 +738,7 @@ function node_ConstructPropertyArray nShape, pNodeArray
 end node_ConstructPropertyArray
 
 private function _CreateProps nShape, nArray
+   -- put node_ConstructPropertyArray (nShape, nArray) into pArray
    switch
       case nShape = "rectangle"
       case nShape = "box"
@@ -220,6 +776,19 @@ private function _CreateProps nShape, nArray
          put dotArray_FindDrawRect (nArray) into gRect
          put gRect into pArray ["graphic_Rect"]
    end switch
+   
+   put nArray ["fontcolor"] into fColour
+   put nArray ["fontname"] into fName
+   put nArray ["fontsize"] into fSize
+   put fName into pArray ["textFont"]
+   put fSize into pArray ["textSize"]
+   put fColour into pArray ["foregroundColor"]
+   --
+   put nArray ["color"] into nColour
+   put nArray ["fillcolor"] into bColour
+   -- put nColour into pArray ["foregroundColor"]
+   put bColour into pArray ["backgroundColor"]
+   --
    return pArray
 end _CreateProps
 
@@ -244,39 +813,6 @@ function dot_ConvertRevShape revShape, pSides
       return revShape
    end if
 end dot_ConvertRevShape
-
-command dotArray_CreateGraphic nArray, dotGroup
-   put nArray ["name"] into oName
-   put nArray ["label"] into oLabel
-   put nArray ["shape"] into nShape
-   put nArray ["style"] is "filled" into isOpaque
-   --
-   reset templateGraphic
-   set the opaque of the templateGraphic to true
-   set the showName of the templateGraphic to true
-   --
-   create graphic oName in dotGroup
-   put it into nodeObject
-   --
-   switch oLabel
-      case "\N"
-         break -- don't set (same as name)
-      default
-         set the label of nodeObject to oLabel
-   end switch
-   
-   if nArray ["nodes"] is an array then
-      break -- creeate a group
-   end if
-   
-   --
-   put _CreateProps (nShape, nArray) into pArray
-   -- put node_ConstructPropertyArray (nShape, nArray) into pArray
-   set the node_Properties of nodeObject to pArray
-   --
-   set the node_Array of nodeObject to nArray
-   return nodeObject
-end dotArray_CreateGraphic
 
 setprop node_Properties pArray
    local customArray
@@ -320,254 +856,21 @@ command display_GraphFromDotArray dotArray, pDotText
    return graphView
 end display_GraphFromDotArray
 
-
---> Dot |Create | Array
--
-getprop dot_Array
-   set the lockmessages to true
-   put the dot_Array of the target into dotArray
-   set the lockmessages to false
-   return dotArray
-end dot_Array
-
-setprop dot_Array [edgeWidth] dotArray
-   put the long id of the target into tGroup
-   
-   lock screen
-   put the loc of tGroup into oLoc
-   --
-   -- _DeleteDotGraphics tGroup
-   _DeleteDotNodes tGroup
-   --
-   if dotArray is an array then -- for safety?
-      put _GetBackgroudRect (dotArray) into bbRect
-      set the bb_Rect of tGroup to bbRect
-      --
-      set the lockloc of tGroup to true
-      _CreateEdges dotArray, tGroup, edgeWidth
-      _CreateObjects dotArray, tGroup
-      --
-      set the lockmessages to true
-      set the dot_Array of tGroup to dotArray
-      set the lockmessages to false
-   end if
-   --
-   set the loc of tGroup to oLoc
-   unlock screen
-   return bbRect
-end dot_Array
-
-private function _GetBackgroudRect dotArray
-   put dotArray ["bb"] into bb
-   put trunc (item 3 of bb) into sWidth
-   put trunc (item 4 of bb) into sHeight
-   -- put rect_FromWidthAndHeight (cRect, sWidth, sHeight) into bbRect
-   put 0,0,sWidth,sHeight into bbRect
-   --
-   return bbRect
-end _GetBackgroudRect
-
-private command _CreateObjects dotArray, dotGroup
-   set the showName of templateGraphic to true
-   --
-   put dotArray ["objects"] into objectsArray
-   repeat with itemNum = 1 to item 2 of the extents of objectsArray
-      put objectsArray [itemNum] into nArray
-      put nArray ["name"] into oName
-      --
-      put nArray ["nodes"] into nodeArray
-      switch
-         case nodeArray is an array
-            break
-         default
-            dotArray_CreateGraphic nArray, dotGroup
-      end switch
-      --
-   end repeat
-end _CreateObjects
-
-private command _CreateEdges dotArray, dotGroup, pEdgeWidth
-   set the showName of templateGraphic to true
-   --
-   put dotArray ["edges"] into edgesArray
-   repeat with itemNum = 1 to item 2 of the extents of edgesArray
-      put edgesArray [itemNum] into edgeArray
-      _CreateEdge edgeArray, dotGroup, pEdgeWidth
-   end repeat
-end _CreateEdges
-
-private command _CreateEdge edgeArray, dotGroup, pEdgeWidth
-   if pEdgeWidth is not a number then
-      put 4 into pEdgeWidth
-   end if
-   --
-   put the edge_OriginalPoints [edgeArray] of dotGroup into edgePoints
-   put dotArray_ConstructEdgeName (edgeArray) into edgeName
-   --
-   reset templateGraphic
-   set the style of the templateGraphic to curve
-   set the lineSize of the templateGraphic to pEdgeWidth
-   set the endArrow of the templateGraphic to true
-   set the showName of the templateGraphic to false
-   --
-   lock screen
-   create graphic edgeName in dotGroup
-   put it into edgeObject
-   -- set the graphic_Points of edgeObject to edgePoints
-   set the points of edgeObject to edgePoints
-   set the uGraphic ["edge_Array"] of edgeObject to edgeArray
-   unlock screen
-   --
-   reset templateGraphic
-   return edgeObject
-end _CreateEdge
-
-function dotArray_RectFromArray nArray
-   -- basic way
-   get nArray["pos"]
-   put item 1 of it into cx
-   put item 2 of it into cy
-   put 72/2 * nArray["width"] into rx
-   put 72/2 * nArray["height"] into ry
-   --
-   put dotArray_ConvertCrxy (cx, cy, rx, ry) into newRect
-   return newRect 
-end dotArray_RectFromArray
-
-function dotArray_GetRectangleRect nArray, itemNum, pScaleFactor
-   get nArray ["_draw_"]
-   put it [itemNum]["rect"] into rArray
-   --
-   put rArray [1]["color"] into bColour
-   put rArray [2]["color"] into fColour
-   put rArray [3]["points"] into pArray
-   --
-   -- put dotArray_ConvertCrxy (cx, cy, rx, ry) into newRect
-   repeat with pNum = 1 to item 2 of the extents of pArray
-      put pArray [pNum][1] into pX
-      put pArray [pNum][2] into pY
-      put pX,pY into sPoint
-      --
-      if pScaleFactor is a number AND pScaleFactor is not 1 then
-         put loc_ScaleFromCentre (sPoint, pScaleFactor, bbCentre) into sPoint
-      end if
-      put sPoint & CR after sPoints
-   end repeat
-   delete char -1 of sPoints
-   return sPoints
-end dotArray_GetRectangleRect
-
-function dotArray_GetDrawPoints nArray, itemNum
-   get nArray ["_draw_"]
-   put it [itemNum]["points"] into pArray
-   repeat with itemNum = 1 to item 2 of the extents of pArray
-      put pArray [itemNum][1] into item 1 of pLoc
-      put pArray [itemNum][2] into item 2 of pLoc
-      put pLoc & CR after gPoints
-   end repeat
-   put line 1 of gPoints after gPoints
-   return gPoints
-end dotArray_GetDrawPoints
-
-function dotArray_FindDrawRect nArray
-   put nArray ["_draw_"] into drawData
-   put item 2 of the extents of drawData into maxItem
-   repeat with itemNum = maxItem down to 1
-      put drawData [itemNum]["rect"] into rArray
-      if rArray is an array then
-         put _RectFromFoundArray (rArray) into newRect
-         return newRect
-      end if
-   end repeat
-   return empty
-end dotArray_FindDrawRect
-
-function dotArray_GetDrawRect nArray, itemNum
-   get nArray ["_draw_"]
-   put it [itemNum]["rect"] into rArray
-   put _RectFromFoundArray (rArray) into newRect
-   return newRect
-end dotArray_GetDrawRect
-
-private function _RectFromFoundArray rArray
-   put rArray [1] into cx
-   put rArray [2] into cy
-   put rArray [3] into rx
-   put rArray [4] into ry
-   --
-   put dotArray_ConvertCrxy (cx, cy, rx, ry) into newRect
-   return newRect
-end _RectFromFoundArray
-
 function dotArray_ConstructEdgeName edgeArray
    put "Edge" && edgeArray ["_gvid"] into edgeName
    return edgeName
 end dotArray_ConstructEdgeName
 
-function dotArray_ConvertCrxy cx, cy, rx, ry
-   put cx,cy into someLoc
-   put 2*rx into newW
-   put 2*ry into newH
-   --
-   put rect_LocWidthHeight (someLoc, newW, newH) into newRect
-   return newRect
-end dotArray_ConvertCrxy
-
 
 --> DotArray
 -
-function dotArray_FromLinkArray linkArray, pGraphStyle, pGraphName, pFile
+function dotArray_FromLinkArray linkArray, pGraphStyle, pGraphName, pFile, pDefaultShape
    if pDefaultShape is empty then put "rectangle" into pDefaultShape
    --
-   dotArray_Construct linkArray, dotArray, pGraphStyle, pGraphName, pFile, pDefaultShape
+   dotArray_Construct linkArray, dotArray, pGraphStyle, pGraphName, pDefaultShape, pFile
    put the result into dotText
    return dotArray
 end dotArray_FromLinkArray
-
-command dotArray_Construct linkArray, @dotArray, pGraphStyle, pGraphName, pDefaultShape, pFile, pBgColour, pConcentrate, pDefSection 
-   if pGraphName is empty then put "Link Array" into pGraphName
-   --
-   put dot_FromLinkArray (linkArray, pGraphStyle, pBgColour, pConcentrate, pDefaultShape, pDefSection, pGraphName) into dotText
-   put dot_CreateArray (dotText, pFile) into dotArray
-   --
-   return dotText
-end dotArray_Construct
-
-
---> Dot
--
-function dot_CreateArray dotText, pFile
-   put dot_CreateText (dotText, "json", pFile) into dotJSON
-   --
-   if word 1 of dotJSON = "Warning:" then
-      delete line 1 of dotJSON
-   end if
-   --
-   put json_ToArray (dotJSON) into dotArray
-   return dotArray
-end dot_CreateArray
-
-function dot_CreateText dotText, pExportFormat, pFile
-   file_CreateText dotText, pFile
-   put the result into dotFile
-   put dot_DoShell (dotFile, "dot", pExportFormat) into dotExport
-   return dotExport
-end dot_CreateText
-
-function dot_DoShell dotFile, pDotCommand, pExportFormat
-   dot_NormalizeDotCommand pDotCommand
-   if pExportFormat is empty then put "svg" into pExportFormat
-   put graphViz_GetShellPath() into gvPath
-   --
-   put gvPath & pDotCommand into someShell
-   put space & "-T" & pExportFormat after someShell
-   put space & quote & dotFile & quote after someShell
-   --
-   put shell(someShell) into gvResult
-   --
-   put dot_CheckResult (gvResult, pExportFormat, someShell) into shellResult
-   return shellResult
-end dot_DoShell
 
 
 --> Deps
@@ -589,3 +892,26 @@ function loc_ScaleFromCentre someLoc, someScale, pScaleCentre
    end if
    return newLoc
 end loc_ScaleFromCentre
+
+function item_Add someItems, someList, pPartLine, pSkipLines
+   list_Add someItems, someList, pPartLine, pSkipLines
+   return someList
+end item_Add
+
+command list_Add someItems, @someList, pPartLine, pSkipLines
+   set the wholematches to (pPartLine is empty)
+   repeat for each item someItem in someItems
+      if someItem is empty then next repeat
+      put itemoffset (someItem, someList, pSkipLines) into itemNum
+      if itemNum is 0 then
+         put the number of items of someList into maxItem
+         put maxItem + 1 into itemNum
+         put someItem into item itemNum of someList
+      else
+         add pSkipLines to itemNum
+         put itemNum & comma after itemNums
+      end if
+   end repeat
+   delete char -1 of itemNums
+   return itemNums
+end list_Add

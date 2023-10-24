@@ -26,6 +26,97 @@ The data structure should perhaps be changed to the usual data/metadata arrangem
 
 --> Working On
 -
+command display_DotTextSvg dotText, dotFile, pGraphStyle
+   dot_CreateGraph dotText, dotFile, pGraphStyle
+   --
+   put the result into svgFile
+   display_SVG svgFile, graphName
+   put the result into svgView
+   --
+   set the dot_File of svgView to dotFile
+   set the graph_Style of svgView to pGraphStyle
+   return svgView
+end display_DotTextSvg
+
+command display_DotFileSvg dotFile, pGraphStyle, pSvgFile
+   local dotText, dotCommand
+   dot_SvgFromDotFile dotFile, pGraphStyle, dotCommand, pSvgFile, dotText
+   --
+   put dot_GetName (dotText) into graphName
+   display_SVG pSvgFile, graphName
+   put the result into svgView
+   --
+   set the dot_File of svgView to dotFile
+   set the graph_Style [true] of svgView to pGraphStyle
+   return svgView
+end display_DotFileSvg
+
+function dot_DisplayTitle dotText, dotFile
+   put dot_GetName (dotText) into displayTitle
+   put file_GetShort (dotFile) into shortFile
+   if shortFile is not empty then
+      put " (" & shortFile & ")" after displayTitle
+   end if
+   return displayTitle
+end dot_DisplayTitle
+
+command display_DotText textOrFile, pDisplayView, pPalette
+   -- display_DotText
+   if there is a file textOrFile then
+      put textOrFile into dotFile
+      put dot_GetText (dotFile) into dotText
+   else
+      put empty into dotFile
+      put textOrFile into dotText
+   end if
+   --
+   put dot_DisplayTitle (dotText, dotFile) into displayTitle
+   display_Text dotText, displayTitle, "Dot Text", pDisplayView, pPalette
+   --
+   put the result into displayView
+   set the dot_File of displayView to dotFile
+   --
+   set the title_Menu of displayView to "Global | Dot | Graph | Text | Menu"
+   return displayView
+end display_DotText
+
+command display_DotGraphs dotFile, pSvgView
+   put gv_DecomposeDotFile (dotFile) into dotGraphs
+   --   
+   display_Text dotGraphs, "Dot Graphs", "Global | Display | Dot | Graphs | Menu"
+   put the result into dView
+   --
+   set the linked_SvgView of dView to pSvgView
+   set the dot_File of dView to dotFile
+   --
+   put folder_Above (dotFile) into dotFolder
+   dot_SplitAndSaveGraphs dotGraphs, dotFolder
+   put the result into namedGraphArray
+   set the named_GraphArray of dView to namedGraphArray
+   --
+   if exists(pSvgView) then
+      put the graph_Style of pSvgView into graphStyle
+      set the graph_Style of dView to graphStyle
+   end if
+   --
+   return dView
+end display_DotGraphs
+
+command display_DotGraph dotURL, pStackStyle, pLocOrRect
+   stack_CloneInvisible "View|Dot|Graph", "Display Dot Graph"
+   put the result into cloneStackName
+   put the long id of widget 1 of cd 1 of stack cloneStackName into graphView
+   --
+   put the view_RectOnCard of graphView into gRect
+   set the dot_URL [gRect] of graphView to dotURL
+   put the result into dotArray
+   --
+   set the dot_Name of graphView to dotName
+   --
+   stack_ShowAndGo graphView, cloneStackName, gName, pStackStyle, pLocOrRect
+   return graphView
+end display_DotGraph
+
 command display_Dot dotText, pGraphStyle, pGraphName, pDotFile
    dot_CreateGraph dotText, pDotFile, pGraphStyle
    --
@@ -59,24 +150,15 @@ command display_Dot dotText, pGraphStyle, pGraphName, pDotFile
    */
 end display_Dot
 
-command display_DotText dotText, gTitle
-   -- put the dot_Name of graphView into gTitle
-   display_Text dotText, gTitle, "Global | Dot | Graph | Text | Menu"
-   put the result into displayView
-   --
-   -- set the graph_View of displayView to graphView
-   set the displayed_Object of displayView to graphView
-   return displayView
-end display_DotText
-
 
 --> Display | Dot
 -
-command display_DotArray dotArray
+command display_DotArray dotArray, pDotFile
    put dotArray ["name"] into graphTitle
    display_Data dotArray, graphTitle, "Dot Array"
    put the result into displayView
    --
+   set the dot_File of displayView to pDotFile
    display_SetInteractions displayView, "Dot | Graph | Array", "mDouble_DotArray", "lcw_Graph"
    return displayView
 end display_DotArray
@@ -115,10 +197,9 @@ command display_ExampleSvgs pURL
    --
    display_Data svgLinks, "Found Links", "SVG"
    put the result into displayView
+   set the displayed_URL of displayView to pURL
    --
    display_SetInteractions displayView, "SVG | Tree", "mDoubleUp_SVG"
-   --
-   set the displayed_URL of displayView to someURL
    return displayView
 end display_ExampleSvgs
 
@@ -177,9 +258,103 @@ command display_HkeyArrayGraph hkeyArray, pGraphStyle
 end display_HkeyArrayGraph
 
 
+--> Dot
+-
+function dot_MenuNameText dotName
+   put dot_MenuNameParam (dotName) into dotNameParam
+   if token 1 of dotNameParam is among the items of "http,https" then
+      put dotNameParam into dotURL
+      put url dotURL into dotText
+   else
+      put scaffold_GetTemplate (dotName) into dotText
+   end if
+   return dotText
+end dot_MenuNameText
+
+function dot_MenuNameParam dotName
+   put dot_MenuNameParamArray() into dotNameArray
+   put dotNameArray [dotName] into dotURL
+   return dotURL
+end dot_MenuNameParam
+
+function dot_MenuNameParamArray
+   -- construct a dictionary to store urls in and enable menu interface based on keys
+   local dotNameArray
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/colors.gv.txt"
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/bazel.gv.txt"
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/sdh.gv.txt"
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/go-package.gv.txt"
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/undirected/gd_1994_2007.gv.txt"
+   --
+   put scaffold_ListShortFiles() into shortFiles
+   set the itemdelimiter to "."
+   repeat for each line shortFile in shortFiles
+      if item -1 of shortFile is not "gv" then next repeat
+      --
+      -- _AddToNameArray dotNameArray, shortFile
+      put "scaffold" into dotNameArray [shortFile]
+   end repeat
+   return dotNameArray
+end dot_MenuNameParamArray
+
+function dot_UrlNameMenu
+   put dot_MenuNameParamArray() into dotNameArray
+   -- put LocalArray ["dotNameArray"] into dotNameArray
+   put keys (dotNameArray) into nameMenu
+   replace CR with comma in nameMenu
+   return nameMenu & ",-,minimal"
+end dot_UrlNameMenu
+
+function dot_GetMinimal
+   put "digraph { a->b }" into dotText
+   return dotText
+end dot_GetMinimal
+
+function dot_RandomColour
+   put colour_GetRandom() into rColour
+   put colour_RgbToHex (rColour) into hColour
+   return hColour
+end dot_RandomColour
+
+
 --> Deps
 -
-function html_ExtractAllLinks someHtml
+private function colour_GetRandom
+   -- was "randomColour"
+   put random(255) into item 1 of someColour
+   put random(255) into item 2 of someColour
+   put random(255) into item 3 of someColour
+   return someColour
+end colour_GetRandom
+
+private function colour_RgbToHex rgbColour
+   -- was "colour_ConvertToWeb"
+   
+   put "#" into theWebColor -- leading "#"
+   repeat for each item myItem in rgbColour -- numeric triplet -  R,G,B
+      put format("%02X",myItem) after theWebColor
+   end repeat
+   return theWebColor
+   
+   -- alternative technique
+   put "#" into theWebColor -- leading "#"
+   repeat for each item myItem in rgbColour -- numeric triplet - R,G,B
+      get baseconvert(myItem,10,16)
+      if the length of it is 1 then put zero before it  -- each component must be 2-digit
+      put it after theWebColor
+   end repeat
+   return theWebColor
+end colour_RgbToHex
+
+function url_FromShortFile shortSvgFile, someURL
+   -- set the itemdelimiter to slash
+   put someURL into svgURL
+   if char -1 of svgURL is not slash then put slash after svgURL
+   put shortSvgFile after svgURL
+   return svgURL
+end url_FromShortFile
+
+private function html_ExtractAllLinks someHtml
    /*
    This one is prob better:
    
@@ -215,41 +390,6 @@ function html_ExtractAllLinks someHtml
    end repeat
 end html_ExtractAllLinks
 
-function dot_UrlNameMenu
-   put dot_ConstructDotNameArray() into dotNameArray
-   -- put LocalArray ["dotNameArray"] into dotNameArray
-   put keys (dotNameArray) into nameMenu
-   replace CR with comma in nameMenu
-   return nameMenu & ",-,minimal"
-end dot_UrlNameMenu
-
-function dot_ConstructDotNameArray
-   -- construct a dictionary to store urls in and enable menu interface based on keys
-   local dotNameArray
-   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/colors.gv.txt"
-   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/bazel.gv.txt"
-   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/sdh.gv.txt"
-   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/go-package.gv.txt"
-   --
-   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/undirected/gd_1994_2007.gv.txt"
-   --
-   return dotNameArray
-end dot_ConstructDotNameArray
-
-function dot_GetMinimal
-   put "digraph { a->b }" into dotText
-   return dotText
-end dot_GetMinimal
-
-function url_FromShortFile shortSvgFile, someURL
-   --
-   -- set the itemdelimiter to slash
-   put someURL into svgURL
-   if char -1 of svgURL is not slash then put slash after svgURL
-   put shortSvgFile after svgURL
-   return svgURL
-end url_FromShortFile
-
 
 --> Private
 -
@@ -259,73 +399,3 @@ private command _AddToNameArray @dotNameArray, dotURL
    replace ".gv.txt" with empty in shortName
    put dotURL into dotNameArray [shortName]
 end _AddToNameArray
-
-private function _TestGroupStyleArray nodeIdArray
-   local dotGroupStyleArray
-   
-   linkarray_ExtractRandomNodes nodeIdArray, 9
-   put the result into nodeIDs
-   if nodeIDs is not empty then
-      put dot_RandomColour() into rColour
-      graph_AddToGroupStyleArray dotGroupStyleArray, "Friends", nodeIDs, "black", rColour
-      graph_SetNodeLabel dotGroupStyleArray, empty, "http://google.com"
-   end if
-   
-   linkarray_ExtractRandomNodes nodeIdArray, 21
-   put the result into nodeIDs
-   if nodeIDs is not empty then
-      put dot_RandomColour() into rColour
-      graph_AddToGroupStyleArray dotGroupStyleArray, "Enemies", nodeIDs, "black", rColour
-      graph_SetNodeLabel dotGroupStyleArray, empty, "http://example.com"
-   end if
-   
-   linkarray_ExtractRandomNodes nodeIdArray, 12
-   put the result into nodeIDs
-   if nodeIDs is not empty then
-      put dot_RandomColour() into rColour
-      graph_AddToGroupStyleArray dotGroupStyleArray, "Bots", nodeIDs, "black", rColour
-      graph_SetNodeLabel dotGroupStyleArray, empty, "http://google.com"
-   end if
-   
-   put keys (nodeIdArray) into remainingIDs
-   if remainingIDs is not empty then
-      put dot_RandomColour() into rColour
-      graph_AddToGroupStyleArray dotGroupStyleArray, "Aliens", remainingIDs, "black", rColour
-      graph_SetNodeLabel dotGroupStyleArray, empty, "http://google.com"
-   end if
-   
-   return dotGroupStyleArray
-end _TestGroupStyleArray
-
-function dot_RandomColour
-   put colour_GetRandom() into rColour
-   put colour_RgbToHex (rColour) into hColour
-   return hColour
-end dot_RandomColour
-
-private function colour_GetRandom
-   -- was "randomColour"
-   put random(255) into item 1 of someColour
-   put random(255) into item 2 of someColour
-   put random(255) into item 3 of someColour
-   return someColour
-end colour_GetRandom
-
-private function colour_RgbToHex rgbColour
-   -- was "colour_ConvertToWeb"
-   
-   put "#" into theWebColor -- leading "#"
-   repeat for each item myItem in rgbColour -- numeric triplet -  R,G,B
-      put format("%02X",myItem) after theWebColor
-   end repeat
-   return theWebColor
-   
-   -- alternative technique
-   put "#" into theWebColor -- leading "#"
-   repeat for each item myItem in rgbColour -- numeric triplet - R,G,B
-      get baseconvert(myItem,10,16)
-      if the length of it is 1 then put zero before it  -- each component must be 2-digit
-      put it after theWebColor
-   end repeat
-   return theWebColor
-end colour_RgbToHex

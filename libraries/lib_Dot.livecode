@@ -22,6 +22,13 @@ put matchchunk (dotText, someReg, startChar, endChar) into foundGraphSection
 
 --> Working on
 -
+function dot_GetName dotText
+   put word 2 of dotText into graphName
+   if char 1 of graphName is quote then delete char 1 of graphName
+   if char -1 of graphName is quote then delete char -1 of graphName
+   return graphName
+end dot_GetName
+
 
 --> Dot | Construct
 -
@@ -323,18 +330,6 @@ private command _AddHeaderStuff @dotHeaderArray, graphPropertyArray
       default
    end switch
 end _AddHeaderStuff
-
-private command _ExtractHeaderArrayDimensions headerArray, @graphWidth, @graphHeight
-   put headerArray ["bb"] into bb
-   if bb is empty then
-      put headerArray ["size"] into inchItems
-      put round(96 * item 1 of inchItems) into graphWidth
-      put round(96 * item 2 of inchItems) into graphHeight
-   else
-      put item 3 of bb into graphWidth
-      put item 4 of bb into graphHeight
-   end if
-end _ExtractHeaderArrayDimensions
 
 private function _ConstructNestedObjectDot hLinkArray, hIdArray, graphName, graphHeader, pTargetObject
    dot_EscapeQuotes graphName

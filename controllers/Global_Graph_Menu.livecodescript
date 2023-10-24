@@ -19,39 +19,61 @@ local LocalArray
 
 --> Menu | Props
 -
+getprop menu_Target [tObject]
+   -- return display_MenuTarget(tObject)
+   return the graph_View of tObject
+end menu_Target
+
+getprop graphDotArray_Params
+   return dot_ListGraphStyles()
+end graphDotArray_Params
+
+getprop checked_StripPositions
+   return LocalArray ["StripPositions"] is true
+end checked_StripPositions
+
+getprop checked_StripBoundingBox
+   return LocalArray ["BoundingBox"] is true
+end checked_StripBoundingBox
+
 
 --> Global | Graph | Menu
 -
-on menu_ParseDot indexView, whichDot
-   put _ChooseDot (whichDot) into dotText
-   put dot_CreateArray (dotText) into dotArray
+on menu_GraphDotArray gView, graphStyle   
+   put LocalArray ["StripPositions"] is true into removePos
+   put the graph_DotArray of gView into dotArray
+   put dot_FromArray (dotArray, removePos) into dotText
    --
-   dot_CreateGraphStack dotArray
-   put the result into dotGroup
-   --
-   dotArray_CreateEdges dotArray, dotGroup
-   dotArray_CreateObjects dotArray, dotGroup
-   
-   -- check
-   put dotArray_BackgroudRect (dotArray) into bbRect
-   get the rect of dotGroup
-   if it is not bbRect then
-      -- should tolerate rouding errors
-      breakpoint
-   end if
-end menu_ParseDot
+   display_DotTextSvg dotText, empty, graphStyle
+   put the result into dView
+   put the dot_File of dView
+end menu_GraphDotArray
 
--- on menu_CreatePresentationStack indexView, whichDot
-put _ChooseDot (whichDot) into dotText
-put dot_CreateArray (dotText) into dotArray
---
-dot_CreateGraphStack dotArray
-end menu_CreatePresentationStack
+on menu_DisplayDotArray gView
+   put the graph_DotArray of gView into dotArray
+   --
+   put the dot_File of gView into dotFile
+   display_DotArray dotArray, dotFile
+end menu_DisplayDotArray
 
-on menu_Shapes
-   put "https://graphviz.org/Gallery/gradient/colors.gv.txt" into dotURL
-   --
-   display_DotUrl dotURL
-   --
-   put _FetchText (dotURL, "plain")
-end menu_Shapes
+private on _
+end _
+
+on menu_StripPositions displayView, sBoolean
+   put LocalArray ["StripPositions"] is false into LocalArray ["StripPositions"]
+end menu_StripPositions
+
+on menu_StripBoundingBox displayView, sBoolean
+   put LocalArray ["BoundingBox"] is false into LocalArray ["BoundingBox"]
+end menu_StripBoundingBox
+
+private on __
+end __
+
+on submenu_DotArray
+   return "Global | DotArray | Menu"
+end submenu_DotArray
+
+on submenu_Dev
+   return menu_DevTitle ("Global | Graph | Menu")
+end submenu_Dev

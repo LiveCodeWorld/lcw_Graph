@@ -17,13 +17,7 @@ local LocalArray
 
 --> Menu | Props
 -
-on menu_Init tObject
-   -- called only once for top menu
-   pass menu_Init
-end menu_Init
-
 getprop menu_Target [tObject]
-   -- called once for each menu
    return the display_View of tObject
 end menu_Target
 
@@ -53,41 +47,8 @@ on menu_DisplayCrudeGraph displayView
    display_DotArray dotArray
 end menu_DisplayCrudeGraph
 
-on menu_TestFile
-   answer file "Choose..."
-   put it into dotFile
-   if dotFile is empty then exit to top
-   --
-   put dot_DoShell (dotFile, "dot", "json") into dotJSON
-   if word 1 of dotJSON = "Warning:" then
-      delete line 1 of dotJSON
-   end if
-   --
-   -- put json_ToArray (dotJSON) into dotArray
-   put JsonImport (dotJSON) into dotArray
-   
-   if dotArray is not an array then
-      breakpoint
-   end if
-   --
-   display_GraphFromDotArray dotArray
-   display_DotArray dotArray
-end menu_TestFile
-
 on _
 end _
-
--- on submenu_CreateGraph
-return "Global | Tree | HkeyArray | Graph | Create | Menu"
-end submenu_CreateGraph
-
--- on submenu_Filter
-return "Global | HkeyArray | Tree | Filter | Menu"
-end submenu_Filter
-
--- on submenu_Deps
-return "Global | HkeyArray | Tree | Deps | Menu"
-end submenu_Deps
 
 on menu_GraphLinkArray displayView, graphStyle
    put the displayed_Array of displayView into linkArray
@@ -124,21 +85,6 @@ end menu_DisplaySvg
 private on __
 end __
 
-on menu_LexonLinkArrayGraph displayView
-   put "fast undirected spring" into graphStyle
-   --
-   put the displayed_Array of displayView into linkArray
-   --
-   put the project_AssetFolder of stack "lcw_Lexon" into projectAssetFolder
-   put projectAssetFolder & "contract.dot" into dotFile
-   --
-   put lexon_ConstructGroupStyleArray (dData) into dotGroupStyleArray
-   put dot_ConstructDefSection (dotGroupStyleArray, linkArray) into defSection
-   put empty into pDefSection
-   --
-   delete variable linkArray ["GENERAL: definitions."]
-   --
-   display_LinkArrayGraph linkArray, graphStyle, dotFile, "lightblue", "LinkArray", pDefSection
-end menu_LexonLinkArrayGraph
-
-
+on submenu_Dev
+   return menu_DevTitle ("Global | LinkArray | Menu")
+end submenu_Dev

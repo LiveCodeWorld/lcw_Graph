@@ -216,7 +216,7 @@ function hkeyArray_ExtractMissingArray hkeyArray, fllterSystem, filterCustomMiss
             if exists (callObject) is false then
                if fllterSystem is true and handlerType is "m" then next repeat
                if filterCustomMissing is true and handlerType is among the items of "g,s" then next repeat
-               array_AddToIndex callKey, hKey, filteredHkeyArray
+               indexArray_Add callKey, hKey, filteredHkeyArray
             end if
          end repeat
       end if

@@ -1,7 +1,7 @@
 ﻿script "lib_DotHeader"
 --> MetaData
 -
-copyright: Anonymous
+copyright: David Bovill
 license: GPLv3
 name: lib_DotHeader
 type: library
@@ -11,59 +11,6 @@ version: 0.1
 
 
 --> Working on
--
-function hkeyArray_ConstructDot hkeyArray, graphName, graphStyle, graphSize
-   local graphDirection, graphOrder, defaultShape
-   
-   set the cursor to watch
-   
-   if the filter_System of me is true then hKeyArray_FilterSystemMessages hkeyArray
-   if the fllter_CustomMissing of me  is true then hKeyArray_FilterCustomMissing hkeyArray
-   if graphSize is empty then
-      put the dot_GraphSize of me into graphSize
-      put dot_RectFromSize(graphSize) into graphRect
-   end if
-   
-   put the overlay_Overlap of me into overlap
-   put the concentrate_Graph of me into concentrate
-   put true into splines
-   if graphstyle = "clusters" then
-      put true into clusterGraph
-   else
-      put false into clusterGraph
-   end if
-   
-   _ConstructDotHeaderArray dotPropertyArray, overlap, concentrate, true
-   -- 
-   put dot_ConstructHeader (graphRect, dotPropertyArray) into graphHeader
-   put dot_NestedSubgraphsFromhkeyArray (hkeyArray, clusterGraph, graphName, graphHeader) into dotText
-   
-   return dotText
-end hkeyArray_ConstructDot
-
-
---> Target | Props
--
-getprop dot_BboxSize
-   put the rect of the target into someRect
-   put dot_BboxSize (someRect) into targetSize
-   return targetSize
-end dot_BboxSize
-
-getprop dot_InchSize [expandIfNeeded]
-   put the rect of the target into someRect
-   put dot_GraphInchSize (someRect, expandIfNeeded) into targetSize
-   return targetSize
-end dot_InchSize
-
-getprop dot_TargetSizeLine
-   put the rect of the target into graphRect
-   put dot_ConvertGraphRect (graphRect, false, false) into targetSize
-   return targetSize
-end dot_TargetSizeLine
-
-
---> Dot | Header
 -
 function dot_GetGraphHeader dotText
    _SetGraphSectionOffsets dotText, startChar, endChar
@@ -90,6 +37,33 @@ command dot_SetHeader @dotText, dotHeader
 end dot_SetHeader
 
 
+--> Dot | Header | Array
+-
+command dotHeader_ConstructArray @propertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
+   put overlap into propertyArray ["overlap"]
+   put concentrate into propertyArray ["concentrate"]
+   put splines into propertyArray ["splines"]
+   put cluster into propertyArray ["cluster"]
+   put direction into propertyArray ["direction"]
+   put dotOrder into propertyArray ["dotOrder"]
+   put defaultShape into propertyArray ["defaultShape"]
+   put defaultUrl into propertyArray ["defaultUrl"]
+end dotHeader_ConstructArray
+
+command dotHeader__DeconstructArray pDotPropertyArray, @overlap, @concentrate, @splines, @cluster, @direction, @dotOrder, @defaultShape, @defaultUrl
+   -- only used in lib_DotHeader
+   put pDotPropertyArray ["graphRect"] into graphRect
+   put pDotPropertyArray ["overlap"] into overlap
+   put pDotPropertyArray ["concentrate"] into concentrate
+   put pDotPropertyArray ["splines"] into splines
+   put pDotPropertyArray ["cluster"] into cluster
+   put pDotPropertyArray ["direction"] into direction
+   put pDotPropertyArray ["dotOrder"] into dotOrder
+   put pDotPropertyArray ["defaultShape"] into defaultShape
+   put pDotPropertyArray ["defaultUrl"] into defaultUrl
+end dotHeader__DeconstructArray
+
+
 --> Dot | Header | Construct
 -
 function dot_ConstructHeaderArray overlap, splines, defaultShape, defaultUrl
@@ -99,31 +73,12 @@ function dot_ConstructHeaderArray overlap, splines, defaultShape, defaultUrl
    put true into splines
    put "rectangle" into defaultShape
    
-   _ConstructDotHeaderArray dotHeaderArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
+   dotHeader_ConstructArray dotHeaderArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
    return dotHeaderArray
 end dot_ConstructHeaderArray
 
-function dot_ConstructHeader graphSize, pDotPropertyArray, graphStyle, pUseInches
-   -- old?
-   put dot_ConstructHeaderBase (graphSize, pDotPropertyArray, graphStyle, pUseInches) into graphHeaderBase
-   
-   put "graph [" & CR after graphHeader
-   line_Indent graphHeaderBase
-   put graphHeaderBase & CR after graphHeader
-   put "];" & CR after graphHeader
-   
-   -- default node section
-   _DeconstructDotHeaderArray pDotPropertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
-   if defaultUrl is not empty then put "node [URL=" & kwote(defaultUrl) & "];" & CR after defaultNodeSection
-   if defaultShape is not empty then put "node [shape=" & defaultShape & "];" & CR after defaultNodeSection
-   if defaultNodeSection is not empty then put CR & defaultNodeSection & CR after graphHeader
-   
-   delete last char of graphHeader
-   return graphHeader
-end dot_ConstructHeader
-
 function dot_ConstructHeaderBase graphSize, dotPropertyArray, graphStyle, pUseInches  
-   _DeconstructDotHeaderArray dotPropertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
+   dotHeader__DeconstructArray dotPropertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
    delete variable dotPropertyArray ["defaultShape"] -- this graph property does not exist and we set the node section of the graph
    --
    put CR into endChar
@@ -166,210 +121,22 @@ function dot_ConstructHeaderBase graphSize, dotPropertyArray, graphStyle, pUseIn
    --
    repeat for each key someKey in dotPropertyArray
       put dotPropertyArray [someKey] into someValue
-      if someValue is not empty then
-         put someKey & "=" & kwote(someValue) & CR after graphHeaderBase
-      end if
+      switch someValue
+         case empty
+            next repeat
+         case true
+         case false
+            put someKey & "=" & someValue & CR after graphHeaderBase
+            break
+         default
+            put someKey & "=" & kwote(someValue) & CR after graphHeaderBase
+      end switch
    end repeat
    
    -- dot_AddDefaultNode
    delete char -1 of graphHeaderBase
    return graphHeaderBase
 end dot_ConstructHeaderBase
-
-
---> Dot | Header | Size
--
-command dot_ResizeImage someView, dotGraphSize
-   -- put "0,0,3000,3000" into headerArray ["bb"]
-   -- put the dot_BboxSize of someView into headerArray ["bb"]
-   -- delete local headerArray ["size"]
-   -- put the dot_BboxSize [false] of someView into headerArray ["bb"]
-   
-   switch dotGraphSize
-      case "none"
-      case "full"
-         put empty into newHeader
-         break
-      default
-         put the dot_InchSize [false] of someView into inchItems
-   end switch
-   
-   put the dot_Text of someView into dotText
-   dot_SetGraphSize dotText, dotGraphSize
-   set the dot_Text of someView to dotText
-   
-   return oldHeaderArray
-end dot_ResizeImage
-
-command dot_StripGraphSize @dotText
-   put dot_GetGraphHeader (dotText) into dotHeader
-   put _ExtractHeaderArray (dotHeader) into headerArray
-   delete local headerArray ["bb"]
-   delete local headerArray ["size"]
-   put dot_HeaderFromArrays (headerArray) into newHeader
-   dot_SetHeader dotText, newHeader
-   return dotText
-end dot_StripGraphSize
-
-command dot_ExtractGraphSize dotText, @graphWidth, @graphHeight
-   -- was "xdot_ExtractGraphSize"
-   repeat 5
-      put dot_GetGraphHeader (dotText) into dotHeader
-      if dotHeader is empty then exit repeat
-      get _ExtractHeaderArray (dotHeader)
-      if keys(headerArray) is empty then
-         put it into headerArray
-      else
-         union it with headerArray
-         put it into headerArray
-      end if
-      dot_SetHeader dotText
-   end repeat
-   _ExtractHeaderArrayDimensions headerArray, graphWidth, graphHeight 
-end dot_ExtractGraphSize
-
-function dot_GetGraphSize dotText
-   put dot_GetGraphHeader (dotText) into dotHeader
-   put _ExtractHeaderArray (oldHeader) into headerArray
-   --
-   put headerArray ["bb"] into bbSize
-   if bbSize is not empty then return bbSize
-   --
-   put headerArray ["size"] into graphSize
-   return graphSize
-end dot_GetGraphSize
-
-command dot_SetGraphSize @dotText, inchItems
-   local newHeader
-   
-   put dot_GetGraphHeader (dotText) into oldHeader
-   if oldHeader is empty then
-      put empty into oldHeaderArray
-      if inchItems is not empty then put "size =" && kwote(inchItems) into graphSize
-      _ConstructDotHeaderArray dotPropertyArray
-      put dot_ConstructHeader (graphSize, dotPropertyArray) into newHeader
-   else
-      put _ExtractHeaderArray (oldHeader) into headerArray
-      delete local headerArray ["bb"]
-      delete local headerArray ["size"]
-      if inchItems is not empty then put inchItems into headerArray ["size"]
-      put dot_HeaderFromArrays (headerArray) into newHeader
-   end if
-   
-   dot_SetHeader dotText, newHeader
-   return newHeader
-end dot_SetGraphSize
-
-function dot_RectFromSize graphSize
-   switch graphSize
-      case empty
-         return empty
-      case "full"
-         put "0,0,3000,3000" into someRect
-         return someRect
-      case "screen"
-         put dot_BboxSize (the screenrect) into someRect
-         return someRect
-      case "image"
-         put view_GetTemplateObject ("View|Image|OPN Image") into imageView
-         put the rect of imageView into graphRect
-         put dot_BboxSize (graphRect) into someRect
-         return someRect
-      default -- "none"
-         if graphSize is a rect then
-            put dot_BboxSize (graphSize) into someRect
-            return someRect
-         else
-            return empty
-         end if
-   end switch 
-end dot_RectFromSize
-
-function dot_ConvertGraphRect someRect, expandIfNeeded, useBbox
-   if useBbox is false then
-      put dot_GraphInchSize (someRect, expandIfNeeded) into someRect
-   else
-      put dot_BboxSize (someRect) into someRect
-   end if
-   return someRect
-end dot_ConvertGraphRect
-
-function dot_BboxSize someRect
-   put item 3 of someRect - item 1 of someRect into someWidth
-   put item 4 of someRect - item 2 of someRect into someHeight
-   put 0,0,someWidth,someHeight into someRect
-   return someRect
-end dot_BboxSize
-
-function dot_GraphInchSize someRect, expandIfNeeded
-   if someRect is empty then return empty
-   put item 3 of someRect - item 1 of someRect into someWidth
-   put item 4 of someRect - item 2 of someRect into someHeight
-   
-   put someWidth,someHeight into someSize
-   dot_ConvertToInches someSize
-   if expandIfNeeded is true then
-      put "!" after someSize
-   end if
-   return someSize
-end dot_GraphInchSize
-
-command dot_ConvertToInches @pixelSize, pScreenRez
-   if pScreenRez is empty then put 96 into pScreenRez
-   set the numberformat to "0.0000"
-   repeat with itemNum = 1 to the number of items of pixelSize
-      put item itemNum of pixelSize into someNumber
-      put someNumber / pScreenRez  into item itemNum of pixelSize
-   end repeat
-end dot_ConvertToInches
-
-command dot_ConvertToPngPixels @xdotValue
-   -- PNG is 96 dpi and xdot is at 72 dpi
-   put round(xdotValue * 96 / 72) into xdotValue 
-end dot_ConvertToPngPixels
-
-function dot_ConvertDrawRect drawPoints, gHeight, @pointNum, @revRect
-   -- was "graphViz_ConvertDrawRect"
-   local revPoints
-   if word 1 of drawPoints is "P" then
-      put word 2 of drawPoints into pointNum
-      put word 3 to -1 of drawPoints into drawPoints
-      repeat pointNum
-         put word 1 of drawPoints into nodeX
-         put word 2 of drawPoints into nodeY
-         
-         put gHeight - nodeY into reflectedY
-         
-         dot_ConvertToPngPixels nodeX
-         add 7 to nodeX
-         dot_ConvertToPngPixels reflectedY
-         add 7 to reflectedY
-         put nodeX,reflectedY into reflectedLoc
-         
-         put reflectedLoc & CR after revPoints
-         delete word 1 to 2 of drawPoints
-      end repeat
-   end if
-   -- delete last char of revPoints
-   put line 1 of revPoints after revPoints
-   
-   if pointNum = 4 then
-      put line 2 of revPoints & "," & line 4 of revPoints into revRect
-   else
-      put empty into revRect
-   end if
-   return revPoints
-end dot_ConvertDrawRect
-
-function dot_ReflectPoint someLoc, gHeight
-   -- was "graphViz_ReflectPoint"
-   put item 1 of someLoc into nodeX
-   put item 2 of someLoc into nodeY
-   
-   put gHeight - nodeY into reflectedY
-   put nodeX,reflectedY into reflectedLoc
-   return reflectedLoc
-end dot_ReflectPoint
 
 
 --> Dot | Header | Add
@@ -468,33 +235,6 @@ end dot_AddGraphHeaderLine
 
 --> Dot | Header | Props
 -
-command dot_StripGraphSize @dotText
-   put dot_GetGraphHeader (dotText) into dotHeader
-   put _ExtractHeaderArray (dotHeader) into headerArray
-   delete local headerArray ["bb"]
-   delete local headerArray ["size"]
-   put dot_HeaderFromArrays (headerArray) into newHeader
-   dot_SetHeader dotText, newHeader
-   return dotText
-end dot_StripGraphSize
-
-command dot_ExtractGraphSize dotText, @graphWidth, @graphHeight
-   -- was "xdot_ExtractGraphSize"
-   repeat 5
-      put dot_GetGraphHeader (dotText) into dotHeader
-      if dotHeader is empty then exit repeat
-      get _ExtractHeaderArray (dotHeader)
-      if keys(headerArray) is empty then
-         put it into headerArray
-      else
-         union it with headerArray
-         put it into headerArray
-      end if
-      dot_SetHeader dotText
-   end repeat
-   _ExtractHeaderArrayDimensions headerArray, graphWidth, graphHeight 
-end dot_ExtractGraphSize
-
 command dot_AddGraphMargin @dotText, xMargin, yMargin, useInches
    /*
    For graphs, this sets x and y margins of canvas, in inches. if the margin is a single double, both margins are set equal to the given value.
@@ -563,96 +303,6 @@ on dot_AddGraphHeaderLine @dotText, headerKey, headerValue, kwoted
 end dot_AddGraphHeaderLine
 
 
---> Dot | Header | Size
--
-command dot_ResizeImage someView, dotGraphSize
-   put the dot_Text of someView into dotText
-   
-   switch dotGraphSize
-      -- put "0,0,3000,3000" into headerArray ["bb"]
-      -- put the dot_BboxSize of someView into headerArray ["bb"]
-      -- delete local headerArray ["size"]
-      -- put the dot_BboxSize [false] of someView into headerArray ["bb"]
-      case "none"
-         put empty into newHeader
-         break
-      case "full"
-         put empty into newHeader
-         break
-      default
-         put the dot_InchSize [false] of someView into inchItems
-         
-   end switch
-   
-   put dot_GetGraphHeader (dotText) into oldHeader
-   if oldHeader is empty then
-      put empty into oldHeaderArray
-      if inchItems is not empty then put "size =" && kwote(inchItems) into graphSize
-      _ConstructDotHeaderArray dotPropertyArray
-      put dot_ConstructHeader (graphSize, dotPropertyArray) into newHeader
-   else
-      put _ExtractHeaderArray (oldHeader) into headerArray
-      -- put headerArray into oldHeaderArray
-      delete local headerArray ["bb"]
-      delete local headerArray ["size"]
-      if inchItems is not empty then put inchItems into headerArray ["size"]
-      put dot_HeaderFromArrays (headerArray) into newHeader
-   end if
-   
-   dot_SetHeader dotText, newHeader
-   set the dot_Text of someView to dotText
-   return oldHeaderArray
-end dot_ResizeImage
-
-
---> Dot | Geometry | Size
--
-function dot_BboxSize someRect
-   put item 3 of someRect - item 1 of someRect into someWidth
-   put item 4 of someRect - item 2 of someRect into someHeight
-   put 0,0,someWidth,someHeight into someRect
-   return someRect
-end dot_BboxSize
-
-function dot_GraphInchSize someRect, expandIfNeeded
-   if someRect is empty then return empty
-   put item 3 of someRect - item 1 of someRect into someWidth
-   put item 4 of someRect - item 2 of someRect into someHeight
-   
-   put someWidth,someHeight into someSize
-   dot_ConvertToInches someSize
-   if expandIfNeeded is true then
-      put "!" after someSize
-   end if
-   return someSize
-end dot_GraphInchSize
-
-function dot_RectFromSize graphSize
-   switch graphSize
-      case empty
-         return empty
-      case "full"
-         put "0,0,3000,3000" into someRect
-         return someRect
-      case "screen"
-         put dot_BboxSize (the screenrect) into someRect
-         return someRect
-      case "image"
-         put view_GetTemplateObject ("View|Image|OPN Image") into imageView
-         put the rect of imageView into graphRect
-         put dot_BboxSize (graphRect) into someRect
-         return someRect
-      default -- "none"
-         if graphSize is a rect then
-            put dot_BboxSize (graphSize) into someRect
-            return someRect
-         else
-            return empty
-         end if
-   end switch 
-end dot_RectFromSize
-
-
 --> Dot | Header | Array
 -
 function dot_HeaderFromArrays dotHeaderArray, defaultNodePropertyArray, defaultEdgePropertyArray
@@ -701,7 +351,7 @@ end dot_HeaderFromArrays
 
 --> Private
 -
-command _ConstructDotHeaderArray @propertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
+command dotHeader_ConstructArray @propertyArray, overlap, concentrate, splines, cluster, direction, dotOrder, defaultShape, defaultUrl
    put overlap into propertyArray ["overlap"]
    put concentrate into propertyArray ["concentrate"]
    put splines into propertyArray ["splines"]
@@ -710,19 +360,7 @@ command _ConstructDotHeaderArray @propertyArray, overlap, concentrate, splines, 
    put dotOrder into propertyArray ["dotOrder"]
    put defaultShape into propertyArray ["defaultShape"]
    put defaultUrl into propertyArray ["defaultUrl"]
-end _ConstructDotHeaderArray
-
-private command _DeconstructDotHeaderArray pDotPropertyArray, @overlap, @concentrate, @splines, @cluster, @direction, @dotOrder, @defaultShape, @defaultUrl
-   put pDotPropertyArray ["graphRect"] into graphRect
-   put pDotPropertyArray ["overlap"] into overlap
-   put pDotPropertyArray ["concentrate"] into concentrate
-   put pDotPropertyArray ["splines"] into splines
-   put pDotPropertyArray ["cluster"] into cluster
-   put pDotPropertyArray ["direction"] into direction
-   put pDotPropertyArray ["dotOrder"] into dotOrder
-   put pDotPropertyArray ["defaultShape"] into defaultShape
-   put pDotPropertyArray ["defaultUrl"] into defaultUrl
-end _DeconstructDotHeaderArray
+end dotHeader_ConstructArray
 
 private command _SetGraphSectionOffsets @dotText, @startChar, @endChar
    # Trims top and tail of dotText
@@ -732,6 +370,9 @@ private command _SetGraphSectionOffsets @dotText, @startChar, @endChar
    
    set the wholematches to true
    put wordOffset("graph", dotText) into wordNum
+   if wordNum = 0 then
+      put wordOffset("digraph", dotText) into wordNum
+   end if
    if wordNum = 0 then return false
    
    put the number of chars of (word 1 to wordNum of dotText) - 4 into startChar
@@ -743,30 +384,3 @@ private command _SetGraphSectionOffsets @dotText, @startChar, @endChar
    put startChar + skipNum + 1 into endChar
    return true
 end _SetGraphSectionOffsets
-
-private function _ExtractHeaderArray dotHeader
-   -- was "dot_HeaderToArray"
-   put text_GetBetween ("[", "]", dotHeader) into innerBit
-   repeat for each line someLine in innerBit
-      put word 1 to -1 of someLine into someLine
-      if someLine is empty then next repeat
-      repeat 50
-         set the itemdelimiter to "="
-         put word 1 to -1 of item 1 of someLine into someKey
-         delete item 1 of someLine
-         
-         put word 1 of someLine into someValue
-         if char -1 of someValue is comma then delete char -1 of someValue
-         replace quote with empty in someValue
-         delete word 1 of someLine
-         
-         put someValue into headerArray [someKey]
-         
-         if word 1 of someLine is comma then delete word 1 of someLine
-         put word 1 to -1 of someLine into someLine
-         if someLine is empty then exit repeat
-      end repeat
-   end repeat
-   return headerArray
-end _ExtractHeaderArray
-

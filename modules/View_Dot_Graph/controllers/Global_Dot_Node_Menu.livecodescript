@@ -39,38 +39,20 @@ getprop disabled_NodeBehavior [nodeObject]
 end disabled_NodeBehavior
 
 getprop setBehavior_Params
-   return "Placeholder"
+   return "Node,-,Placeholder"
 end setBehavior_Params
-
-function _GetBehaviorObject bName
-   put view_GetTemplateBehavior("Layout|Placeholder") into bObject
-   -- put the long id of stack "behavior_ViewLayoutPlaceholder" into bObject
-   return bObject
-end _GetBehaviorObject
 
 
 --> Global | Dot | Node | Menu
 -
-on submenu_Dev
-   return "Global | Dot | Graph | Test | Menu"
-end submenu_Dev
-
-on menu_Create nodeObject
-   put the long id of the owner of nodeObject into dotGroup
-   --
-   dotArray_CreateGraphic oArray, dotGroup
-end menu_Create
-
-on menu_Delete nodeObject
-   object_Delete nodeObject
-end menu_Delete
-
-private on _
-end _
+on menu_ScaleText nodeObject
+   breakpoint
+end menu_ScaleText
 
 on menu_NodeRect nodeObject
    put the rect of nodeObject into oRect
-   put the node_Rect of nodeObject into nodeRect
+   -- put the node_Rect of nodeObject into nodeRect
+   put the node_TargetRect of nodeObject into nodeRect
    set the rect of nodeObject to nodeRect
    --
    put oRect &CR& nodeRect
@@ -80,49 +62,28 @@ on menu_NodeShape nodeObject, nShape
    set the node_Shape of nodeObject to nShape
 end menu_NodeShape
 
-private on ______
-end ______
-
-on menu_NodeArray nodeObject
-   put the short name of nodeObject into nodeName
-   put the node_Array of nodeObject into pArray
-   --
-   display_Data pArray, nodeName, "node_Array"
-end menu_NodeArray
-
-on menu_ParentArray nodeObject
-   put the short name of nodeObject into nodeName
-   put the parent_Array of nodeObject into pArray
-   --
-   display_Data pArray, "parent_Array", nodeName
-end menu_ParentArray
-
-on menu_DataModel nodeObject
-   put the short name of nodeObject into nodeName
-   put the data_Model of nodeObject into dModel
-   --
-   display_Data dModel, "data_Model", nodeName
-end menu_DataModel
-
-private on __
-end __
-
-on menu_NodeBehavior nodeObject
-   put the behavior of nodeObject into bObject
-   edit the script of bObject
-end menu_NodeBehavior
+private on _
+end _
 
 on menu_ReplaceWithPlaceholder nodeObject
    set the control_Type  of nodeObject to "placeHolder"
 end menu_ReplaceWithPlaceholder
 
 on menu_SetBehavior nodeObject, bName
-   put _GetBehaviorObject (bName) into bObject
+   switch bName
+      case "Node"
+         put view_GetTemplateBehavior("View|Node|Graphic") into bObject
+         break
+      default
+         -- put the long id of stack "behavior_ViewLayoutPlaceholder" into bObject
+         put view_GetTemplateBehavior("Layout|Placeholder") into bObject
+   end switch
+   --
    set the behavior of nodeObject to bObject
 end menu_SetBehavior
 
-private on ___
-end ___
+private on __
+end __
 
 on menu_ColourFamily nodeObject
    lock screen
@@ -217,3 +178,10 @@ on menu_AllWhite nodeObject
    unlock screen
    return allNodeNames
 end menu_AllWhite
+
+private on _____
+end _____
+
+on submenu_Dev
+   return menu_DevTitle ("Global | Dot | Node | Menu")
+end submenu_Dev

@@ -8,6 +8,8 @@ type: controller
 version: 0.1
 
 /*
+Renamed "Global | Trello | Card | Line | Menu"
+
 The technical specifications of the recording are determined by the settings of the 
 recordCompression 
 recordChannels
@@ -34,9 +36,23 @@ getprop menu_Target [tObject]
    return the display_View of tObject
 end menu_Target
 
+command display_UpdateTrelloCardData displayView, cardID
+   put the view_Data of displayView into viewData
+   --
+   put trello_GetCard (cardID) into cardData
+   put indexArray_Find (viewData, "id", cardID) into indexNum
+   put cardData into viewData [indexNum]
+   --
+   set the view_Data of displayView to viewData
+end display_UpdateTrelloCardData
+
 
 --> Global | Trello | List | Line | Menu
 -
+on menu_DisplayedObject displayView
+   put the displayed_Object of displayView
+end menu_DisplayedObject
+
 on submenu_Audio
    return "Global | Audio | Record | Menu"
 end submenu_Audio
@@ -81,7 +97,7 @@ end ___
 on menu_File displayView
    -- put the constructed_ShortAudioFile of displayView -- into audioFile
    -- put the constructed_AudioFile of displayView -- into audioFile
-   put the cardData_ShortFile of displayView
+   put the selected_CardDataShortFile of displayView
 end menu_File
 
 on menu_LaunchTrello displayView
@@ -90,8 +106,8 @@ on menu_LaunchTrello displayView
    launch url trelloURL
 end menu_LaunchTrello
 
-on menu_DisplayListData displayView
-   put the view_Data of displayView into listData
+on menu_DisplayViewData displayView
+   put the view_Data of displayView into viewData
    --
-   display_Data listData
-end menu_DisplayListData
+   display_Data viewData, "view_Data"
+end menu_DisplayViewData

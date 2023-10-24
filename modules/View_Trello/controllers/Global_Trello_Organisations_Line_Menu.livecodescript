@@ -32,10 +32,17 @@ on menu_DisplayOrgBoards displayView
    
    /*
    put the view_Data of displayView into vData
-   put array_IndexFind (vData, "DisplayName", orgName) into indexNum
+   put indexArray_Find (vData, "DisplayName", orgName) into indexNum
    put vData [indexNum]["id"] into orgID
    -- put vData [indexNum]["displayName"] into orgName
    --
    display_TrelloOrgBoards orgID, orgName
    */
 end menu_DisplayOrgBoards
+
+private on _
+end _
+
+on menu_DisplayedObject displayView
+   put the displayed_Object of displayView
+end menu_DisplayedObject

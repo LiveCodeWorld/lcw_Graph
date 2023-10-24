@@ -72,6 +72,9 @@ on menu_DisplayOrganisations displayView
    display_TrelloOrganisations displayView
 end menu_DisplayOrganisations
 
+on _
+end _
+
 on menu_RememberList leftView
    put the title_Text of leftView into listName
    put the view_Data of leftView into cardData

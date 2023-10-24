@@ -17,6 +17,48 @@ See stack "model_Hkey"
 */
 
 
+--> Dot | Plurals
+-
+function dot_ListGraphProps
+   put "bb,beautify,bgcolor,center,charset,class,clusterrank,colorscheme,comment" into gProps
+   put ",compound,concentrate,Damping,defaultdist,dim,dimen,directed,diredgeconstraints,dpi,epsilon,esep,fontcolor,fontname,fontnames,fontpath,fontsize" after gProps
+   put ",forcelabels,gradientangle,href,id,imagepath,inputscale,K,label,label_scheme,labeljust,labelloc,landscape,layerlistsep" after gProps
+   put ",layers,layerselect,layersep,layout,levels,levelsgap,lheight,linelength,lp,lwidth,margin,maxiter,mclimit,mindist,mode,model,newrank,nodesep" after gProps
+   put ",nojustify,normalize,notranslate,nslimit,nslimit1,oneblock,ordering,orientation,outputorder,overlap,overlap_scaling,overlap_shrink,pack" after gProps
+   put ",packmode,pad,page,pagedir,quadtree,quantum,rankdir,ranksep,ratio,remincross,repulsiveforce,resolution,root,rotate,rotation,scale,searchsize" after gProps
+   put ",sep,showboxes,size,smoothing,sortv,splines,start,strict,style,stylesheet,target,TBbalance,tooltip,truecolor,URL,viewport,voro_margin,xdotversion" after gProps
+   return gProps
+end dot_ListGraphProps
+
+function dot_ListGraphStyles
+   return "radial,spring,circular,-,hierarchical,-,undirected spring,fast undirected spring,-,tree map,nested" 
+end dot_ListGraphStyles
+
+function dot_AllGraphFlattenNums
+   return "0,1,2,3,4,5,6,7,8,9,10,11,12,-,none"
+end dot_AllGraphFlattenNums
+
+
+--> Dot | Model
+-
+function dot_GetText dotFile
+   -- get url ("file:" & dotFile)
+   put url ("binfile:" & dotFile) into utf8Text
+   put textDecode (utf8Text, "UTF-8") into dotText
+   return dotText
+end dot_GetText
+
+command dot_SetText dotFile, dotText
+   if dotFile is empty then put the tempname into dotFile
+   --
+   put folder_Above (dotFile) into someFolder
+   folder_CreateNested someFolder
+   --
+   put textEncode (dotText, "utf-8") into utf8Text
+   put utf8Text into url ("binfile:" & dotFile)
+   return dotFile
+end dot_SetText
+
 
 --> Props
 -
@@ -420,13 +462,6 @@ function dot_GetGraphMaximumDepths
    return "1,2,3,4,5,6,7,8,9,-,none"
 end dot_GetGraphMaximumDepths
 
-function dot_GetGraphSizes
-   return "full,screen,image,-,none"
-   -- put the hkey_CaseConditions ["dot_RectFromSize,f"] of stack "libOPN_GraphViz" into dotGraphSizes
-   -- put ",-,none" after dotGraphSizes
-   -- return dotGraphSizes
-end dot_GetGraphSizes
-
 
 --> overlayArray | Node Style
 -
@@ -465,17 +500,6 @@ function dot_ParamsToStyleArray styleParams
    split styleParams with comma and "="
    return styleParams
 end dot_ParamsToStyleArray
-
-
---> Dot | Plurals
--
-function dot_ListGraphStyles
-   return "radial,spring,circular,-,hierarchical,-,undirected spring,fast undirected spring" 
-end dot_ListGraphStyles
-
-function dot_AllGraphFlattenNums
-   return "0,1,2,3,4,5,6,7,8,9,10,11,12,-,none"
-end dot_AllGraphFlattenNums
 
 
 --> Dot | MetaData | Array
@@ -685,13 +709,6 @@ command dot_FilesFromHkey hKey, graphStyle, @dotFile, @imageFile, @cmapxFile, @x
    put "/" after dotFolder
    overlay_Files dotFolder, dotFile, imageFile, cmapxFile, xdotFile, dotArrayFile, graphStyle
 end dot_FilesFromHkey
-
-command dot_SaveTemporaryFile dotText, dotFile
-   if dotFile is empty then put dot_NewTemporaryFilePath (dotText) into dotFile
-   file_CreateText dotText, dotFile
-   put the result into dotFile
-   return the result
-end dot_SaveTemporaryFile
 
 function dot_LabelFileWithGraphStyle graphStyle, dotFile, pImageFormat
    -- adds graphStyle_ before the short file name

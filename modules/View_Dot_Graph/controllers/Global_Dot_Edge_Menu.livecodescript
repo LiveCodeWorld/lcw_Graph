@@ -7,13 +7,6 @@ name: Global | Dot | Edge | Menu
 type: controller
 version: 0.1
 
-/*
-on menu_EditBehavior edgeGraphic
-   put the behavior of edgeGraphic into bObject
-   edit the script of bObject
-end menu_EditBehavior
-*/
-
 
 --> Variables
 -
@@ -21,6 +14,9 @@ local LocalArray
 
 --> Menu | Props
 -
+getprop menu_Target [tObject]
+   return the arrow_View of tObject
+end menu_Target
 
 
 --> Global | Dot | Edge | Menu
@@ -33,17 +29,6 @@ end menu_EdgeArray
 on _
 end _
 
-on menu_OriginalPoints edgeGraphic
-   put the edge_OriginalPoints of edgeGraphic into edgePoints
-   put edgePoints
-end menu_OriginalPoints
-
-on menu_Points edgeGraphic
-   put the points of edgeGraphic
-end menu_Points
-
-on menu_ScaledPoints edgeGraphic
-   put the edge_ScaledPoints of edgeGraphic into edgePoints
-   set the points of edgeGraphic to edgePoints
-   put edgePoints
-end menu_ScaledPoints
+on submenu_Dev
+   return menu_DevTitle ("Global | Dot | Edge | Menu")
+end submenu_Dev

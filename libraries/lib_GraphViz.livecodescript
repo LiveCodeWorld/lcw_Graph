@@ -28,6 +28,8 @@ At the renderer api, plugins have a choice of coordinate representation:
 At present, most device-independent units are either inches or points, which we take as 72 points per inch. 
 */
 
+--> Working on
+-
 
 --> Graph | Model
 -
@@ -41,6 +43,45 @@ getprop graph_Model -- old
    
    return the long id of me
 end graph_Model
+
+
+--> GraphViz | Latest
+-
+function gv_DecomposeDotFile dotFile
+   _SetDefaultDotFoler dotFile, shortFile, dotFolder, oFolder
+   --
+   set the defaultfolder to dotFolder
+   put merge ("ccomps -x [[shortFile]]") into someShell
+   put shell (someShell) into sResult
+   --
+   set the defaultfolder to oFolder
+   return sResult
+end gv_DecomposeDotFile
+
+function gv_RecomposeDotFile dotFile, pOutputType
+   if pOutputType is empty then
+      put "json" into pOutputType
+   end if
+   --
+   _SetDefaultDotFoler dotFile, shortFile, dotFolder, oFolder
+   --
+   set the defaultfolder to dotFolder
+   put merge ("ccomps -x [[shortFile]] | dot | gvpack | neato -s -n2 -T[[pOutputType]]") into someShell
+   put shell (someShell) into sResult
+   --
+   set the defaultfolder to oFolder
+   --
+   return sResult
+end gv_RecomposeDotFile
+
+private command _SetDefaultDotFoler dotFile, @shortFile, @dotFolder, @oFolder
+   put the defaultfolder into oFolder
+   set the itemdelimiter to slash
+   put item -1 of dotFile into shortFile
+   put dotFile into dotFolder
+   put empty into item -1 of dotFolder
+   return oFolder
+end _SetDefaultDotFoler
 
 
 --> GraphViz
@@ -242,173 +283,6 @@ function dot_NodeDefLineFromArray nodeID, defLineArray
    put "];" into char -2 to -1 defLine
    return defLine
 end dot_NodeDefLineFromArray
-
-function dot_ConstructDefLine nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile
-   -- was "node_ConstructParamLine"
-   local nodeLine
-   
-   if nodeLabel is not empty then
-      put "label='[[nodeLabel]]'" into nodeLine
-   end if
-   
-   if nodeShape is not empty then
-      if nodeLine is not empty then
-         put "," & space after nodeLine
-      end if
-      put "shape=[[nodeShape]]" after nodeLine
-      if nodeShape is "polygon" then
-         if polyParams is not empty then
-            put "," && polyParams after nodeLine
-         end if
-      end if
-   end if
-   
-   dot_AddParamToNodeDef "style", nodeStyle, nodeLine, false
-   dot_AddParamToNodeDef "color", nodeColour, nodeLine, false
-   dot_AddParamToNodeDef "fillcolor", nodeFillColour, nodeLine, false
-   dot_AddParamToNodeDef "URL", nodeUrl, nodeLine
-   dot_AddParamToNodeDef "tooltip", nodeToolTip, nodeLine
-   dot_AddParamToNodeDef "shapefile", nodeShapeFile, nodeLine
-   
-   replace "'" with quote in nodeLine
-   put merge(nodeLine) into nodeLine
-   
-   return nodeLine
-end dot_ConstructDefLine
-
-
---> Dot | Node Defs | ShapeFile
--
-function dot_ConstructShapeDef someNode, nodeLabel, nodeShape, nodeFillColour, nodeUrl, nodeToolTip, nodeStyle, nodeColour
-   dot_NormalizeNode someNode
-   if nodeStyle is empty then put "filled" into nodeStyle
-   if nodeColour is empty then put nodeFillColour into nodeColour
-   
-   get dot_ConstructDefLine(nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, "", nodeUrl, nodeToolTip, "")
-   put someNode && "[" & it & "];" into nodeDef
-   put nodeDef & CR after nodeDefs
-   
-   delete last char of nodeDefs
-   return nodeDefs
-end dot_ConstructShapeDef
-
-function dot_ConstructShapeFileDefs shapeFileArray, someWidth, someHeight, fixedSize
-   -- shapefile is deprecated
-   local nodeDefs
-   
-   put shapeFileArray ["Node titles"] into defNodes
-   repeat for each line someNode in defNodes
-      set the cursor to busy
-      
-      put shapeFileArray [someNode] into nodeShapeFile
-      put shapeFileArray [someNode,"url"] into nodeUrl
-      put shapeFileArray [someNode,"tooltip"] into nodeToolTip
-      
-      get dot_ConstructShapeFileDef(someNode, nodeShapeFile, someWidth, someHeight, fixedSize, nodeUrl, nodeToolTip)   
-      put nodeDef & CR after nodeDefs
-   end repeat
-   delete last char of nodeDefs
-   return nodeDefs
-end dot_ConstructShapeFileDefs
-
-function dot_ConstructGraphicDef nodeLabel, someWidth, someHeight, fixedSize, nodeUrl, nodeToolTip
-   -- shapefile is deprecated
-   put "shapeFile" into nodeShape
-   put empty into polyParams
-   put empty into nodeStyle
-   put empty into nodeColour
-   put empty into nodeFillColour
-   
-   get dot_ConstructDefLine(nodeName, nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip)
-   
-   if someWidth is not empty then
-      dot_ConvertToInches someWidth
-      put ", width=" & someWidth after it
-   end if
-   if someHeight is not empty then
-      dot_ConvertToInches someHeight
-      put ", height=" & someHeight after it
-   end if
-   if fixedsize is not empty then put ", fixedsize=" & fixedsize after it
-   
-   dot_NormalizeNode nodeName
-   put nodeName && "[" & it & "];" into nodeDef
-   
-   return nodeDef
-end dot_ConstructGraphicDef
-
-function dot_ConstructShapeFileDef nodeName, nodeShapeFile, someWidth, someHeight, fixedSize, nodeUrl, nodeToolTip
-   put "shapeFile" into nodeShape
-   put empty into polyParams
-   put empty into nodeStyle
-   put empty into nodeColour
-   put empty into nodeFillColour
-   
-   put " " into nodeLabel
-   get dot_ConstructDefLine(nodeName, nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile)
-   
-   if someWidth is not empty then
-      dot_ConvertToInches someWidth
-      put ", width=" & someWidth after it
-   end if
-   if someHeight is not empty then
-      dot_ConvertToInches someHeight
-      put ", height=" & someHeight after it
-   end if
-   if fixedsize is not empty then put ", fixedsize=" & fixedsize after it
-   
-   dot_NormalizeNode nodeName
-   put nodeName && "[" & it & "];" into nodeDef
-   
-   return nodeDef
-end dot_ConstructShapeFileDef
-
-
---> Dot | Node Defs | Poly
--
-function dot_ConstructPolyDefs someNodes, polyStyle, polySkew, polyDistortion, nodeColour, nodeFillColour, nodeUrl, nodeToolTip, regular, peripheries, polyOrientation
-   return "Not done yet!"
-   
-   local nodeDefs
-   put "polygon" into nodeShape
-   put empty into polyParams
-   put empty into nodeShapeFile
-   repeat for each line someNode in someNodes
-      set the cursor to busy
-      dot_NormalizeNode someNode
-      
-      get dot_ConstructDefLine(someNode, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile)
-      put someNode && "[" & it & "];" into nodeDef
-      put nodeDef & CR after nodeDefs
-   end repeat
-   delete last char of nodeDefs
-   return nodeDefs
-end dot_ConstructPolyDefs
-
-
---> Dot | Node Defs | Defaults
--
-function dot_ConstructDefaultNodeDefs nodeShape, nodeStyle, nodeColour, nodeFillColour, nodeUrl, nodeToolTip
-   --   node [URL="http://wiki.architex.tv/\N", shape=box, fontsize=22, fontname=arial, style=filled];
-   get dot_ConstructDefLine(empty, nodeShape, nodeStyle, nodeColour, nodeFillColour, "", nodeUrl, nodeToolTip, "")
-   return "node [" & it & "];"
-end dot_ConstructDefaultNodeDefs
-
-function dot_ConstructDefaultEdgeDefs edgeColour, edgeStyle, arrowhead, edgeWidth
-   --  edge [color=cyan, style=solid, arrowhead=none, width=2]
-   put dot_ConstructEdgeDefParams(edgeColour, edgeStyle, arrowhead, edgeWidth) into nodeLine
-   return "edge [" & nodeLine & "];"
-end dot_ConstructDefaultEdgeDefs
-
-function dot_ConstructEdgeDefParams edgeColour, edgeStyle, arrowhead, edgeWidth
-   local nodeLine
-   dot_AddParamToNodeDef "style", edgeStyle, nodeLine, false
-   dot_AddParamToNodeDef "color", edgeColour, nodeLine, false
-   dot_AddParamToNodeDef "arrowhead", arrowhead, nodeLine, false
-   dot_AddParamToNodeDef "width", edgeWidth, nodeLine, false
-   return nodeLine
-end dot_ConstructEdgeDefParams
-
 
 
 --> Dot | Formats

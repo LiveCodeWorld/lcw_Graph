@@ -1,7 +1,7 @@
 ﻿script "Global | Dot | Graph | Text | Menu"
 --> MetaData
 -
-copyright: Anonymous
+copyright: David Bovill
 license: GPLv3
 name: Global | Dot | Graph | Text | Menu
 type: controller
@@ -18,8 +18,9 @@ local LocalArray
 --> Menu | Props
 -
 getprop menu_Target [tObject]
-   put the display_View of tObject into LocalArray ["displayView"]
-   put the displayed_Object of tObject into graphView
+   put the display_View of tObject into displayView
+   put displayView into LocalArray ["displayView"]
+   put the displayed_Object of displayView into graphView
    return graphView
 end menu_Target
 
@@ -32,20 +33,27 @@ end _GetDotText
 
 --> Global | Dot | Graph | Text | Menu
 -
-on menu_AddSize graphView
+on submenu_Save
+   return "Global | Dot | Save | Menu"
+end submenu_Save
+
+private on _
+end _
+
+on menu_AddSize indexView
    put _GetDotText() into dotText
    --
    put dot_GraphInchSize (the screenrect, true) into inchSizes
-   dot_SetGraphSize dotText, inchSizes
+   -- dot_SetGraphSize dotText, inchSizes
    --
-   display_Text dotText 
+   put word 2 of dotText into gTitle
+   display_DotText dotText, gTitle
 end menu_AddSize
 
 on menu_RenderDot graphView
    put _GetDotText() into dotText
    --
-   put the view_RectOnCard of graphView into gRect
-   set the dot_Text [gRect] of graphView to dotText
+   set the dot_Text of graphView to dotText
 end menu_RenderDot
 
 on menu_ClearGraph graphView
@@ -53,26 +61,9 @@ on menu_ClearGraph graphView
    -- set the dot_Array of graphView to empty
 end menu_ClearGraph
 
-on _
-end _
+private on __
+end __
 
-on submenu_Tools
-   return "Global | Dot | Graph | Tools | Menu"
-end submenu_Tools
-
-on menu_FetchDotFromImage displayView
-   put the graph_View of displayView into graphView
-   put the dot_Text of graphView into dotText
-   --
-   set the displayed_Text of displayView to dotText
-end menu_FetchDotFromImage
-
-on menu_DisplayGraphView graphView
-   object_GoTo graphView
-end menu_DisplayGraphView
-
-on menu_DiplayBehavior
-   put LocalArray ["displayView"] into displayView
-   put the behavior of displayView into bObject
-   edit the behavior of bObject
-end menu_DiplayBehavior
+on submenu_Dev
+   return menu_DevTitle ("Global | Dot | Graph | Text | Menu")
+end submenu_Dev

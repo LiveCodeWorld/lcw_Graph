@@ -296,7 +296,7 @@ function script_GetNodeDef someNode, handlerName, handlerType, scriptObject
             break
     end switch
      
-    get dot_ConstructDefLine(handlerName, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile)
+    get dot_ConstructNodeParamBit(handlerName, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile)
     put someNode && "[" & it & "];" into nodeDef
     return nodeDef
 end script_GetNodeDef
@@ -484,7 +484,7 @@ function hKeyArray_ConstructStackIdArray idArray
         else
             put scriptObject into stackObject
         end if
-        array_AddToIndex nodeID, stackObject, stackIdArray
+        indexArray_Add nodeID, stackObject, stackIdArray
     end repeat
     return stackIdArray
 end hKeyArray_ConstructStackIdArray
@@ -498,7 +498,7 @@ function hKeyArray_ConstructObjectIdArray hIdArray, hIDs
       if hKey is empty then next repeat
       hkey_Deconstruct hKey, handlerName, handlerType, scriptObject, handlerNum
       -- if exists(scriptObject) then put the mobile_Name of scriptObject into scriptObject
-      array_AddToIndex nodeID, scriptObject, objectIdArray
+      indexArray_Add nodeID, scriptObject, objectIdArray
    end repeat
    return objectIdArray
 end hKeyArray_ConstructObjectIdArray
@@ -543,7 +543,7 @@ function hKeyArray_ConstructIdTypeArray idToHkeyArray
     repeat for each key nodeID in idToHkeyArray
         put idToHkeyArray [nodeID] into hKey
         hkey_Deconstruct hKey, handlerName, handlerType, scriptObject, handlerNum
-        array_AddToIndex nodeID, handlerType, IdTypeArray
+        indexArray_Add nodeID, handlerType, IdTypeArray
     end repeat
     return IdTypeArray
 end hKeyArray_ConstructIdTypeArray
@@ -555,7 +555,7 @@ function hKeyArray_ConstructNodeDefLine nodeID, idArray, graphPropertyArray
     put dot_ConstructDefaultNodeDefs(nodeShape, nodeStyle, nodeColour, nodeFillColour) into defaultNodeDefs
     
     put handlerName into nodeLabel
-    put dot_ConstructDefLine(nodeLabel) into nodeDefs
+    put dot_ConstructNodeParamBit(nodeLabel) into nodeDefs
     
     /*
     put linkArray_GetNodePropertyArray(nodeID, graphPropertyArray) into nodeStyleArray
@@ -563,7 +563,7 @@ function hKeyArray_ConstructNodeDefLine nodeID, idArray, graphPropertyArray
     put nodeStyleArray ["nodeUrl"] into nodeUrl
     put nodeStyleArray ["nodeToolTip"] into nodeToolTip
     put nodeStyleArray ["nodeShapeFile"] into nodeShapeFile
-    put dot_ConstructDefLine(nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile) into nodeDefs
+    put dot_ConstructNodeParamBit(nodeLabel, nodeShape, nodeStyle, nodeColour, nodeFillColour, polyParams, nodeUrl, nodeToolTip, nodeShapeFile) into nodeDefs
     */
      
     return defaultNodeDefs & CR & nodeID && "[" & nodeDefs & "];"
@@ -599,7 +599,7 @@ function hKeyArray_ConstructObjectIdArray idArray
     repeat for each key nodeID in idArray
         put idArray [nodeID] into hKey
         hkey_Deconstruct hKey, handlerName, handlerType, scriptObject, handlerNum
-        array_AddToIndex nodeID, scriptObject, hObjectIdArray
+        indexArray_Add nodeID, scriptObject, hObjectIdArray
         -- line_Add scriptObject, scriptObjects
     end repeat
     return hObjectIdArray
@@ -638,7 +638,7 @@ end hKeyArray_ConstructGraphPropertyArray
 Old? stuff for working with "nodes" as objects for dot graphs
 */
 
-function dot_ConstructGraph nodeIndex, onlyLinked, gTemplateName, graphName, graphSize, dotOrder, direction, defaultShape
+-- function dot_ConstructGraph nodeIndex, onlyLinked, gTemplateName, graphName, graphSize, dotOrder, direction, defaultShape
     local dotNodeDefs, dotNodeLinks
     
     put the node_View of me into nodeView

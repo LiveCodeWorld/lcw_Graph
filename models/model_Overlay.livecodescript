@@ -1052,7 +1052,7 @@ function hKeyArray_ConstructObjectIdArray hIdArray, hIDs
       if hKey is empty then next repeat
       hkey_Deconstruct hKey, handlerName, handlerType, scriptObject, handlerNum
       -- if exists(scriptObject) then put the mobile_Name of scriptObject into scriptObject
-      array_AddToIndex nodeID, scriptObject, objectIdArray
+      indexArray_Add nodeID, scriptObject, objectIdArray
    end repeat
    return objectIdArray
 end hKeyArray_ConstructObjectIdArray
