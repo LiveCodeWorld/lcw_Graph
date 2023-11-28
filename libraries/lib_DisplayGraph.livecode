@@ -266,7 +266,7 @@ function dot_MenuNameText dotName
       put dotNameParam into dotURL
       put url dotURL into dotText
    else
-      put scaffold_GetTemplate (dotName) into dotText
+      put scaffold_Get (dotName) into dotText
    end if
    return dotText
 end dot_MenuNameText
