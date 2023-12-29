@@ -8,15 +8,12 @@ type: library
 version: 0.1
 
 /*
-on mDoubleUp_TrelloBoard displayView, boardName
-   breakpoint
-   mDoubleUp_TrelloBoards displayView, boardName
-end mDoubleUp_TrelloBoard
+A library to display Trello data.
 */
 
 function trello_RocketLists
    put trello_GetBoardLists ("64aa88f3a4df035aabba896e") into listData
-   put indexArray_Names (listData) into listNames
+   put indexArray_List (listData) into listNames
    return listNames
 end trello_RocketLists
 
@@ -24,7 +21,7 @@ function trello_RocketCardNames pListName
    if pListName is empty then put "Inbox" into pListName
    put trello_FetchCardArray (pListName, "64aa88f3a4df035aabba896e") into cardArray
    --
-   put indexArray_Names (cardArray) into rocketCardNames
+   put indexArray_List (cardArray) into rocketCardNames
    return rocketCardNames
 end trello_RocketCardNames
    
@@ -273,7 +270,7 @@ end display_TrelloListData
 -
 command _DisplayIndexOrArray indexArray, titleText, menuBit, pDisplayView
    if the tree_View of pDisplayView is empty then
-      put indexArray_Names (indexArray) into boardNames
+      put indexArray_List (indexArray) into boardNames
       display_Data boardNames, titleText, menuBit, pDisplayView
       put the result into displayView
       set the view_Data of displayView to indexArray
