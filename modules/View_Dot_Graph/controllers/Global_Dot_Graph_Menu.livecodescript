@@ -109,7 +109,7 @@ on menu_ScreenDimensions graphView
 end menu_ScreenDimensions
 
 on submenu_Geometry
-   return menu_CreateTitle ("Global | Dot | Graph | Geometry | Menu")
+   return "Global | Dot | Graph | Geometry | Menu"
 end submenu_Geometry
 
 on submenu_Props
