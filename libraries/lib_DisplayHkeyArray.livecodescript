@@ -48,7 +48,7 @@ command display_HKeyArray hKey, pHkeyArray, pLabel, pShowHow, pStripMissing
    --
    display_Data dData, hKey, "HkeyArray"
    put the result into displayView
-   set the data_MenuBit of displayView to "HkeyArray"
+   set the tool_MenuBit of displayView to "HkeyArray"
    --
    set the show_How of displayView to pShowHow
    set the displayed_Hkey of displayView to hKey
