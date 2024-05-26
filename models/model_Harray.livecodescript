@@ -117,7 +117,7 @@ command lcw_ExportAndAddScriptToHarray @hArray, someObject, someScript, pCreateH
       -- here we can export the script
       object_ExportScript someObject, someScript, pExportHandlersAndCalls, false
       put the result into scriptFile
-      file_SetHome scriptFile
+      file_StripHome scriptFile
    else
       put the dataObject_Folder [true] of someObject into dataFolder
       put textStack_ScriptFile (dataFolder) into scriptFile
@@ -138,7 +138,7 @@ command lcw_AddScriptToHarray @hArray, someObject, someScript, scriptFile, pCrea
    put the mainstack of stackObject into mainStackName
    put the name of stack mainStackName into ruggedMainStack
    put the filename of stack mainStackName into stackFile
-   file_SetHome stackFile
+   file_StripHome stackFile
 
    put the rugged_ID of someObject into ruggedObject
 
