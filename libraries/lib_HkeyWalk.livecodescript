@@ -21,6 +21,93 @@ local UseExportedCalls = false
 
 --> Working on
 -
+getprop dep_Data [graphStyle]
+   if graphStyle is empty then put "hierarchical" into graphStyle
+   --
+   put the long id of the target into sObject
+   put the walk_HkeyArray of sObject into hKeyArray
+   --
+   put hkeyArray_GetStackDepArray (hkeyArray) into depObjectData
+   put depObjectData into depData ["objectData"]
+   delete variable depObjectData [sObject]
+   put keys (depObjectData) into depData ["stacks"]
+   --
+   put hkeyArray_GetProjectDepArray (hkeyArray) into depProjectData
+   put depProjectData into depData ["projectData"]
+   put the project_Name of sObject into projectName
+   delete variable depProjectData [projectName]
+   put keys (depProjectData) into depData ["projects"]
+   --
+   -- graph_CreateScriptObjectHkeyArray hkeyArray, sObject, graphStyle
+   -- put the result into svgFile
+   put the short name of sObject into overlayName
+   put dot_ConstructFromHkeyArray (hKeyArray, pGraphStyle, overlayName) into sDot
+   put sDot into depData ["dot"]
+   --
+   return depData
+end dep_Data
+
+function dot_ConstructFromHkeyArray hKeyArray, pGraphStyle, pOverlayName, pDotCluster
+   put overlayArray_FromLinkArray (hKeyArray, pDotHeaderArray, pGraphPropertyArray, pKeyStyle) into overlayArray
+   -- dispatch "graph_TidyOverlayArray" to pProcessObject with overlayArray
+   
+   overlayArray_SetGraphProperty overlayArray, "overlay_Style", pGraphStyle
+   overlayArray_SetGraphProperty overlayArray, "overlay_Name", pOverlayName
+   -- overlayArray_SetGraphProperty overlayArray, "overlay_Of", pOverlayOf
+   if pDotCluster is not empty then
+      overlayArray_SetHeaderProperty overlayArray, "dot_ClusterRank", pDotCluster
+   end if
+   
+   put overlayArray_ConstructDot (overlayArray, pOverlayName) into sDot
+   return sDot
+end dot_ConstructFromHkeyArray
+
+getprop dep_MissingArray
+   put the long id of the target into sObject
+   --
+   put the walk_HkeyArray of sObject into hKeyArray
+   put hkeyArray_GetStackDepArray (hkeyArray) into depObjectData
+   put depObjectData ["Missing"] into missingArray
+   return missingArray
+end dep_MissingArray
+
+getprop dep_Stacks
+   put the long id of the target into sObject
+   --
+   put the walk_HkeyArray of sObject into hKeyArray
+   put hkeyArray_GetStackDepArray (hkeyArray) into depObjectData
+   delete variable depObjectData [sObject]
+   --
+   put keys (depObjectData) into depStacks
+   return depStacks
+end dep_Stacks
+
+getprop dep_Projects
+   put the long id of the target into sObject
+   --
+   put the walk_HkeyArray of sObject into hKeyArray
+   put hkeyArray_GetProjectDepArray (hkeyArray) into depProjectData
+   --
+   put the project_Name of sObject into projectName
+   delete variable depProjectData [projectName]
+   --
+   put keys (depProjectData) into projectNames
+   return projectNames
+end dep_Projects
+
+function hkeyArray_DisplayData hkeyArray, pShowHow, pStripMissing, pFirstHkey
+   switch pShowHow
+      case "hKeys"
+         return hkeyArray_ListHkeys (hkeyArray, pFirstHkey)
+      case "stacks"
+         return hkeyArray_GetStackDepArray (hkeyArray)
+      case "projects"
+         return hkeyArray_GetProjectDepArray (hkeyArray, pStripMissing)
+      default 
+         return hkeyArray
+   end switch
+end hkeyArray_DisplayData
+
 function hkeyArray_TidyMissing missingArray, pStripProps
    repeat for each key missingShortKey in missingArray
       put missingArray [missingShortKey] into ofHkeyArray

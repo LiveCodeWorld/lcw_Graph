@@ -743,10 +743,3 @@ command dot_FilesFromScriptObject scriptObject, graphStyle, pGraphSize, @dotFile
    put "/" after dotFolder
    overlay_Files dotFolder, dotFile, imageFile, cmapxFile, xdotFile, dotArrayFile, graphStyle
 end dot_FilesFromScriptObject
-
-function dot_NewTemporaryFilePath dotText
-   put the tempname & "/" into dotFolder
-   folder_CreateNested dotFolder
-   put dotFolder & "dot.txt" into dotFile
-   return dotFile
-end dot_NewTemporaryFilePath

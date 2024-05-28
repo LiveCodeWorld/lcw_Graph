@@ -9,7 +9,6 @@ version: 0.3
 --> Working on
 -
 
-
 --> Display | HkeyArray | Script
 -
 command display_HkeyDepScript hKey
@@ -28,7 +27,8 @@ end display_ScriptFromHkeyArray
 command display_ScriptFromHkeys hKeys, pTitle
    put hkey_CollectFromObjects (hKeys, false) into newScript
    --
-   display_Text newScript, pTitle
+   -- display_Text newScript, pTitle
+   display_Lines newscript, pTitle
    put the result into displayView
    return displayView
 end display_ScriptFromHkeys
@@ -56,19 +56,6 @@ command display_HKeyArray hKey, pHkeyArray, pLabel, pShowHow, pStripMissing
    --
    return displayView
 end display_HKeyArray
-
-function hkeyArray_DisplayData hkeyArray, pShowHow, pStripMissing, pFirstHkey
-   switch pShowHow
-      case "hKeys"
-         return hkeyArray_ListHkeys (hkeyArray, pFirstHkey)
-      case "stacks"
-         return hkeyArray_GetStackDepArray (hkeyArray)
-      case "projects"
-         return hkeyArray_GetProjectDepArray (hkeyArray, pStripMissing)
-      default 
-         return hkeyArray
-   end switch
-end hkeyArray_DisplayData
 
 
 --> Display | Events

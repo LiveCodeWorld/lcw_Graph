@@ -78,19 +78,19 @@ private function _SplitCallArray hTable, someScript
       htable_ExactLineOffsets hkeyLine, hTable, startLineNum, endLineNum
       if endLineNum = 0 then next repeat
       
-      -- let's extract handler calls
+      # Extract handler calls
       put line startLineNum to endLineNum of someScript into someHandler
       put handler_ExtractCalls (someHandler) into handlerCalls
       
-      -- let's split the calls
+      # Split the calls
       repeat for each line handlerCall in handlerCalls
-         -- handler calls are not private
-         -- need to match with private and also "on" or "command"
-         hTable_FlexibleLineOffsets handlerCall, hTable, startCallNum, endCallNum, true
+         htable_EitherLineOffsets handlerCall, hTable, startCallNum, endCallNum
          --
-         if endCallNum = 0 then
+         if the result is empty then
             put startCallNum,endCallNum into splitCallArray ["externalCalls"][handlerCall]
          else
+            put the result into hTableLine
+            put word 1 to 2 of hTableLine into handlerCall -- fixes possible private bit
             put startCallNum,endCallNum into splitCallArray ["internalCalls"][handlerCall]
          end if
       end repeat

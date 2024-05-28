@@ -52,6 +52,26 @@ end graph_CreateScriptObjectHkeyArray
 
 --> Working on
 -
+command graph_CreateScriptObjectHkeyArray hkeyArray, hObject, pGraphStyle, pProcessObject
+   -- tailored to create a clustered graph from hKeyArray of an objects script
+   -- display_CreateScriptObjectGraph sObject, projectName, pGraphStyle, pProcessObject, false
+   -- display_ObjectDepArray sObject
+   
+   if pGraphStyle is empty then put "hierarchical" into pGraphStyle
+   --
+   put the metadataObject_Folder [true] of hObject into metadataFolder
+   --
+   put true into clusterBoolean
+   put empty into mainstackHash
+   put hObject into overlayOf
+   --
+   overlay_CreateGraph metadataFolder, hkeyArray, pGraphStyle, overlayOf, pGraphStyle, clusterBoolean, mainstackHash, "svg", pProcessObject
+   put the result into overlayArray
+   --
+   put overlayArray_GetImageFile (overlayArray, metadataFolder) into imageFile
+   return imageFile
+end graph_CreateScriptObjectHkeyArray
+
 command graph_Hkey hKey, pGraphStyle
    -- uses "walk_GetHkeyArray" of stack "lib_HkeyWalk"
    -- used to use graph_HkeyDependency
@@ -106,26 +126,6 @@ command graph_CreateScriptObject sObject, pGraphStyle, pProcessObject, pProjectN
    put the result into imageFile
    return imageFile
 end graph_CreateScriptObject
-
-command graph_CreateScriptObjectHkeyArray hkeyArray, hObject, pGraphStyle, pProcessObject
-   -- tailored to create a clustered graph from hKeyArray of an objects script
-   -- display_CreateScriptObjectGraph sObject, projectName, pGraphStyle, pProcessObject, false
-   -- display_ObjectDepArray sObject
-   
-   if pGraphStyle is empty then put "hierarchical" into pGraphStyle
-   --
-   put the metadataObject_Folder [true] of hObject into metadataFolder
-   --
-   put true into clusterBoolean
-   put empty into mainstackHash
-   put hObject into overlayOf
-   --
-   overlay_CreateGraph metadataFolder, hkeyArray, pGraphStyle, overlayOf, pGraphStyle, clusterBoolean, mainstackHash, "svg", pProcessObject
-   put the result into overlayArray
-   --
-   put overlayArray_GetImageFile (overlayArray, metadataFolder) into imageFile
-   return imageFile
-end graph_CreateScriptObjectHkeyArray
 
 command graph_Project scriptObject, pProjectName, pGraphStyle, pProcessObject, pForceCreate
    put graph_ConstructObjectHkeyArray (scriptObject, pProjectName, pProcessObject, pForceCreate) into hkeyArray

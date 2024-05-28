@@ -450,6 +450,20 @@ function dot_Render dotText, pDotCommand, pTextFile, pOutputFormat
    end if
 end dot_Render
 
+command dot_SaveTemporaryFile dotText, dotFile
+   if dotFile is empty then put dot_NewTemporaryFilePath (dotText) into dotFile
+   file_CreateText dotText, dotFile
+   put the result into dotFile
+   return the result
+end dot_SaveTemporaryFile
+
+function dot_NewTemporaryFilePath dotText
+   put the tempname & "/" into dotFolder
+   folder_CreateNested dotFolder
+   put dotFolder & "dot.txt" into dotFile
+   return dotFile
+end dot_NewTemporaryFilePath
+
 
 --> Private
 -

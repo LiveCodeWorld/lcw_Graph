@@ -200,9 +200,40 @@ function overlayArray_ConstructHeader overlayArray, pOverlayName
    return dotHeader
 end overlayArray_ConstructHeader
 
+private command _AddGraphSize @dotHeaderArray, graphPropertyArray
+   put graphPropertyArray ["overlay_Size"] into graphSize
+   if graphSize is not empty then
+      if graphPropertyArray [pUseInches] is not false then
+         put dot_RectFromSize (graphSize) into bbRect
+         put graphPropertyArray ["overlay_ScaleToFit"] into someBoolean
+         put dot_GraphInchSize (bbRect, someBoolean) into inchSize
+         if inchSize is not empty then
+            put inchSize into dotHeaderArray ["size"]
+         end if
+      else
+         put dot_RectFromSize (graphSize) into bbRect
+         if bbRect is not empty then
+            put bbRect into dotHeaderArray ["bb"]
+         end if
+      end if
+   end if
+end _AddGraphSize
+
 
 --> Private
 -
+private command _AddHeaderStuff @dotHeaderArray, graphPropertyArray
+   switch graphPropertyArray ["overlay_Style"]
+      case "hierarchical"
+         -- remove these props unless the style is hierarchical "dot"
+         delete local dotHeaderArray ["overlap"]
+         delete local dotHeaderArray ["ordering"]
+         delete local dotHeaderArray ["concentrate"]
+         break
+      default
+   end switch
+end _AddHeaderStuff
+
 private command overlay_SetAndStoreFileRelative @overlayArray, filePropName, someFile
    put overlayArray_GetGraphProperty (overlayArray, "overlay_Folder") into overlayFolder
    overlay_SetFileRelative someFile, overlayFolder
