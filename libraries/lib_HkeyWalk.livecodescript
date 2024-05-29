@@ -47,6 +47,104 @@ getprop dep_Data [graphStyle]
    return depData
 end dep_Data
 
+
+--> Props
+-
+getprop dep_MissingArray [pHKeyArray]
+   put the long id of the target into sObject
+   if pHKeyArray is not an array then
+      put the walk_HkeyArray of sObject into pHKeyArray
+   end if
+   --
+   put hkeyArray_GetStackDepArray (pHKeyArray) into depObjectData
+   put depObjectData ["Missing"] into missingArray
+   return missingArray
+end dep_MissingArray
+
+getprop dep_Stacks [pHKeyArray]
+   put the long id of the target into sObject
+   if pHKeyArray is not an array then
+      put the walk_HkeyArray of sObject into pHKeyArray
+   end if
+   --
+   put hkeyArray_GetStackDepArray (pHKeyArray) into depObjectData
+   delete variable depObjectData [sObject]
+   --
+   put keys (depObjectData) into depStacks
+   return depStacks
+end dep_Stacks
+
+getprop dep_Projects [pHKeyArray]
+   put the long id of the target into sObject
+   if pHKeyArray is not an array then
+      put the walk_HkeyArray of sObject into pHKeyArray
+   end if
+   --
+   put hkeyArray_GetProjectDepArray (pHKeyArray) into depProjectData
+   put the project_Name of sObject into projectName
+   delete variable depProjectData [projectName]
+   --
+   put keys (depProjectData) into projectNames
+   return projectNames
+end dep_Projects
+
+getprop call_HkeyArray [pSearchObjects]
+   put the long id of the target into tObject
+   put the revAvailableHandlers of tObject into hTable
+   if pSearchObjects is empty then
+      put the hkey_ScriptHierarchy of tObject into pSearchObjects
+   end if
+   --
+   put true into UseExportedCalls
+   walk_SetSearchHierarchy pSearchObjects
+   put _WalkAvailableHandlers (hTable) into hKeyArray
+   --
+   return hKeyArray
+end call_HkeyArray
+
+getprop walk_DepArray [pHkey]
+   put the walk_HkeyArray [hKey] of the target into hkeyArray
+   put hkeyArray_GetStackDepArray (hkeyArray) into hkeyDepArray
+   return hkeyDepArray
+end walk_DepArray
+
+getprop walk_HkeyArray [hKey]
+   put the long id of the target into tObject
+   put the walk_Hierarchy of tObject into searchObjects
+   put false into UseExportedCalls
+   walk_SetSearchHierarchy searchObjects
+   
+   local hKeyArray
+   --
+   if hKey is empty then
+      put the revAvailableHandlers of tObject into hTable
+      put _WalkAvailableHandlers (hTable) into hKeyArray
+   else
+      _WalkHkeyRecursive shortCallHkey, hKey, hKeyArray
+   end if
+   --
+   return hKeyArray
+end walk_HkeyArray
+
+getprop walk_Hierarchy
+   -- as comprehensive as possible version of object_Hierarchy
+   put the long id of the target into tObject
+   put revRuggedID (tObject) into tObject
+   --
+   put object_GetHierarchy (tObject) into walkHierarchy
+   put env_ScriptHierarchy (true) into envHierarchy
+   if envHierarchy is empty then return walkHierarchy
+   
+   _StripObjectHierarchy envHierarchy, walkHierarchy
+   if envHierarchy is empty then return walkHierarchy
+   
+   put CR & envHierarchy after walkHierarchy
+   return walkHierarchy
+end walk_Hierarchy
+
+
+--> Functions
+-
 function dot_ConstructFromHkeyArray hKeyArray, pGraphStyle, pOverlayName, pDotCluster
    put overlayArray_FromLinkArray (hKeyArray, pDotHeaderArray, pGraphPropertyArray, pKeyStyle) into overlayArray
    -- dispatch "graph_TidyOverlayArray" to pProcessObject with overlayArray
@@ -61,39 +159,6 @@ function dot_ConstructFromHkeyArray hKeyArray, pGraphStyle, pOverlayName, pDotCl
    put overlayArray_ConstructDot (overlayArray, pOverlayName) into sDot
    return sDot
 end dot_ConstructFromHkeyArray
-
-getprop dep_MissingArray
-   put the long id of the target into sObject
-   --
-   put the walk_HkeyArray of sObject into hKeyArray
-   put hkeyArray_GetStackDepArray (hkeyArray) into depObjectData
-   put depObjectData ["Missing"] into missingArray
-   return missingArray
-end dep_MissingArray
-
-getprop dep_Stacks
-   put the long id of the target into sObject
-   --
-   put the walk_HkeyArray of sObject into hKeyArray
-   put hkeyArray_GetStackDepArray (hkeyArray) into depObjectData
-   delete variable depObjectData [sObject]
-   --
-   put keys (depObjectData) into depStacks
-   return depStacks
-end dep_Stacks
-
-getprop dep_Projects
-   put the long id of the target into sObject
-   --
-   put the walk_HkeyArray of sObject into hKeyArray
-   put hkeyArray_GetProjectDepArray (hkeyArray) into depProjectData
-   --
-   put the project_Name of sObject into projectName
-   delete variable depProjectData [projectName]
-   --
-   put keys (depProjectData) into projectNames
-   return projectNames
-end dep_Projects
 
 function hkeyArray_DisplayData hkeyArray, pShowHow, pStripMissing, pFirstHkey
    switch pShowHow
@@ -185,63 +250,6 @@ command hkeyArray_SetObjectArray @hkeyDepArray, hkeyArray
       end if
    end repeat
 end hkeyArray_SetObjectArray
-
-
---> Props
--
-getprop call_HkeyArray [pSearchObjects]
-   put the long id of the target into tObject
-   put the revAvailableHandlers of tObject into hTable
-   if pSearchObjects is empty then
-      put the hkey_ScriptHierarchy of tObject into pSearchObjects
-   end if
-   --
-   put true into UseExportedCalls
-   walk_SetSearchHierarchy pSearchObjects
-   put _WalkAvailableHandlers (hTable) into hKeyArray
-   --
-   return hKeyArray
-end call_HkeyArray
-
-getprop walk_DepArray [pHkey]
-   put the walk_HkeyArray [hKey] of the target into hkeyArray
-   put hkeyArray_GetStackDepArray (hkeyArray) into hkeyDepArray
-   return hkeyDepArray
-end walk_DepArray
-
-getprop walk_HkeyArray [hKey]
-   put the long id of the target into tObject
-   put the walk_Hierarchy of tObject into searchObjects
-   put false into UseExportedCalls
-   walk_SetSearchHierarchy searchObjects
-   
-   local hKeyArray
-   --
-   if hKey is empty then
-      put the revAvailableHandlers of tObject into hTable
-      put _WalkAvailableHandlers (hTable) into hKeyArray
-   else
-      _WalkHkeyRecursive shortCallHkey, hKey, hKeyArray
-   end if
-   --
-   return hKeyArray
-end walk_HkeyArray
-
-getprop walk_Hierarchy
-   -- as comprehensive as possible version of object_Hierarchy
-   put the long id of the target into tObject
-   put revRuggedID (tObject) into tObject
-   --
-   put object_GetHierarchy (tObject) into walkHierarchy
-   put env_ScriptHierarchy (true) into envHierarchy
-   if envHierarchy is empty then return walkHierarchy
-   
-   _StripObjectHierarchy envHierarchy, walkHierarchy
-   if envHierarchy is empty then return walkHierarchy
-   
-   put CR & envHierarchy after walkHierarchy
-   return walkHierarchy
-end walk_Hierarchy
 
 
 --> Walk

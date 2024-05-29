@@ -105,16 +105,12 @@ end display_ScriptHkeyArray
 
 --> Display | Deps
 -
-command display_HkeyDepArray hKey
-   -- Fetch stored hKeyArray for hkey
-   -- Turn it into a depObjectArray
-   
-   put hkey_FetchOverlayData (hKey) into overlayData
-   put keys (overlayData) into projectName
-   put overlayData [projectName] into hArray
-   put hArray ["data"]["linkArray"] into hKeyArray
+command display_HkeyDepArray hKey, pOverlayName
+   -- Fetch stored hKeyArray for hkey and turn it into a depObjectArray
+   put hkey_GetHkeyArray (hKey, pOverlayName) into hkeyArray
    --
-   display_ObjectDepArray hkey, hkeyArray
+   -- display_ObjectDepArray hkey, hkeyArray
+   display_HkeyTreeArray hKeyArray, hKey
    --
    put the result into displayView
    set the hkey_Array of displayView to hkeyArray

@@ -217,7 +217,7 @@ setprop script_DataArray [pOverlayName] dataArray
    set the script_OverlayArray [pOverlayName] of scriptObject to overlayArray
 end script_DataArray
 
-getprop script_OverlayArray  [pOverlayName]
+getprop script_OverlayArray [pOverlayName]
    put the long id of the target into scriptObject
    put the script_OverlayData of scriptObject into overlayData
    if pOverlayName is empty then put overlayData_GetDefaultName (overlayData) into pOverlayName
@@ -273,15 +273,6 @@ command scriptObject_ReconstructGraphArray scriptObject, pOverlayName, pGraphSty
    overlay_ReconstructDotArray graphFolder, pGraphStyle, linkArray, pOverlayName
    overlay_Draw graphFolder, pOverlayName
 end scriptObject_ReconstructGraphArray
-
-command scriptObject_NormalizeGraphName @pOverlayName, overlayFolder
-   if pOverlayName is empty then
-      put overlay_GetData (overlayFolder) into overlayData
-      put overlayData_GetDefaultGraphName (overlayData) into pOverlayName
-      if pOverlayName is empty then put "undirected spring" into pOverlayName
-   end if
-   return pOverlayName
-end scriptObject_NormalizeGraphName
 
 
 --> Global | Script | Export | Line | Menu | Utilities

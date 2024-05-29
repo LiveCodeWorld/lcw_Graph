@@ -3,8 +3,31 @@
 -
 license: GPLv3
 name: lib_GraphVizTools
-type: script library
-version: 0.1
+type: library
+version: 0.3
+
+/*
+This is a library that contains assorted and experimental handlers for working with {{code graphs}}, graphviz and handlers.
+*/
+
+--> Working on
+-
+function hkeyArray_Construct hKey
+   local hKeyLinkArray
+   hkeyArray_ConstructRecusively hKey, hKeyLinkArray
+   return hKeyLinkArray
+end hkeyArray_Construct
+
+command hkeyArray_ConstructRecusively hKey, @hKeyLinkArray
+   -- recurse
+   put hkey_FetchCalls (hKey) into hKeyCalls -- this extracts from file
+   repeat for each line hKeyCall in hKeyCalls
+      if hKeyCall is among the keys of hKeyLinkArray then next repeat
+      --
+      put hKeyCall into hKeyLinkArray [hKey]
+      hkeyArray_ConstructRecusively hKeyCall, hKeyLinkArray
+   end repeat
+end hkeyArray_ConstructRecusively
 
 
 --> Script Calls | Graphing
@@ -380,23 +403,6 @@ end script_NodeSectionFromLinkKeys
 
 --> HkeyArray | Dot
 -
-function hkeyArray_FromStoredCalls hKey
-   local hKeyLinkArray
-   hkeyArray_Construct hKey, hKeyLinkArray
-   return hKeyLinkArray
-end hkeyArray_FromStoredCalls
-
-command hkeyArray_Construct hKey, @hKeyLinkArray
-   put hkey_FetchCalls (hKey) into hKeyCalls -- this extracts from file
-   -- if hkeyCalls is empty then put hkey_HandlerCalls (hKey) into hKeyCalls -- maybe it just has not been indexed
-   repeat for each line hKeyCall in hKeyCalls
-      if hKeyCall is among the keys of hKeyLinkArray then next repeat
-      
-      put hKeyCall into hKeyLinkArray [hKey]
-      hkeyArray_Construct hKeyCall, hKeyLinkArray
-   end repeat
-end hkeyArray_Construct
-
 function hKeyArray_ConstructObjectDot hLinkArray, hIdArray, graphName, graphHeader, graphNodeType, pTargetObject
    if graphName is empty then put "Test" into graphName
    
@@ -634,11 +640,9 @@ end hKeyArray_ConstructGraphPropertyArray
 
 --> Node | Graphs
 -
-/*
-Old? stuff for working with "nodes" as objects for dot graphs
-*/
+-- Old? stuff for working with "nodes" as objects for dot graphs
 
--- function dot_ConstructGraph nodeIndex, onlyLinked, gTemplateName, graphName, graphSize, dotOrder, direction, defaultShape
+function dot_ConstructGraph nodeIndex, onlyLinked, gTemplateName, graphName, graphSize, dotOrder, direction, defaultShape
     local dotNodeDefs, dotNodeLinks
     
     put the node_View of me into nodeView
@@ -693,8 +697,8 @@ Old? stuff for working with "nodes" as objects for dot graphs
 end dot_ConstructGraph
 
 function graph_ConstructSub subGraphName, nodeIndex, onlyLinked
-    put graph_ConstructNodeSection(nodeIndex, onlyLinked) into nodeSection
-    return graph_ConstructSubraph(subGraphName, nodeSection)
+   put graph_ConstructNodeSection(nodeIndex, onlyLinked) into nodeSection
+   return graph_ConstructSubraph(subGraphName, nodeSection)
 end graph_ConstructSub
 
 function graph_ConstructNodeSection nodeIndex, onlyLinked

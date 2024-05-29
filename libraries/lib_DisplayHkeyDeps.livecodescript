@@ -56,9 +56,10 @@ command display_HkeyGraph hKey, pRevealFinder
    end if
 end display_HkeyGraph
 
-command display_HkeyDot hkey
-   put hkey_DotFile (hKey) into dotFile
-   display_TextFile dotFile
+command display_HkeyDot hkey, pGraphStyle
+   put hkey_DotFile (hKey, pGraphStyle) into dotFile
+   --
+   display_TextFile dotFile, hKey, mTitle, "Dot"
 end display_HkeyDot
 
 command display_HandlerCalls hKey
