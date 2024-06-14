@@ -29,30 +29,15 @@ Here we store the latest graphing handlers.
 
 A library to do with displaying overlays, creating them from folders of data (overlay_Folder)
 and providing a set of custom properties that can be used to manipulate them.
-
-command graph_CreateScriptObjectHkeyArray hkeyArray, hObject, pGraphStyle, pProjectName, pProcessObject
-   -- tailored to create a clustered graph from hKeyArray of an objects script
-   put true into clusterBoolean
-   put empty into mainstackHash
-   --
-   if pProjectName is empty then put the project_Name of hObject into overlayName
-   put pProjectName into overlayName
-   put hObject into overlayOf
-   --
-   put the project_OverlayFolder [false] of hObject into overlayFolder
-   --
-   overlay_CreateGraph overlayFolder, hkeyArray, overlayName, overlayOf, pGraphStyle, clusterBoolean, mainstackHash, "svg", pProcessObject
-   put the result into overlayArray
-   --
-   put overlayArray_GetImageFile (overlayArray, overlayFolder) into imageFile
-   return imageFile
-end graph_CreateScriptObjectHkeyArray
 */
 
 
 --> Working on
 -
-command graph_CreateScriptObjectHkeyArray hkeyArray, hObject, pGraphStyle, pProcessObject
+
+--> Graph
+-
+command graph_CreateFromScriptHkeyArray hkeyArray, hObject, pGraphStyle, pProcessObject
    -- tailored to create a clustered graph from hKeyArray of an objects script
    -- display_CreateScriptObjectGraph sObject, projectName, pGraphStyle, pProcessObject, false
    -- display_ObjectDepArray sObject
@@ -70,26 +55,47 @@ command graph_CreateScriptObjectHkeyArray hkeyArray, hObject, pGraphStyle, pProc
    --
    put overlayArray_GetImageFile (overlayArray, metadataFolder) into imageFile
    return imageFile
-end graph_CreateScriptObjectHkeyArray
+end graph_CreateFromScriptHkeyArray
 
 command graph_Hkey hKey, pGraphStyle
-   -- uses "walk_GetHkeyArray" of stack "lib_HkeyWalk"
-   -- used to use graph_HkeyDependency
-   -- graph_CreateScriptObjectHkeyArray hkeyArray, sObject, "fast undirected spring"
-   if pGraphStyle is empty then put "hierarchical" into pGraphStyle
    put walk_GetHkeyArray (hKey) into hKeyArray
+   hKey_SetArray hkey, hKeyArray
    --
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   -- put the metadataObject_Folder [true] of hObject into metadataFolder
-   put hkey_MetadataFolder (hKey) into metadataFolder
+   graph_HkeyArray hKey, hKeyArray, pGraphStyle
    --
-   set the cursor to busy
-   overlay_CreateGraph metadataFolder, hkeyArray, pGraphStyle, hObject, pGraphStyle, true, "", "svg"
-   put the result into overlayArray
-   put overlayArray_GetImageFile (overlayArray, metadataFolder) into svgFile
-   --
+   put the result into svgFile
    return svgFile
 end graph_Hkey
+
+command graph_HkeyArray hKey, pHkeyArray, pGraphStyle
+   -- uses "walk_GetHkeyArray" of stack "lib_HkeyWalk"
+   
+   # Set things up and do checks
+   set the cursor to busy
+   if pHkeyArray is not an array then
+      put hKey_GetArray (hkey) into pHkeyArray
+      if pHkeyArray is not an array then
+         return "Error, hkeyArray is not an array for:" && hKey
+      end if
+   end if
+   if pGraphStyle is empty then put "hierarchical" into pGraphStyle
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   if exists (hObject) is false then
+      return "Error, hObject for 'graph_HkeyArray' does not exists:" && hKey
+   end if
+   
+   # Set HkeyArray
+   -- script_SetHkeyArray hObject, pHkeyArray
+   
+   # Create Overlay and Graph
+   put hkey_MetadataFolder (hKey) into metadataFolder
+   overlay_CreateGraph metadataFolder, pHkeyArray, pGraphStyle, hObject, pGraphStyle, true, "", "svg"
+   put the result into overlayArray
+   
+   # Return svgFile
+   put overlayArray_GetImageFile (overlayArray, metadataFolder) into svgFile
+   return svgFile
+end graph_HkeyArray
 
 command graph_HkeyDependency hKey, pProjectName, pGraphStyle, pClusterBoolean, processObject
    -- change to lib_HkeyWalk rather than walk_GetHkeyArray?
@@ -122,7 +128,7 @@ command graph_CreateScriptObject sObject, pGraphStyle, pProcessObject, pProjectN
    put graph_ConstructObjectHkeyArray (sObject, pProjectName, pProcessObject) into hkeyArray
    set the projectOverlay_Array ["processedHkey.array"] of sObject to hkeyArray
    --
-   graph_CreateScriptObjectHkeyArray hkeyArray, sObject, pGraphStyle, pProcessObject
+   graph_CreateFromScriptHkeyArray hkeyArray, sObject, pGraphStyle, pProcessObject
    put the result into imageFile
    return imageFile
 end graph_CreateScriptObject
@@ -137,7 +143,7 @@ command graph_Project scriptObject, pProjectName, pGraphStyle, pProcessObject, p
 end graph_Project
 
 command graph_ObjectHkeyArray hkeyArray, hObject, pGraphStyle, pProcessObject
-   -- should not use "project_OverlayFolder" (see "graph_CreateScriptObjectHkeyArray")
+   -- should not use "project_OverlayFolder" (see "graph_CreateFromScriptHkeyArray")
    put true into clusterBoolean
    put empty into mainstackHash
    --

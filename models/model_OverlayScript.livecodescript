@@ -67,13 +67,13 @@ getprop script_CmapText [pOverlayName]
 end script_CmapText
 
 function script_GetLinkArrayDotText scriptObject, pGraphStyle, pGraphSize
-   put scriptObject_DotFile (scriptObject, pGraphStyle, pGraphSize) into someFile
+   put scriptFile_ConstructDot (scriptObject, pGraphStyle, pGraphSize) into someFile
    put url ("file:" & someFile) into dotText
    return dotText
 end script_GetLinkArrayDotText
 
 command script_SetLinkArrayDotText scriptObject, dotText
-   put scriptObject_DotFile (scriptObject) into someFile
+   put scriptFile_ConstructDot (scriptObject) into someFile
    put dotText into url ("file:" & someFile)
    return dotText
 end script_SetLinkArrayDotText

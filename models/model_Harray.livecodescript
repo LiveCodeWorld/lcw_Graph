@@ -1432,58 +1432,6 @@ command view_DeleteTemplate vName
    return someFile
 end view_DeleteTemplate
 
-command view_CreateIcon libraryView, pIconView
-   if exists(libraryView) is false then
-      beep
-      lcw_Notify "Library (mTarget) view does not exist!"
-      exit to top
-   end if
-
-   get the mobile_Name of libraryView
-   put the rect of libraryView into someRect
-   put rect_Subtract (-2, someRect) into someRect
-
-   put the stack_Name of libraryView into stackName
-   put the windowid of stack stackName into someWindowID
-
-   put the view_IconFile [false] of libraryView into imageFile
-
-   set the wholeMatches to true
-   put stackName is among the lines of the openstacks into stackOpen
-   if stackOpen is false then object_GoTo libraryView
-
-   if pIconView is empty then
-      export snapshot from rect someRect of window someWindowID to file imageFile as PNG
-   else
-      export snapshot from rect someRect of window someWindowID to iconImage as PNG
-      set the resized_Image ["60,60"] of pIconView to iconImage
-      put the result into resizedImage
-      put resizedImage into url ("binfile:" & imageFile)
-      set the image_File of pIconView to imageFile
-   end if
-
-   if stackOpen is false then close stack stackName
-   return imageFile
-end view_CreateIcon
-
-function view_IconUrl vName, pDontCreate
-   put library_TextUrl ("icon.png", vName, "view", pDontCreate) into someUrl
-   return someUrl
-end view_IconUrl
-
-function view_LocalIconFile vName, pDontCreate
-   view_NormalizeName vName
-   put library_TextFile ("icon.png", vName, "view", pDontCreate) into localFile
-   return localFile
-end view_LocalIconFile
-
-command view_DeleteIcon vName
-   view_NormalizeName vName
-   put library_TextFile ("icon.png", vName, "view", true) into someFile
-   delete file someFile
-   return someFile
-end view_DeleteIcon
-
 function view_GetHelpHtml vName, pOnLineMode
    view_NormalizeName vName
    put library_TextUrl ("help.html", vName, "view", true) into someUrl

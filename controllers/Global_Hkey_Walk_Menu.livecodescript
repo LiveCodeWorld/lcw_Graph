@@ -68,12 +68,12 @@ on menu_FastGraphHandler hKey
    display_CreateHandlerGraph hKey, "fast undirected spring"
 end menu_FastGraphHandler
 
-on menu_ConstructDot hKey
-   put hkeyArray_Construct (hKey)
-   put hkey_ConstructDepArray(allCalls, pMakePrivate)
-   -- put hkey_ConstructHarrayWalkArray(hKeys, hArray, pSearchOutSideMainStack)
-   put dot_ConstructFromHkeyArray (hKeyArray, pGraphStyle, overlayName) into sDot
-   -- put hkey_ConstructHarrayWalkArray (hKeys, hArray, pSearchOutSideMainStack)
+-- on menu_ConstructDot hKey
+put hkeyArray_Construct (hKey)
+put hkey_ConstructDepArray(allCalls, pMakePrivate)
+-- put hkey_ConstructHarrayWalkArray(hKeys, hArray, pSearchOutSideMainStack)
+put dot_ConstructFromHkeyArray (hKeyArray, pGraphStyle, overlayName) into sDot
+-- put hkey_ConstructHarrayWalkArray (hKeys, hArray, pSearchOutSideMainStack)
 end menu_ConstructDot
 
 private on _
@@ -93,9 +93,37 @@ end menu_DisplayDot
 private on __
 end __
 
-on menu_DisplayHkeyArray hKey
+on menu_ExportHkeyArray hKey
+   put walk_GetHkeyArray (hKey) into hKeyArray
+   --
+   hKey_SetArray hkey, hKeyArray
+end menu_ExportHkeyArray
+
+on menu_TestBullets
+   put hKey_GetArray (hkey) into hKeyArray
+   --
+   put hkeyArray_DepStackBulletList (hkeyArray)
+end menu_TestBullets
+
+on menu_DisplayExportedHkeyArray hKey
+   put hKey_GetArray (hkey) into hKeyArray
+   --
+   display_HKeyArray hKey, hkeyArray
+   put the result into dView
+   return dView
+end menu_DisplayExportedHkeyArray
+
+getprop disabled_DisplayExportedHkeyArray [hKey]
+   put hkey_ArrayFile (hKey) into hkeyArrayFile
+   return there is not a file hkeyArrayFile
+end disabled_DisplayExportedHkeyArray
+
+private on ___
+end ___
+
+on menu_HkeyDepArray hKey
    display_HkeyDepArray hKey
-end menu_DisplayHkeyArray
+end menu_HkeyDepArray
 
 on menu_DisplayOverlayData hKey
    put hkey_FetchOverlayData (hKey) into overlayData

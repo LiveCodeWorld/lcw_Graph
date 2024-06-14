@@ -735,7 +735,7 @@ function dot_NameFromImageFile imageFile
 end dot_NameFromImageFile
 
 command dot_FilesFromScriptObject scriptObject, graphStyle, pGraphSize, @dotFile, @imageFile, @cmapxFile, @xdotFile
-   put scriptObject_DotFile (scriptObject, graphStyle, pGraphSize) into dotFile
+   put scriptFile_ConstructDot (scriptObject, graphStyle, pGraphSize) into dotFile
    
    put dotFile into dotFolder
    set the itemdelimiter to "/"

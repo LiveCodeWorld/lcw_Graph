@@ -8,6 +8,47 @@ version: 0.3
 
 --> Working on
 -
+command mDouble_DisplayHkeyTreeArray dView, someValue, hKey
+   hkey_Edit hKey
+end mDouble_DisplayHkeyTreeArray
+
+on mDouble_DisplayObjectHkeyArray dView, someValue, pathItems
+   put 1 into hNum
+   set the itemdelimiter to slash
+   put item 1 of pathItems into hObject
+   put item 2 of pathItems into shortHkey
+   put hKeyLine_AddObject (shortHkey, hObject) into hKey
+   
+   hkey_Edit hKey
+end mDouble_DisplayObjectHkeyArray
+
+
+--> Display | HkeyArray
+-
+command display_HKeyArray hKey, pHkeyArray, pLabel, pShowHow, pStripMissing
+   if pHkeyArray is not an array then
+      put walk_GetHkeyArray (hKey) into pHkeyArray
+   end if
+   if pShowHow is empty then
+      put "hkeyArray" into pShowHow
+   end if
+   --
+   put hkeyArray_DisplayData (pHkeyArray, pShowHow, pStripMissing, hKey) into dData
+   --
+   display_Tool dData, hKey, "HkeyArray", "lcw_Graph"
+   put the result into dView
+   
+   -- display_Data dData, hKey, "HkeyArray"
+   -- put the result into dView
+   -- set the tool_MenuBit of dView to "HkeyArray"
+   --
+   set the show_How of dView to pShowHow
+   set the displayed_Hkey of dView to hKey
+   set the displayed_HkeyArray of dView to pHkeyArray
+   --
+   return dView
+end display_HKeyArray
+
 
 --> Display | HkeyArray | Script
 -
@@ -29,77 +70,21 @@ command display_ScriptFromHkeys hKeys, pTitle
    --
    -- display_Text newScript, pTitle
    display_Lines newscript, pTitle
-   put the result into displayView
-   return displayView
+   put the result into dView
+   return dView
 end display_ScriptFromHkeys
-
-
---> Display | HkeyArray
--
-command display_HKeyArray hKey, pHkeyArray, pLabel, pShowHow, pStripMissing
-   if pHkeyArray is not an array then
-      put walk_GetHkeyArray (hKey) into pHkeyArray
-   end if
-   if pShowHow is empty then
-      put "hkeyArray" into pShowHow
-   end if
-   --
-   put hkeyArray_DisplayData (pHkeyArray, pShowHow, pStripMissing, hKey) into dData
-   --
-   display_Data dData, hKey, "HkeyArray"
-   put the result into displayView
-   set the tool_MenuBit of displayView to "HkeyArray"
-   --
-   set the show_How of displayView to pShowHow
-   set the displayed_Hkey of displayView to hKey
-   set the displayed_HkeyArray of displayView to pHkeyArray
-   --
-   return displayView
-end display_HKeyArray
-
-
---> Display | Events
--
-command mDoubleUp_HkeyArray displayView, someValue, sPath
-   if the optionKey is "Down" then breakpoint
-   --
-   switch 
-      case line 1 of sPath = "Missing"
-         --  put line 4 of sPath into hKey
-         put someValue into hKey
-         break
-      default
-         put line 3 of sPath into hKey
-   end switch
-   --
-   hkey_Edit hKey
-end mDoubleUp_HkeyArray
-
-command mDouble_DisplayHkeyTreeArray displayView, someValue, hKey
-   hkey_Edit hKey
-end mDouble_DisplayHkeyTreeArray
-
-on mDouble_DisplayObjectHkeyArray displayView, someValue, pathItems
-   put 1 into hNum
-   set the itemdelimiter to slash
-   put item 1 of pathItems into hObject
-   put item 2 of pathItems into shortHkey
-   put hKeyLine_AddObject (shortHkey, hObject) into hKey
-   
-   hkey_Edit hKey
-end mDouble_DisplayObjectHkeyArray
 
 
 --> Display | HkeyArray
 -
 command display_ScriptHkeyArray hKeyArray, sObject
    display_Data hKeyArray, hKey, "hKeyArray"
-   put the result into displayView
+   put the result into dView
    --
-   display_SetInteractions displayView, "HkeyArray | Script | Tree", "mDouble_DisplayHkeyTreeArray"
+   display_SetInteractions dView, "HkeyArray | Script | Tree", "mDouble_DisplayHkeyTreeArray"
    --
-   set the displayed_Object of displayView to hObject
-   return displayView
+   set the displayed_Object of dView to hObject
+   return dView
 end display_ScriptHkeyArray
 
 
@@ -112,9 +97,9 @@ command display_HkeyDepArray hKey, pOverlayName
    -- display_ObjectDepArray hkey, hkeyArray
    display_HkeyTreeArray hKeyArray, hKey
    --
-   put the result into displayView
-   set the hkey_Array of displayView to hkeyArray
-   return displayView
+   put the result into dView
+   set the hkey_Array of dView to hkeyArray
+   return dView
 end display_HkeyDepArray
 
 command display_HkeyArrayDependencyScript hkeyArray, pScriptObject, pStripObjects, pStripProps, pMakePrivate
@@ -143,12 +128,12 @@ command display_OverlayData overlayFolder, pTitle
    put overlay_GetData (overlayFolder) into overlayData 
    
    display_Array overlayData, pTitle
-   put the result into displayView
-   display_SetInteractions displayView, "Script | Graph", ""
+   put the result into dView
+   display_SetInteractions dView, "Script | Graph", ""
    --
-   set the displayed_OverlayFolder of displayView to overlayFolder
-   set the displayed_OverlayName of displayView to pOverlayName
-   return displayView
+   set the displayed_OverlayFolder of dView to overlayFolder
+   set the displayed_OverlayName of dView to pOverlayName
+   return dView
 end display_OverlayData
 
 
@@ -159,18 +144,18 @@ command display_Script sObject
    --
    put the name of sObject into someTitle
    display_Data scriptArray, someTitle, "Script"
-   put the result into displayView
+   put the result into dView
    --
-   set the displayed_Object of displayView to sObject
-   display_SetInteractions displayView, "Script | Tree", "mDoubleUp_DisplayShortHkey"
+   set the displayed_Object of dView to sObject
+   display_SetInteractions dView, "Script | Tree", "mDoubleUp_DisplayShortHkey"
    --   
-   return displayView
+   return dView
 end display_Script
 
 command display_ScriptArray scriptObject
    put the walk_HkeyArray of scriptObject into hKeyArray
    --
-   graph_CreateScriptObjectHkeyArray hkeyArray, scriptObject
+   graph_CreateFromScriptHkeyArray hkeyArray, scriptObject
    put the result into imageFile
    display_HandlerSVG imageFile
    --
@@ -236,13 +221,13 @@ command display_HkeyTreeArray hKeyArray, hKey
    put the result into shortHkey
    --
    display_Data hkeyTreeArray, hKey, "hkeyTreeArray"
-   put the result into displayView
+   put the result into dView
    --
    -- may want to use "Global | HkeyArray | Tree | Filter | Menu"
-   display_SetInteractions displayView, "HkeyArray", "mDouble_DisplayHkeyTreeArray"
-   set the displayed_Object of displayView to hObject
-   set the displayed_Hkey of displayView to hKey
-   return displayView
+   display_SetInteractions dView, "HkeyArray", "mDouble_DisplayHkeyTreeArray"
+   set the displayed_Object of dView to hObject
+   set the displayed_Hkey of dView to hKey
+   return dView
 end display_HkeyTreeArray
 
 function hkeyArray_ConstructTreeArray hKeyArray
@@ -275,8 +260,8 @@ end _addToDepKeyArray
 private command _DisplayHkeyArray depArray, someTitle, stackLabel, displayedObject
    -- put "Global | HkeyArray | Menu" into mLineTitle
    display_Array depArray, someTitle, stackLabel
-   put the result into displayView
-   display_SetInteractions displayView, "HkeyArray | Tree | Deps", "mouse_EditHkey"
-   set the displayed_Object of displayView to displayedObject
-   return displayView
+   put the result into dView
+   display_SetInteractions dView, "HkeyArray | Tree | Deps", "mouse_EditHkey"
+   set the displayed_Object of dView to displayedObject
+   return dView
 end _DisplayHkeyArray

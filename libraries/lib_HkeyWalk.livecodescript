@@ -27,7 +27,13 @@ getprop dep_Data [graphStyle]
    put the long id of the target into sObject
    put the walk_HkeyArray of sObject into hKeyArray
    --
+   put dep_ConstructData (hkeyArray, sObject, graphStyle) into depData
+   return depData
+end dep_Data
+
+function dep_ConstructData hkeyArray, sObject, pGraphStyle
    put hkeyArray_GetStackDepArray (hkeyArray) into depObjectData
+   --
    put depObjectData into depData ["objectData"]
    delete variable depObjectData [sObject]
    put keys (depObjectData) into depData ["stacks"]
@@ -37,15 +43,15 @@ getprop dep_Data [graphStyle]
    put the project_Name of sObject into projectName
    delete variable depProjectData [projectName]
    put keys (depProjectData) into depData ["projects"]
-   --
-   -- graph_CreateScriptObjectHkeyArray hkeyArray, sObject, graphStyle
-   -- put the result into svgFile
-   put the short name of sObject into overlayName
-   put dot_ConstructFromHkeyArray (hKeyArray, pGraphStyle, overlayName) into sDot
-   put sDot into depData ["dot"]
+   
+   if pGraphStyle is not empty then
+      put the short name of sObject into overlayName
+      put dot_ConstructFromHkeyArray (hKeyArray, pGraphStyle, overlayName) into sDot
+      put sDot into depData ["dot"]
+   end if
    --
    return depData
-end dep_Data
+end dep_ConstructData
 
 
 --> Props
@@ -159,6 +165,79 @@ function dot_ConstructFromHkeyArray hKeyArray, pGraphStyle, pOverlayName, pDotCl
    put overlayArray_ConstructDot (overlayArray, pOverlayName) into sDot
    return sDot
 end dot_ConstructFromHkeyArray
+
+
+--> HkeyArray
+-
+function hkeyArray_DepStackNames hkeyArray
+   put hkeyArray_DepStacks (hkeyArray) into depStacks
+   put stack_ObjectsToNames (stackObjects) into sNames
+   return sNames
+end hkeyArray_DepStackNames
+
+function hkeyArray_DepStacks hkeyArray, sObject
+   put revRuggedId (sObject) into sObject
+   --
+   put hkeyArray_GetStackDepArray (hkeyArray) into depStackData
+   if exists (sObject) then
+      delete variable depStackData [sObject]
+   end if
+   put keys (depStackData) into depStacks
+   return depStacks
+end hkeyArray_DepStacks
+
+function hkeyArray_DepProjectBulletList hkeyArray, sObject
+   put revRuggedId (sObject) into sObject
+   
+   # Construct depProjectData
+   put hkeyArray_DepProjects (hkeyArray, sObject) into pNames
+   
+   # Make Tag Items
+   put markdown_TagItems (pNames) into pNameBulletList
+   --
+   return pNameBulletList
+end hkeyArray_DepProjectBulletList
+
+function hkeyArray_DepStackBulletList hkeyArray, sObject
+   put revRuggedId (sObject) into stackObject
+   
+   # Construct depProjectData
+   put hkeyArray_GetStackDepArray (hkeyArray) into depStackData
+   delete variable depStackData [stackObject]
+   
+   # Get Stack Names
+   -- put stack_ObjectsToNames (stackObjects) into sNames
+   repeat for each key stackObject in depStackData
+      if exists (stackObject) is false then next repeat
+      --
+      put the short name of stackObject into sName
+      put sName & CR after sNames 
+   end repeat
+   delete char -1 of sNames
+   
+   # Make Tag Items
+   put markdown_TagItems (sNames) into sNameBulletList
+   --
+   return sNameBulletList
+end hkeyArray_DepStackBulletList
+
+function hkeyArray_DepProjects hkeyArray, sObject
+   put revRuggedId (sObject) into sObject
+   put hkeyArray_ConstructDepProjectData (hkeyArray, sObject) into depProjectData
+   put keys (depProjectData) into depProjects
+   return depProjects
+end hkeyArray_DepProjects
+
+function hkeyArray_ConstructDepProjectData hkeyArray, sObject
+   put hkeyArray_GetProjectDepArray (hkeyArray) into depProjectData
+   --
+   put depProjectData into depData ["projectData"]
+   if exists (sObject) then
+      put the project_Name of sObject into projectName
+      delete variable depProjectData [projectName]
+   end if
+   return depProjectData
+end hkeyArray_ConstructDepProjectData
 
 function hkeyArray_DisplayData hkeyArray, pShowHow, pStripMissing, pFirstHkey
    switch pShowHow
