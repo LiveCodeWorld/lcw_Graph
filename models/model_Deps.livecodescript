@@ -94,7 +94,7 @@ function deps_HarrayFetch hKey
    if mainstackHkeyWalkArray is not an array then return false
    put hkeyArray_ExtractSubArray (hKey, hkeyArray) into hkeySubArray
    
-   put array_AllNodes (hkeySubArray) into hKeyDeps
+   put array_ListKeys (hkeySubArray) into hKeyDeps
    line_Delete hKey, hKeyDeps
    sort hKeyDeps by item 1 of each
    return hKeyDeps
@@ -325,7 +325,7 @@ end main_Stack
 -
 function library_HkeyDeps hKey, pAllcalls
    put library_HkeyCallArray (hKey, pAllcalls) into hKeyLinkArray
-   put array_AllNodes (hKeyLinkArray) into hkeyDeps
+   put array_ListKeys (hKeyLinkArray) into hkeyDeps
    put item 1 to 2 of hKey into shortHkey
    line_Delete shortHkey, hkeyDeps
    sort hkeyDeps by item 1 of each

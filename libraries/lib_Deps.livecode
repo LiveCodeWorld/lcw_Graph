@@ -10,7 +10,7 @@ version: 0.1
 --> Deps | HkeyArray
 -
 function deps_FromHkeyArray hKey, hkeyDepArray, pReturnShortHkey
-   put array_AllNodes (hkeyDepArray) into allHkeys
+   put array_ListKeys (hkeyDepArray) into allHkeys
    sort allHkeys by item 1 of each
    repeat for each line depKey in allHkeys
       put item 1 to 2 of depKey into shortDepKey
@@ -57,7 +57,7 @@ function hkey_FetchDeps hKey, pFetchHow
    
    local hKeyArray
    hkey_RecurseCallArray hKey, hkeyArray, pFetchHow
-   put array_AllNodes (hKeyArray) into allShortDeps
+   put array_ListKeys (hKeyArray) into allShortDeps
    put item 1 to 2 of hKey into shortKey
    line_Delete shortKey, allShortDeps
    return allShortDeps

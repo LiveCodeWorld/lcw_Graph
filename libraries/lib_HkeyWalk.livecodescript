@@ -11,7 +11,6 @@ version: 0.2
 In this stack we organise the best tested and developed handlers that walk hkey dependency trees.
 */
 
-
 --> Varaibles
 -
 local WalkSearchHierarchy
@@ -19,8 +18,124 @@ local AllowPrivateWithFirstObject = true
 local UseExportedCalls = false
 
 
---> Working on
+--> Ask
 -
+command ask_CreateDepHkeyArray sObject, dView
+   put the walk_ModuleBehaviorHkeyArray of sObject into hkeyArray
+   display_ScriptHkeyArrayDeps hkeyArray, sObject
+   put the result into dView
+   --
+   put the module_Name of sObject into mName
+   lcw_Answer "Save the hkey array for module '[[var]]' and replace the script_HkeyArray?", dView, mName
+   --
+   set the script_HkeyArray of sObject to hKeyArray
+   --
+   return dView
+end ask_CreateDepHkeyArray
+
+--> Make Recursive
+-
+getprop walk_DepArray [pHkey]
+   put the walk_HkeyArray [hKey] of the target into hkeyArray
+   put hkeyArray_GetStackDepArray (hkeyArray) into hkeyDepArray
+   return hkeyDepArray
+end walk_DepArray
+
+getprop walk_ModuleBehaviorHkeyArray [fromFolder]
+   put the long id of the target into sObject
+   --
+   put the module_BehaviorHierarchy [fromFolder] of sObject into bSearchObjects
+   put the walk_ScriptHkeyArray [bSearchObjects] of sObject into hkeyArray
+   return hkeyArray
+end walk_ModuleBehaviorHkeyArray
+   
+getprop walk_HkeyArray [hKey]
+   local hKeyArray
+   put the long id of the target into tObject
+   
+   # Search Hierarchy
+   put the walk_Hierarchy of tObject into searchObjects
+   walk_SetSearchHierarchy searchObjects
+   
+   # HkeyArray of script of hanlder
+   if hKey is empty then
+      put the revAvailableHandlers of tObject into hTable
+      put _WalkAvailableHandlers (hTable) into hKeyArray
+   else
+      _WalkHkeyRecursive shortCallHkey, hKey, hKeyArray
+   end if
+   return hKeyArray
+end walk_HkeyArray
+
+getprop walk_ScriptHkeyArray [pSearchObjects]
+   local hKeyArray
+   put the long id of the target into tObject
+   
+   # Work out search hierarchy
+   if pSearchObjects is empty then
+      put the walk_Hierarchy of tObject into pSearchObjects
+   end if
+   walk_SetSearchHierarchy pSearchObjects
+   
+   # Htable of objects script
+   put the revAvailableHandlers of tObject into hTable
+   
+   # Walk recursively
+   put _WalkAvailableHandlers (hTable) into hKeyArray
+   --
+   return hKeyArray
+end walk_ScriptHkeyArray
+
+function hkeyArray_FromStackDepArray hkeyDepArray
+   local hkeyArray
+   repeat for each element handlerArray in hkeyDepArray
+      union hkeyArray with handlerArray -- recursively
+   end repeat
+   return hkeyArray
+end hkeyArray_FromStackDepArray
+
+function hkeyArray_GetStackDepArray hkeyArray
+   local hkeyDepArray
+   hkeyArray_SetObjectArray hkeyDepArray, hkeyArray
+   return hkeyDepArray
+end hkeyArray_GetStackDepArray
+
+command hkeyArray_SetObjectArray @hkeyDepArray, hkeyArray
+   repeat for each key hKey in hkeyArray
+      set the cursor to busy
+      
+      -- add toplevel hKey to objectArray
+      _AddToObjectArray hkeyDepArray, hKey
+      
+      -- look at calls
+      put hkeyArray [hKey] into hkeyCalls
+      if hkeyCalls is an array then
+         repeat for each key hkeyCall in hkeyCalls
+            _AddToObjectArray hkeyDepArray, hkeyCall, hKey
+         end repeat
+      else
+         repeat for each line hkeyCall in hkeyCalls
+            _AddToObjectArray hkeyDepArray, hkeyCall, hKey
+         end repeat
+      end if
+   end repeat
+end hkeyArray_SetObjectArray
+
+
+--> Props | Dep
+-
+getprop dep_ProjectArray
+   put the long id of the target into sObject
+   if the module_Name of sObject is empty then
+      put the walk_HkeyArray of sObject into hKeyArray
+   else
+      put the module_BehaviorDepHkeyArray of sObject into hKeyArray
+   end if
+   --
+   put hkeyArray_GetProjectDepArray (hkeyArray) into depProjectArray
+   return depProjectArray
+end dep_ProjectArray
+
 getprop dep_Data [graphStyle]
    if graphStyle is empty then put "hierarchical" into graphStyle
    --
@@ -107,46 +222,6 @@ getprop call_HkeyArray [pSearchObjects]
    --
    return hKeyArray
 end call_HkeyArray
-
-getprop walk_DepArray [pHkey]
-   put the walk_HkeyArray [hKey] of the target into hkeyArray
-   put hkeyArray_GetStackDepArray (hkeyArray) into hkeyDepArray
-   return hkeyDepArray
-end walk_DepArray
-
-getprop walk_HkeyArray [hKey]
-   put the long id of the target into tObject
-   put the walk_Hierarchy of tObject into searchObjects
-   put false into UseExportedCalls
-   walk_SetSearchHierarchy searchObjects
-   
-   local hKeyArray
-   --
-   if hKey is empty then
-      put the revAvailableHandlers of tObject into hTable
-      put _WalkAvailableHandlers (hTable) into hKeyArray
-   else
-      _WalkHkeyRecursive shortCallHkey, hKey, hKeyArray
-   end if
-   --
-   return hKeyArray
-end walk_HkeyArray
-
-getprop walk_Hierarchy
-   -- as comprehensive as possible version of object_Hierarchy
-   put the long id of the target into tObject
-   put revRuggedID (tObject) into tObject
-   --
-   put object_GetHierarchy (tObject) into walkHierarchy
-   put env_ScriptHierarchy (true) into envHierarchy
-   if envHierarchy is empty then return walkHierarchy
-   
-   _StripObjectHierarchy envHierarchy, walkHierarchy
-   if envHierarchy is empty then return walkHierarchy
-   
-   put CR & envHierarchy after walkHierarchy
-   return walkHierarchy
-end walk_Hierarchy
 
 
 --> Functions
@@ -241,6 +316,11 @@ end hkeyArray_ConstructDepProjectData
 
 function hkeyArray_DisplayData hkeyArray, pShowHow, pStripMissing, pFirstHkey
    switch pShowHow
+      case "depKeys"
+         put hkeyArray_ListHkeys (hkeyArray, pFirstHkey) into hKeys
+         filter hKeys with ("*Deps" & quote)
+         return hKeys
+         break
       case "hKeys"
          return hkeyArray_ListHkeys (hkeyArray, pFirstHkey)
       case "stacks"
@@ -302,33 +382,6 @@ function hkeyArray_GetProjectDepArray hkeyArray, pStripProps
    --
    return dArray
 end hkeyArray_GetProjectDepArray
-
-function hkeyArray_GetStackDepArray hkeyArray
-   local hkeyDepArray
-   hkeyArray_SetObjectArray hkeyDepArray, hkeyArray
-   return hkeyDepArray
-end hkeyArray_GetStackDepArray
-
-command hkeyArray_SetObjectArray @hkeyDepArray, hkeyArray
-   repeat for each key hKey in hkeyArray
-      set the cursor to busy
-      
-      -- add toplevel hKey to objectArray
-      _AddToObjectArray hkeyDepArray, hKey
-      
-      -- look at calls
-      put hkeyArray [hKey] into hkeyCalls
-      if hkeyCalls is an array then
-         repeat for each key hkeyCall in hkeyCalls
-            _AddToObjectArray hkeyDepArray, hkeyCall, hKey
-         end repeat
-      else
-         repeat for each line hkeyCall in hkeyCalls
-            _AddToObjectArray hkeyDepArray, hkeyCall, hKey
-         end repeat
-      end if
-   end repeat
-end hkeyArray_SetObjectArray
 
 
 --> Walk
@@ -417,6 +470,7 @@ end _WalkAvailableHandlers
 private command _WalkHkeyRecursive shortHkey, parentHKeyLine, @hKeyArray
    -- first we look for it in WalkSearchHierarchy
    hkeyLine_Deconstruct parentHKeyLine, pName, pType, pObject
+   --
    put hkey_FindShortHkey (shortHkey, pObject, WalkSearchHierarchy) into foundCall
    --
    if foundCall is empty then 
@@ -440,22 +494,6 @@ private command _WalkHkeyRecursive shortHkey, parentHKeyLine, @hKeyArray
    return true
 end _WalkHkeyRecursive
 
-private command _AddObjectAndBehaviors @objectHierarchy, tObject, pPretty
-   if exists (tObject) is false then return empty
-   
-   if pPretty is not false then
-      -- put the long id of tObject into tObject
-      put CR & the name of tObject after objectHierarchy
-   else
-      put CR & revRuggedId (tObject) after objectHierarchy
-   end if
-   
-   put the behavior_Objects of tObject into bObjects
-   if bObjects is empty then return false
-   put CR & bObjects after objectHierarchy
-   return true
-end _AddObjectAndBehaviors
-
 private command _AddToObjectArray @hkeyObjectArray, hKey, parentHkey
    hkeyLine_Deconstruct hKey, hName, hType, hObject
    switch
@@ -467,83 +505,15 @@ private command _AddToObjectArray @hkeyObjectArray, hKey, parentHkey
          put empty into hkeyObjectArray ["Missing"][hKey][parentHkey]
          break
       case parentHkey is empty
-         put "top" into parentHkey
+         put revRuggedID (hObject) into hObject
+         if the keys of hkeyObjectArray [hObject] is empty then
+            put empty into hkeyObjectArray [hObject][hKey]
+         else
+            -- put empty into hkeyObjectArray [hObject][hKey]["top"]
+         end if
+         break
       default
          put revRuggedID (hObject) into hObject
          put empty into hkeyObjectArray [hObject][hKey][parentHkey]
    end switch
 end _AddToObjectArray
-
-private command _StripObjectHierarchy @externalObjects, objectHierarchy
-   set the wholematches to true
-   repeat for each line sObject in objectHierarchy
-      put lineOffset (sObject, externalObjects) into lineNum
-      delete line lineNum of externalObjects
-   end repeat
-end _StripObjectHierarchy
-
-
---> Deps
--
-function object_GetHierarchy tObject, pPretty
-   local objectHierarchy
-   
-   put the long id of tObject into tObject
-   put pPretty is not false into pPretty
-   _AddObjectAndBehaviors objectHierarchy, tObject, pPretty
-   
-   put tObject into objectOwner
-   put empty into skipThisBackgroundID
-   repeat
-      switch word 1 of objectOwner
-         case "stack"
-            -- previously added a stack, check if it was a substack
-            put objectOwner into stackObject
-            put the owner of stackObject into mainStackObject
-            if exists (mainStackObject) then
-               _AddObjectAndBehaviors objectHierarchy, mainStackObject, pPretty
-            end if
-            
-            delete word 1 to 3 of objectOwner
-            if exists (objectOwner) is false then exit repeat
-            break
-         case "card"
-            -- previously added a card, so check for backgrounds
-            put objectOwner into cardObject
-            put the backgroundIDs of cardObject into bgIDs
-            -- need to add in reverse to mirror message path
-            repeat with bgNum = the number of lines of bgIDs down to 1
-               put line bgNum of bgIDs into someID
-               if someID = skipThisBackgroundID then next repeat
-               put the long ID of bg ID someID of cardObject into backgroundObject
-               _AddObjectAndBehaviors objectHierarchy, backgroundObject
-            end repeat
-            
-            delete word 1 to 4 of objectOwner
-            if exists (objectOwner) is false then exit repeat
-            
-            -- above a card must be a stack
-            _AddObjectAndBehaviors objectHierarchy, stackObject
-            break
-         case "group"
-            -- previously added a group, check to see if was a bg
-            if the backgroundbehavior of objectOwner is true then
-               -- will need to skip it's own "card" background
-               put the short ID of objectOwner into skipThisBackgroundID
-            end if
-            --
-            delete word 1 to 4 of objectOwner
-            if exists (objectOwner) is false then exit repeat
-            --
-            _AddObjectAndBehaviors objectHierarchy, objectOwner
-            break
-         default
-            -- previously added a normal control
-            delete word 1 to 4 of objectOwner
-            if exists (objectOwner) is false then exit repeat
-            --
-            _AddObjectAndBehaviors objectHierarchy, objectOwner
-      end switch
-   end repeat
-   return word 1 to -1 of objectHierarchy
-end object_GetHierarchy

@@ -57,11 +57,13 @@ command graph_CreateFromScriptHkeyArray hkeyArray, hObject, pGraphStyle, pProces
    return imageFile
 end graph_CreateFromScriptHkeyArray
 
-command graph_Hkey hKey, pGraphStyle
-   put walk_GetHkeyArray (hKey) into hKeyArray
-   hKey_SetArray hkey, hKeyArray
+command graph_Hkey hKey, pGraphStyle, pHkeyArray
+   if pHkeyArray is not an array then
+      put walk_GetHkeyArray (hKey) into pHkeyArray
+   end if
+   hKey_SetArray hkey, pHkeyArray
    --
-   graph_HkeyArray hKey, hKeyArray, pGraphStyle
+   graph_HkeyArray hKey, pHkeyArray, pGraphStyle
    --
    put the result into svgFile
    return svgFile
