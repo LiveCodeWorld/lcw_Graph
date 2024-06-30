@@ -16,6 +16,64 @@ This library processes hkeyArrays.
 
 --> Working on
 -
+function hkeyIndex_FilterOutside hKeys, sObject, pCarefully
+   if pCarefully is true then
+      if exists (sObject) is false then return "Error, cannot check filtered hkeys as object does nto exist:" && sObject
+      repeat for each line hKey in hKeys
+         hkeyLine_Deconstruct hKey, hName, hType, hObject
+         if exists (hObject) is false then next repeat
+         if the long id of hObject is not the long id of sObject then
+            put hKey & CR after externalHkeys
+         end if
+      end repeat
+      delete char -1 of externalHkeys
+      return externalHkeys
+   else
+      put revRuggedId (sObject) into sObject
+      filter hKeys without ("*" && sObject)
+      return hKeys
+   end if
+end hkeyIndex_FilterOutside
+
+function hkeyArray_ExtractExternalHkeys externalHkeyArray
+   -- not used
+   breakpoint
+   repeat for each key shortExternalCall in externalHkeyArray
+      put externalHkeyArray [shortExternalCall] into callArray
+      put line 1 of keys (callArray) into parentKey
+      put callArray [parentKey] into externalHkey
+      put externalHkey & CR after externalHkeys
+   end repeat
+   delete char -1 of externalHkeys
+   return externalHkeys
+end hkeyArray_ExtractExternalHkeys
+
+command hkeyArray_FilterOutExternalObjects @hKeyArray, scriptObject, pIncludeSecondGen
+   breakpoint
+   -- does not work ???
+   -- think this may be as simple as only taking firstkeys! (ie no need to recurse and check :)
+   local filteredLinkArray
+   put keys (hKeyArray) into firstKeys
+   repeat for each line firstKey in firstKeys
+      hkey_Deconstruct firstKey, handlerName, firstType, firstScriptObject, firstNum
+      if exists(firstScriptObject) is not true then next repeat
+      if the long id of firstScriptObject = the long id of scriptObject then
+         recurse_FilterOutExternalObjects firstKey, hKeyArray, scriptObject, filteredLinkArray, pIncludeSecondGen
+      end if
+   end repeat
+   put filteredLinkArray into hKeyArray
+end hkeyArray_FilterOutExternalObjects
+
+
+--> Working on
+-
+function hkeyArray_ListKeysWithoutObject hkeyArray, sObject
+   put revRuggedID (sObject) into rObject
+   put array_ListKeys (hkeyArray) into hKeys
+   filter hKeys without ("*" && rObject)
+   return hKeys
+end hkeyArray_ListKeysWithoutObject
+
 function objectHkeyArray_FromKeys hKeys
    repeat for each line hKey in hKeys
       put word 4 to -1 hKey into sObject
@@ -24,23 +82,9 @@ function objectHkeyArray_FromKeys hKeys
    return objectHkeyArray
 end objectHkeyArray_FromKeys
 
-function hkeyArray_ListKeysWithoutObject hkeyArray, sObject
-   put revRuggedID (sObject) into rObject
-   put array_ListKeys (hkeyArray) into hKeys
-   filter hKeys without ("*" && rObject)
-   return hKeys
-   
-   /* -- only delete one way, not hkeys that call handler in object
-   put hkeyArray_GetStackDepArray (hkeyArray) into stackDepArray   
-   repeat for each line hObject in hObjects
-      delete variable stackDepArray [hObject]
-   end repeat
-   -- set the displayed_Data of dView to stackDepArray
-   put hkeyArray_FromStackDepArray (stackDepArray) into hkeyArray
-   */
-end hkeyArray_ListKeysWithoutObject
-
 function hkeyArray_DeleteObject someObject, hkeyArray
+   breakpoint -- need to rethink?
+   
    set the wholematches to true
    repeat for each key hKey in hkeyArray
       set the cursor to busy
@@ -83,47 +127,12 @@ function hkeyArray_DeleteObject someObject, hkeyArray
    return hkeyArray
 end hkeyArray_DeleteObject
 
-function hkeyArray_ExtractExternalHkeys externalHkeyArray
-   -- not used
-   repeat for each key shortExternalCall in externalHkeyArray
-      put externalHkeyArray [shortExternalCall] into callArray
-      put line 1 of keys (callArray) into parentKey
-      put callArray [parentKey] into externalHkey
-      put externalHkey & CR after externalHkeys
-   end repeat
-   delete char -1 of externalHkeys
-   return externalHkeys
-end hkeyArray_ExtractExternalHkeys
-
-command hkeyArray_FilterOutExternalObjects @hKeyArray, scriptObject, pIncludeSecondGen
-   -- does not work ???
-   -- think this may be as simple as only taking firstkeys! (ie no need to recurse and check :)
-   local filteredLinkArray
-   put keys (hKeyArray) into firstKeys
-   repeat for each line firstKey in firstKeys
-      hkey_Deconstruct firstKey, handlerName, firstType, firstScriptObject, firstNum
-      if exists(firstScriptObject) is not true then next repeat
-      if the long id of firstScriptObject = the long id of scriptObject then
-         recurse_FilterOutExternalObjects firstKey, hKeyArray, scriptObject, filteredLinkArray, pIncludeSecondGen
-      end if
-   end repeat
-   put filteredLinkArray into hKeyArray
-end hkeyArray_FilterOutExternalObjects
-
 
 --> HkeyArray | List
 -
 function hkeyArray_ListHkeys hkeyArray, pFirstKey
    local hKeys
    put array_ListKeys (hkeyArray) into hKeys
-   /*
-   repeat for each key hKey in hkeyArray
-      set the cursor to busy
-      line_Add hKey, hKeys
-      put hkeyArray [hKey] into handlerCalls
-      line_Add handlerCalls, hKeys
-   end repeat
-   */
    if pFirstKey is not empty then
       set the wholematches to true
       put lineOffset (pFirstKey, hKeys) into lineNum

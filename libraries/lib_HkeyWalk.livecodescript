@@ -18,54 +18,54 @@ local AllowPrivateWithFirstObject = true
 local UseExportedCalls = false
 
 
---> Ask
+--> Working on
 -
-command ask_CreateDepHkeyArray sObject, dView
-   put the walk_ModuleBehaviorHkeyArray of sObject into hkeyArray
-   display_ScriptHkeyArrayDeps hkeyArray, sObject
-   put the result into dView
-   --
-   put the module_Name of sObject into mName
-   lcw_Answer "Save the hkey array for module '[[var]]' and replace the script_HkeyArray?", dView, mName
-   --
-   set the script_HkeyArray of sObject to hKeyArray
-   --
-   return dView
-end ask_CreateDepHkeyArray
-
---> Make Recursive
--
-getprop walk_DepArray [pHkey]
-   put the walk_HkeyArray [hKey] of the target into hkeyArray
-   put hkeyArray_GetStackDepArray (hkeyArray) into hkeyDepArray
-   return hkeyDepArray
-end walk_DepArray
-
-getprop walk_ModuleBehaviorHkeyArray [fromFolder]
-   put the long id of the target into sObject
-   --
-   put the module_BehaviorHierarchy [fromFolder] of sObject into bSearchObjects
-   put the walk_ScriptHkeyArray [bSearchObjects] of sObject into hkeyArray
-   return hkeyArray
-end walk_ModuleBehaviorHkeyArray
-   
 getprop walk_HkeyArray [hKey]
    local hKeyArray
    put the long id of the target into tObject
    
-   # Search Hierarchy
-   put the walk_Hierarchy of tObject into searchObjects
-   walk_SetSearchHierarchy searchObjects
-   
-   # HkeyArray of script of hanlder
    if hKey is empty then
+      -- put hierarchy_Construct (tObject) into searchObjects
+      put the walk_Hierarchy of tObject into searchObjects
+      walk_SetSearchHierarchy searchObjects
+      --
       put the revAvailableHandlers of tObject into hTable
       put _WalkAvailableHandlers (hTable) into hKeyArray
    else
-      _WalkHkeyRecursive shortCallHkey, hKey, hKeyArray
+      put walk_ConstructHkeyArray (hKey) into hKeyArray
    end if
    return hKeyArray
 end walk_HkeyArray
+
+function walk_ConstructHkeyArray hKey, pSearchObjects
+   local hKeyArray
+   -- walk_HkeyCalls hKeyArray, hKey
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   put the result into shortCallHkey
+   
+   # Object hierarchy (include behaviors)
+   if pSearchObjects is empty then
+      put the walk_Hierarchy of hObject into pSearchObjects -- default
+   end if
+   walk_SetSearchHierarchy pSearchObjects
+   
+   # Recursively walk
+   _WalkHkeyRecursive hKey, hKey, hKeyArray
+   return hKeyArray
+end walk_ConstructHkeyArray
+
+getprop walk_Hierarchy
+   put the long id of the target into tObject
+   --
+   if the module_Name of tObject is empty then
+      put revRuggedID (tObject) into tObject
+      put hierarchy_Construct (tObject) into walkHierarchy
+      hierarchy_AddEnv walkHierarchy
+   else
+      put the module_BehaviorHierarchy of tObject into walkHierarchy
+   end if
+   return walkHierarchy
+end walk_Hierarchy
 
 getprop walk_ScriptHkeyArray [pSearchObjects]
    local hKeyArray
@@ -85,6 +85,108 @@ getprop walk_ScriptHkeyArray [pSearchObjects]
    --
    return hKeyArray
 end walk_ScriptHkeyArray
+
+private function _WalkAvailableHandlers hTable
+   local hKeyArray
+   
+   put revRuggedID (word 5 to -1 of line 1 of hTable) into hObject
+   repeat for each line hTableLine in hTable
+      set the cursor to busy
+      put word 1 to 2 of hTableLine into shortHkey
+      put hKeyLine_AddObject (shortHkey, hObject) into hKey
+      walk_HkeyCalls hKeyArray, hKey
+   end repeat
+   return hKeyArray
+end _WalkAvailableHandlers
+
+command walk_HkeyCalls @hKeyArray, hKey
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   put the result into shortHkey
+   --
+   put _GetHandlerCalls (shortHkey, hObject) into shortCallHkeys
+   if shortCallHkeys is empty then
+      put empty into hKeyArray [hKey]
+   else
+      repeat for each line shortCallHkey in shortCallHkeys 
+         _WalkHkeyRecursive shortCallHkey, hKey, hKeyArray
+      end repeat
+   end if
+end walk_HkeyCalls
+
+private command _WalkHkeyRecursive shortHkey, parentHKeyLine, @hKeyArray
+   -- first we look for it in WalkSearchHierarchy
+   hkeyLine_Deconstruct parentHKeyLine, pName, pType, pObject
+   --
+   put hkey_FindShortHkey (shortHkey, pObject, WalkSearchHierarchy) into foundCall
+   --
+   if foundCall is empty then 
+      put shortHkey && "of Missing" into missingCall
+      put true into hKeyArray [parentHKeyLine][missingCall]
+      return false
+   end if
+   
+   -- add it to the array
+   if hKeyArray [parentHKeyLine][foundCall] is true then return empty -- already indexed (don't recurse)
+   put true into hKeyArray [parentHKeyLine][foundCall]
+   
+   -- now lets repeat and recurse for each call found
+   hkeyLine_Deconstruct foundCall, fName, fType, fObject
+   put _GetHandlerCalls (foundCall, fObject) into childShortHkeys
+   repeat for each line childShortHkey in childShortHkeys
+      set the cursor to busy
+      _WalkHkeyRecursive childShortHkey, foundCall, hKeyArray
+   end repeat
+   --
+   return true
+end _WalkHkeyRecursive
+
+
+--> SearchHierarchy | Model
+-
+function walk_GetSearchHierarchy
+   return WalkSearchHierarchy
+end walk_GetSearchHierarchy
+
+command walk_SetSearchHierarchy pSearchObjects
+   if pSearchObjects is empty then
+      put env_ScriptHierarchy (true) into pSearchObjects
+   end if
+   --
+   put pSearchObjects into WalkSearchHierarchy
+end walk_SetSearchHierarchy
+
+
+--> Ask
+-
+command ask_CreateDepHkeyArray sObject, dView
+   put the walk_ModuleBehaviorHkeyArray of sObject into hkeyArray
+   display_ScriptHkeyArrayDeps hkeyArray, sObject
+   put the result into dView
+   --
+   put the module_Name of sObject into mName
+   lcw_Answer "Save the hkey array for module '[[var]]' and replace the script_HkeyArray?", dView, mName
+   --
+   set the script_HkeyArray of sObject to hKeyArray
+   --
+   return dView
+end ask_CreateDepHkeyArray
+
+
+--> Make Recursive
+-
+getprop walk_DepArray [pHkey]
+   put the walk_HkeyArray [hKey] of the target into hkeyArray
+   put hkeyArray_GetStackDepArray (hkeyArray) into hkeyDepArray
+   return hkeyDepArray
+end walk_DepArray
+
+getprop walk_ModuleBehaviorHkeyArray [fromFolder]
+   put the long id of the target into sObject
+   --
+   put the module_BehaviorHierarchy [fromFolder] of sObject into bSearchObjects
+   put the walk_ScriptHkeyArray [bSearchObjects] of sObject into hkeyArray
+   return hkeyArray
+end walk_ModuleBehaviorHkeyArray
 
 function hkeyArray_FromStackDepArray hkeyDepArray
    local hkeyArray
@@ -393,39 +495,6 @@ function walk_GetObjectHkeyArray tObject, pSearchObjects, pUseExportedCalls
    return hKeyArray
 end walk_GetObjectHkeyArray
 
-function walk_GetHkeyArray hKey, pSearchObjects
-   local hKeyArray
-   walk_SetSearchHierarchy pSearchObjects
-   walk_HkeyCalls hKeyArray, hKey
-   return hKeyArray
-end walk_GetHkeyArray
-
-command walk_HkeyCalls @hKeyArray, hKey
-   hkeyLine_Deconstruct hKey, hName, hType, hObject
-   put the result into shortHkey
-   --
-   put _GetHandlerCalls (shortHkey, hObject) into shortCallHkeys
-   if shortCallHkeys is empty then
-      put empty into hKeyArray [hKey]
-   else
-      repeat for each line shortCallHkey in shortCallHkeys 
-         _WalkHkeyRecursive shortCallHkey, hKey, hKeyArray
-      end repeat
-   end if
-end walk_HkeyCalls
-
-function walk_GetSearchHierarchy
-   return WalkSearchHierarchy
-end walk_GetSearchHierarchy
-
-command walk_SetSearchHierarchy pSearchObjects
-   if pSearchObjects is empty then
-      put env_ScriptHierarchy (true) into pSearchObjects
-   end if
-   --
-   put pSearchObjects into WalkSearchHierarchy
-end walk_SetSearchHierarchy
-
 
 --> Private
 -
@@ -434,12 +503,11 @@ private function _GetHandlerCalls hKeyLine, rObject
       breakpoint
       put hkey_FetchCalls (hKeyLine) into shortHkeyCalls
    else
-      -- we get the revAvailableHandlers and script for each call
-      -- may be possible to speed up by caching?
-      -- put the handler_Calls [hKeyLine] of rObject into shortHkeyCalls
-      
+      -- htable_ExactLineOffsets hkeyLine, hTable, startLineNum, endLineNum -- breaks as revAvailableHandlers has changed M/C
       put the revAvailableHandlers of rObject into hTable
-      htable_ExactLineOffsets hkeyLine, hTable, startLineNum, endLineNum
+      --
+      hkeyLine_Deconstruct hKeyLine, hName, hType, hObject
+      htable_OrLineOffsets hName, hType, hTable, startLineNum, endLineNum -- should it be Either private or public?
       if endLineNum = 0 then return empty
       --
       put the script of rObject into someScript
@@ -454,46 +522,6 @@ end _GetHandlerCalls
 
 --> Private | Walk
 -
-private function _WalkAvailableHandlers hTable
-   local hKeyArray
-   
-   put revRuggedID (word 5 to -1 of line 1 of hTable) into hObject
-   repeat for each line hTableLine in hTable
-      set the cursor to busy
-      put word 1 to 2 of hTableLine into shortHkey
-      put hKeyLine_AddObject (shortHkey, hObject) into hKey
-      walk_HkeyCalls hKeyArray, hKey
-   end repeat
-   return hKeyArray
-end _WalkAvailableHandlers
-
-private command _WalkHkeyRecursive shortHkey, parentHKeyLine, @hKeyArray
-   -- first we look for it in WalkSearchHierarchy
-   hkeyLine_Deconstruct parentHKeyLine, pName, pType, pObject
-   --
-   put hkey_FindShortHkey (shortHkey, pObject, WalkSearchHierarchy) into foundCall
-   --
-   if foundCall is empty then 
-      put shortHkey && "of Missing" into missingCall
-      put true into hKeyArray [parentHKeyLine][missingCall]
-      return false
-   end if
-   
-   -- add it to the array
-   if hKeyArray [parentHKeyLine][foundCall] is true then return empty -- already indexed (don't recurse)
-   put true into hKeyArray [parentHKeyLine][foundCall]
-   
-   -- now lets repeat and recurse for each call found
-   hkeyLine_Deconstruct foundCall, fName, fType, fObject
-   put _GetHandlerCalls (foundCall, fObject) into childShortHkeys
-   repeat for each line childShortHkey in childShortHkeys
-      set the cursor to busy
-      _WalkHkeyRecursive childShortHkey, foundCall, hKeyArray
-   end repeat
-   --
-   return true
-end _WalkHkeyRecursive
-
 private command _AddToObjectArray @hkeyObjectArray, hKey, parentHkey
    hkeyLine_Deconstruct hKey, hName, hType, hObject
    switch

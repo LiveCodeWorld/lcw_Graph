@@ -1,7 +1,7 @@
 ﻿script "Global | HkeyArray | Tree | Menu"
 --> MetaData
 -
-copyright: Anonymous
+copyright: David Bovill
 license: GPLv3
 name: Global | HkeyArray | Tree | Menu
 type: controller
@@ -29,6 +29,10 @@ getprop menu_Target [tObject]
    return dView
 end menu_Target
 
+getprop menu_CheckTarget [dView]
+   return true
+end menu_CheckTarget
+
 private command _DisplayMissing mTitle, mArray, dView
    put keys (mArray) into mKeys
    sort mKeys
@@ -50,7 +54,7 @@ function hkey_ConstructMissingData hKeys, sObject, searchObjects, pDisplayView
       end if
       
       # List handler calls = allHandlerKeys
-      put walk_GetHkeyArray (hKey, searchObjects) into handlerHkeyArray
+      put walk_ConstructHkeyArray (hKey, searchObjects) into handlerHkeyArray
       put array_ListKeys (handlerHkeyArray) into allHandlerKeys
       
       repeat for each line handlerHkey in allHandlerKeys
@@ -83,14 +87,44 @@ end hkey_ConstructMissingData
 
 --> Global | HkeyArray | Tree | Menu
 -
-on menu_TestDeps dView
+on menu_CallsOutsideScript dView
+   put the show_How of dView into sHow
+   put the displayed_Hkey of dView into hKey
+   put the displayed_HkeyArray of dView into hkeyArray
+   put the displayed_Object of dView into sObject
+   
    menu_DisplayHkeyIndex dView
    put the result into hKeys
-   put the displayed_Index of dView into hKeys
-   --
+   
+   # Search Hierarcy
+   if sObject is empty then
+      hkeyLine_Deconstruct hKey, hName, hType, hObject
+      put hObject into sObject
+   end if
+   
+   put hkeyIndex_FilterOutside (hKeys, sObject, true) into foundButOutsideKeys
+   put the name of sObject into sTitle
+   display_CollectedHkeys foundButOutsideKeys, sTitle
+end menu_CallsOutsideScript
+
+on menu_TestDeps dView
+   put the show_How of dView into sHow
+   put the displayed_Hkey of dView into hKey
+   put the displayed_HkeyArray of dView into hkeyArray
    put the displayed_Object of dView into sObject
-   put the walk_Hierarchy of sObject into searchObjects
-   --
+   
+   menu_DisplayHkeyIndex dView
+   put the result into hKeys
+   -- put the displayed_Index of dView into hKeys
+   
+   # Search Hierarcy
+   if sObject is empty then
+      hkeyLine_Deconstruct hKey, hName, hType, hObject
+      put hObject into sObject
+   end if
+   put the walk_Hierarchy [hKey] of sObject into searchObjects
+   
+   # Missing
    put hkey_ConstructMissingData (hKeys, sObject, searchObjects, dView) into missingData
    --
    put missingData ["foundArray"] into foundArray -- fine
@@ -106,6 +140,7 @@ on menu_TestDeps dView
    set the missing_FoundButOutsideArray of dView to foundButOutsideArray -- add dependency to index
    set the missing_Array of dView to missingArray -- bad
    
+   # Display
    if keys (missingArray) is empty then
       # Display Missing but Found
       _DisplayMissing "Found but Outside", foundButOutsideArray, dView
@@ -113,15 +148,20 @@ on menu_TestDeps dView
       _DisplayMissing "Missing", missingArray, dView
    end if
    
+   # Collect Script
    if keys (foundButOutsideArray) is not empty then
-      # Collect and display script
-      put the name of sObject into sTitle
       put array_ListKeys (foundButOutsideArray) into foundButOutsideKeys
-      put hkey_CollectFromObjects (foundButOutsideKeys, true) into newDepScript
-      display_Text newDepScript, sTitle, "Found but Outside Script"
+      put the name of sObject into sTitle
+      display_CollectedHkeys foundButOutsideKeys, sTitle
    end if
 end menu_TestDeps
 
+private command display_CollectedHkeys hKeys, sTitle
+   # Collect and display script
+   put hkey_CollectFromObjects (hKeys, true) into newDepScript
+   display_Text newDepScript, sTitle, "Found but Outside Script"
+   return teh result
+end display_CollectedHkeys
 
 private on __
 end __
@@ -177,25 +217,39 @@ on menu_MissingModuleKeys dView
    put the displayed_Object of dView into sObject
    put the displayed_HkeyArray of dView into hkeyArray
    --
-   put array_ListKeys (hkeyArray) into hKeys
-   put the module_Hierarchy [true] of sObject into hObjects
-   repeat for each line hObject in hObjects
-      put revRuggedID (hObject) into rObject
-      filter hKeys without ("*" && rObject)
-   end repeat
    
    put "Deps" && the number of lines of hKeys into sTitle
    put objectHkeyArray_FromKeys (hKeys) into objectHkeyArray
    set the displayed_Data [sTitle] of dView to objectHkeyArray
+   
+   if hKeys is not empty then
+      put the name of sObject into sTitle
+      put hkey_CollectFromObjects (hKeys, true) into newDepScript
+      display_Text newDepScript, sTitle, "Module Dependency Script"
+   end if
 end menu_MissingModuleKeys
 
 on menu_DisplayHkeyIndex dView
    put the displayed_HkeyArray of dView into hkeyArray
    put array_ListKeys (hkeyArray) into hKeys
-   set the displayed_Data of dView to hKeys
-   --
+   
+   # Title
    put the number of lines of hKeys into keyNum
-   set the title_Text of dView to keyNum && "Hkeys"
+   put "(" & keyNum && "Hkeys)" into keyNumBit
+   --
+   put the displayed_Hkey of dView into hKey
+   put the displayed_Object of dView into sObject
+   if sObject is empty then
+      hkeyLine_Deconstruct hKey, hName, hType, hObject
+      put hObject into sObject
+      put hKey into sTitle
+   else
+      put the name of sObject into sTitle
+   end if
+   
+   put space & keyNumBit after sTitle
+   -- set the title_Text of dView to sTitle
+   set the displayed_Data [sTitle] of dView to hKeys
    --
    sort lines of hKeys
    return hKeys

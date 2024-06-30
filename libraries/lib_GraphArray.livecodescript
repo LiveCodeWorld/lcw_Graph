@@ -50,7 +50,7 @@ command graph_CreateDotFiles linkArray, pGraphStyle, pDotFile, pGraphTitle
    
    shell_BashParamEscape pDotFile
    put pGraphStyle into dotCommand
-   dot_NormalizeDotCommand dotCommand -- converts a graphStyle to a dotCommand
+   dot_GraphStyleToLayoutEngine dotCommand -- converts a graphStyle to a dotCommand
    put dotCommand & space & pDotFile into someShell
    
    put space & "-Tsvg" after someShell

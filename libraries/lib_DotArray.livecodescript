@@ -316,7 +316,7 @@ command dotArray_Set dotFile, dotArray
 end dotArray_Set
 
 function dotJson_FromDotFile dotFile, pGraphStyle, pClean
-   put dot_CommandFromGraphStyle (pGraphStyle) into dotCommand
+   put dot_LayoutEngine (pGraphStyle) into dotCommand
    gv_DoShell dotFile, dotCommand, "json"
    put the result into dotJSON
    if pClean is true then

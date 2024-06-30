@@ -5,7 +5,7 @@ copyright: David Bovill
 license: GPLv3
 name: lib_DotCreate
 type: library
-version: 0.1
+version: 0.2
 
 /*Some help*/
 
@@ -51,7 +51,6 @@ command dot_NormalizeSvgFile @svgFile, dotFile
    end if
 end dot_NormalizeSvgFile
 
-
 command dot_RenderImage dotFile, svgFile, pDotCommand, pImageFormat
    if pDotCommand is empty then put "dot" into pDotCommand
    if pImageFormat is empty then put "svg" into pImageFormat
@@ -73,7 +72,7 @@ function dot_NormalizeCommand pGraphStyle, pDotText
          put dot_GetLayout (pDotText) into dotCommand
          return dotCommand
       default
-         put dot_CommandFromGraphStyle (pGraphStyle) into dotCommand
+         put dot_LayoutEngine (pGraphStyle) into dotCommand
          return dotCommand
    end switch
 end dot_NormalizeCommand
@@ -151,7 +150,7 @@ command gv_DoShell dotFile, pDotCommand, pExportFormat, pOutputFile
 end gv_DoShell
 
 function gv_ConstructShell dotFile, pDotCommand, pExportFormat, pOutputFile
-   dot_NormalizeDotCommand pDotCommand
+   dot_GraphStyleToLayoutEngine pDotCommand
    if pExportFormat is empty then put "svg" into pExportFormat
    put graphViz_GetShellPath() into gvPath
    --
@@ -228,13 +227,14 @@ end hkeyArray_ConstructDot
 
 --> Dot | From
 -
-function dot_CommandFromGraphStyle pGraphStyle
+function dot_LayoutEngine pGraphStyle
+   -- was "dot_CommandFromGraphStyle" 
    -- defaults to "dot"
-   dot_NormalizeDotCommand pGraphStyle
+   dot_GraphStyleToLayoutEngine pGraphStyle
    return pGraphStyle
-end dot_CommandFromGraphStyle
+end dot_LayoutEngine
 
-command dot_NormalizeDotCommand @graphStyle
+command dot_GraphStyleToLayoutEngine @graphStyle
    switch
       case graphStyle is among the items of "tree map,patchwork"
          put "patchwork" into graphStyle
@@ -297,7 +297,7 @@ command dot_NormalizeDotCommand @graphStyle
          */
          put "dot" into graphStyle
    end switch
-end dot_NormalizeDotCommand
+end dot_GraphStyleToLayoutEngine
 
 
 --> Dot | Create

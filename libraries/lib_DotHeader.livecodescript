@@ -152,7 +152,7 @@ function dot_GetLayout dotText
 end dot_GetLayout
 
 command dot_AddLayout @dotText, pGraphStyle
-   put dot_CommandFromGraphStyle (pGraphStyle) into dotCommand
+   put dot_LayoutEngine (pGraphStyle) into dotCommand
    --
    -- put "layout\s=\s'(.+)'" into regExp -- lazy
    put "layout\s=\s'?(.+)'?" into regExp -- lazy

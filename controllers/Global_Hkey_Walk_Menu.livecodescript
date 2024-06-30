@@ -60,21 +60,22 @@ end disabled_DisplayHkeyArray
 
 --> Global | Hkey | Walk | Menu
 -
-on menu_GraphHandler hKey
-   display_CreateHandlerGraph hKey
-end menu_GraphHandler
-
 on menu_FastGraphHandler hKey
    display_CreateHandlerGraph hKey, "fast undirected spring"
 end menu_FastGraphHandler
 
--- on menu_ConstructDot hKey
-put hkeyArray_Construct (hKey)
-put hkey_ConstructDepArray(allCalls, pMakePrivate)
--- put hkey_ConstructHarrayWalkArray(hKeys, hArray, pSearchOutSideMainStack)
-put dot_ConstructFromHkeyArray (hKeyArray, pGraphStyle, overlayName) into sDot
--- put hkey_ConstructHarrayWalkArray (hKeys, hArray, pSearchOutSideMainStack)
-end menu_ConstructDot
+on menu_GraphHandler hKey, graphStyle
+   display_CreateHandlerGraph hKey, graphStyle
+end menu_GraphHandler
+
+getprop graphHandler_Param [hKey]
+   put hkey_ListSvgFiles (hKey) into shortFiles
+   return shortFiles
+end graphHandler_Param
+
+getprop graphHandler_Params [hKey]
+   return dot_ListGraphStyles()
+end graphHandler_Params
 
 private on _
 end _
@@ -94,16 +95,11 @@ private on __
 end __
 
 on menu_ExportHkeyArray hKey
-   put walk_GetHkeyArray (hKey) into hKeyArray
+   -- put the walk_HkeyArray [hKey] of dsaf into hKeyArray
+   put walk_ConstructHkeyArray (hKey) into hKeyArray
    --
    hKey_SetArray hkey, hKeyArray
 end menu_ExportHkeyArray
-
-on menu_TestBullets
-   put hKey_GetArray (hkey) into hKeyArray
-   --
-   put hkeyArray_DepStackBulletList (hkeyArray)
-end menu_TestBullets
 
 on menu_DisplayExportedHkeyArray hKey
    put hKey_GetArray (hkey) into hKeyArray

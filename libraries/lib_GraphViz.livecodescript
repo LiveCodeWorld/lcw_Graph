@@ -360,12 +360,11 @@ function dot_MakeRadialImage dotFile
 end dot_MakeRadialImage
 
 
-
 --> Dot | Shell
 -
 command dot_DoImageMapShell dotCommand, dotFile, imageFile, pCmapFile, pXdotFile, pImageFormat
    -- dot foo.gv -Tpng -o foo.png -Tcmapx -o foo.cmapx
-   dot_NormalizeDotCommand dotCommand -- converts a graphStyle to a dotCommand
+   dot_GraphStyleToLayoutEngine dotCommand -- converts a graphStyle to a dotCommand
    if pImageFormat is empty then put "png" into pImageFormat
    shell_BashParamEscape dotFile
    shell_BashParamEscape imageFile

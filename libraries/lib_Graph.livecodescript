@@ -59,7 +59,7 @@ end graph_CreateFromScriptHkeyArray
 
 command graph_Hkey hKey, pGraphStyle, pHkeyArray
    if pHkeyArray is not an array then
-      put walk_GetHkeyArray (hKey) into pHkeyArray
+      put walk_ConstructHkeyArray (hKey) into pHkeyArray
    end if
    hKey_SetArray hkey, pHkeyArray
    --
@@ -70,7 +70,7 @@ command graph_Hkey hKey, pGraphStyle, pHkeyArray
 end graph_Hkey
 
 command graph_HkeyArray hKey, pHkeyArray, pGraphStyle
-   -- uses "walk_GetHkeyArray" of stack "lib_HkeyWalk"
+   -- uses "walk_ConstructHkeyArray" of stack "lib_HkeyWalk"
    
    # Set things up and do checks
    set the cursor to busy
@@ -100,9 +100,9 @@ command graph_HkeyArray hKey, pHkeyArray, pGraphStyle
 end graph_HkeyArray
 
 command graph_HkeyDependency hKey, pProjectName, pGraphStyle, pClusterBoolean, processObject
-   -- change to lib_HkeyWalk rather than walk_GetHkeyArray?
+   -- change to lib_HkeyWalk rather than walk_ConstructHkeyArray?
    -- traverses the hkey dependency graph using a slow crawl of Livecode objects
-   -- uses overlay_CreateGraph and walk_GetHkeyArray
+   -- uses overlay_CreateGraph and walk_ConstructHkeyArray
    
    put empty into overlayName -- defaults to pGraphStyle or "hierarchical"
    if pClusterBoolean is not false then 
@@ -112,7 +112,7 @@ command graph_HkeyDependency hKey, pProjectName, pGraphStyle, pClusterBoolean, p
    end if
    
    -- put hkey_DependencyArrayFromObjects (hKey, pProjectName, true) into hKeyArray
-   put walk_GetHkeyArray (hKey) into hKeyArray
+   put walk_ConstructHkeyArray (hKey) into hKeyArray
    hkeyArray_Process hKeyArray, processObject -- export to overlayArray
    --
    -- this is not working until we eexport overlayArray
@@ -125,7 +125,7 @@ command graph_HkeyDependency hKey, pProjectName, pGraphStyle, pClusterBoolean, p
 end graph_HkeyDependency
 
 command graph_CreateScriptObject sObject, pGraphStyle, pProcessObject, pProjectName
-   -- uses overlay_CreateGraph and hkey_ObjectWalk (not walk_GetHkeyArray)
+   -- uses overlay_CreateGraph and hkey_ObjectWalk (not walk_ConstructHkeyArray)
    
    put graph_ConstructObjectHkeyArray (sObject, pProjectName, pProcessObject) into hkeyArray
    set the projectOverlay_Array ["processedHkey.array"] of sObject to hkeyArray

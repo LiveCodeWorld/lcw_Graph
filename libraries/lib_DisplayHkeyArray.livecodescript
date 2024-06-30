@@ -27,7 +27,7 @@ end mDouble_DisplayObjectHkeyArray
 -
 command display_HKeyArray hKey, pHkeyArray, pLabel, pShowHow, pStripMissing
    if pHkeyArray is not an array then
-      put walk_GetHkeyArray (hKey) into pHkeyArray
+      put walk_ConstructHkeyArray (hKey) into pHkeyArray
    end if
    if pShowHow is empty then
       put "hkeyArray" into pShowHow
@@ -38,10 +38,6 @@ command display_HKeyArray hKey, pHkeyArray, pLabel, pShowHow, pStripMissing
    display_Tool dData, hKey, "HkeyArray", "lcw_Graph"
    put the result into dView
    
-   -- display_Data dData, hKey, "HkeyArray"
-   -- put the result into dView
-   -- set the tool_MenuBit of dView to "HkeyArray"
-   --
    set the show_How of dView to pShowHow
    set the displayed_Hkey of dView to hKey
    set the displayed_HkeyArray of dView to pHkeyArray
@@ -53,7 +49,7 @@ end display_HKeyArray
 --> Display | HkeyArray | Script
 -
 command display_HkeyDepScript hKey
-   put walk_GetHkeyArray (hKey) into hkeyArray
+   put walk_ConstructHkeyArray (hKey) into hkeyArray
    put "Deps for" && hKey into pTitle
    display_ScriptFromHkeyArray hkeyArray, pTitle, hKey
    return the result
