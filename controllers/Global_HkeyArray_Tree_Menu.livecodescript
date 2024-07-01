@@ -40,50 +40,6 @@ private command _DisplayMissing mTitle, mArray, dView
    return mKeys
 end _DisplayMissing
 
-function hkey_ConstructMissingData hKeys, sObject, searchObjects, pDisplayView
-   put hkey_ListShort (hKeys) into allShortHkeys
-   --
-   repeat with lineNum = 1 to the number of lines of hKeys
-      if the commandKey is "down" then breakpoint
-      if the shiftKey is "down" then exit repeat
-      --
-      put line lineNum of hKeys into hKey
-      --
-      if exists (pDisplayView) then
-         set the hilited_Element of pDisplayView to hKey
-      end if
-      
-      # List handler calls = allHandlerKeys
-      put walk_ConstructHkeyArray (hKey, searchObjects) into handlerHkeyArray
-      put array_ListKeys (handlerHkeyArray) into allHandlerKeys
-      
-      repeat for each line handlerHkey in allHandlerKeys
-         put word 1 to 2 of handlerHkey into shortHandlerKey
-         --
-         switch
-            case handlerHkey is among the lines of hKeys
-               put empty into foundArray [handlerHkey]
-               break
-            case word -1 of handlerHkey = "Missing"
-               put empty into missingArray [handlerHkey]
-               break
-            case shortHandlerKey is among the lines of allShortHkeys
-               put empty into inShortArray [handlerHkey]
-               break
-            default
-               put empty into foundButOutsideArray [handlerHkey]
-         end switch
-      end repeat
-   end repeat
-   --
-   put foundArray into missingData ["foundArray"]
-   put missingArray into missingData ["missingArray"]
-   put inShortArray into missingData ["inShortArray"]
-   put foundButOutsideArray into missingData ["foundButOutsideArray"]
-   --
-   return missingData
-end hkey_ConstructMissingData
-
 
 --> Global | HkeyArray | Tree | Menu
 -
@@ -93,18 +49,13 @@ on menu_CallsOutsideScript dView
    put the displayed_HkeyArray of dView into hkeyArray
    put the displayed_Object of dView into sObject
    
-   menu_DisplayHkeyIndex dView
-   put the result into hKeys
-   
    # Search Hierarcy
    if sObject is empty then
       hkeyLine_Deconstruct hKey, hName, hType, hObject
       put hObject into sObject
    end if
    
-   put hkeyIndex_FilterOutside (hKeys, sObject, true) into foundButOutsideKeys
-   put the name of sObject into sTitle
-   display_CollectedHkeys foundButOutsideKeys, sTitle
+   display_CallsOutside hkeyArray, sObject, hKey
 end menu_CallsOutsideScript
 
 on menu_TestDeps dView
@@ -155,13 +106,6 @@ on menu_TestDeps dView
       display_CollectedHkeys foundButOutsideKeys, sTitle
    end if
 end menu_TestDeps
-
-private command display_CollectedHkeys hKeys, sTitle
-   # Collect and display script
-   put hkey_CollectFromObjects (hKeys, true) into newDepScript
-   display_Text newDepScript, sTitle, "Found but Outside Script"
-   return teh result
-end display_CollectedHkeys
 
 private on __
 end __

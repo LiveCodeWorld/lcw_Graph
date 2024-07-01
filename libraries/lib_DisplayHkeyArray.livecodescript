@@ -135,7 +135,7 @@ end display_OverlayData
 
 --> Display | Script
 -
-command display_Script sObject
+command display_ScriptTools sObject
    put the script_SuiteArray of sObject into scriptArray
    --
    put the name of sObject into someTitle
@@ -146,7 +146,7 @@ command display_Script sObject
    display_SetInteractions dView, "Script | Tree", "mDoubleUp_DisplayShortHkey"
    --   
    return dView
-end display_Script
+end display_ScriptTools
 
 command display_ScriptArray scriptObject
    put the walk_HkeyArray of scriptObject into hKeyArray
