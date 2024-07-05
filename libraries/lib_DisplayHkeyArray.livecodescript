@@ -141,6 +141,7 @@ command display_ScriptTools sObject
    put the name of sObject into someTitle
    display_Data scriptArray, someTitle, "Script"
    put the result into dView
+   set the displayed_ScriptArray of dView to scriptArray
    --
    set the displayed_Object of dView to sObject
    display_SetInteractions dView, "Script | Tree", "mDoubleUp_DisplayShortHkey"
