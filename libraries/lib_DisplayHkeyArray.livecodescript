@@ -6,8 +6,23 @@ name: lib_DisplayHkeyArray
 type: library
 version: 0.3
 
+
 --> Working on
 -
+command display_Script newScript, pTitle
+   display_Text newScript, pTitle
+   -- display_Lines newscript, pTitle
+   put the result into dView
+   -- set the field_Style of dView to "text"
+   return dView
+end display_Script
+
+command display_ScriptFromHkeys hKeys, pTitle
+   put script_CollectFromObjects (hKeys, false) into newScript
+   display_Script newScript
+   return the result
+end display_ScriptFromHkeys
+ 
 command mDouble_DisplayHkeyTreeArray dView, someValue, hKey
    hkey_Edit hKey
 end mDouble_DisplayHkeyTreeArray
@@ -61,15 +76,6 @@ command display_ScriptFromHkeyArray hkeyArray, pTitle, pFirstKey
    return the result
 end display_ScriptFromHkeyArray
 
-command display_ScriptFromHkeys hKeys, pTitle
-   put hkey_CollectFromObjects (hKeys, false) into newScript
-   --
-   -- display_Text newScript, pTitle
-   display_Lines newscript, pTitle
-   put the result into dView
-   return dView
-end display_ScriptFromHkeys
-
 
 --> Display | HkeyArray
 -
@@ -111,9 +117,8 @@ command display_HkeyArrayDependencyScript hkeyArray, pScriptObject, pStripObject
       put "Dependency Suite" into someTitle
    end if
    
-   -- put depSuite
-   display_Lines depSuite, someTitle
-   
+   display_Script newScript, someTitle
+   --
    return someArray
 end display_HkeyArrayDependencyScript
 

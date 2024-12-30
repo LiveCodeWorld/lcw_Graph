@@ -116,13 +116,26 @@ command display_LinkArrayGraph linkArray, pGraphStyle, pFile, pBgColour, pGraphN
    return svgFile
 end display_LinkArrayGraph
 
+command display_HkeyLinkArray hkey, pGraphStyle
+   put hKey_GetArray (hkey) into hkeyArray
+   --
+   display_LinkArray hkeyArray, hKey, "Hkey LinkArray"
+   put the result into dView
+   --
+   set the displayed_Hkey of dView to hKey
+   set the displayed_GraphStyle of dView to pGraphStyle
+   set the link_Array of dView to hkeyArray
+   --
+   return dView
+end display_HkeyLinkArray
+
 command display_LinkArray linkArray, pTitle, pLabel
    if pLabel is empty then put "Link Array" into pLabel
    --
    display_Data linkArray, pTitle, pLabel
    put the result into displayView
    display_SetInteractions displayView, "LinkArray", "mDouble_DisplayLinkArray"
-   --
+   --   
    return displayView
 end display_LinkArray
 

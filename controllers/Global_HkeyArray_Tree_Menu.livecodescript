@@ -168,7 +168,7 @@ on menu_MissingModuleKeys dView
    
    if hKeys is not empty then
       put the name of sObject into sTitle
-      put hkey_CollectFromObjects (hKeys, true) into newDepScript
+      put script_CollectFromObjects (hKeys, true) into newDepScript
       display_Text newDepScript, sTitle, "Module Dependency Script"
    end if
 end menu_MissingModuleKeys

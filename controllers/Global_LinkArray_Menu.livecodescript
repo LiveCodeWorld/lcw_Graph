@@ -21,18 +21,67 @@ getprop menu_Target [tObject]
    return the display_View of tObject
 end menu_Target
 
+command _Set
+   put the link_Array of dView into hkeyArray
+   put the displayed_Hkey of dView into hKey
+   put the displayed_GraphStyle of dView into pGraphStyle
+end _Set
+
+private function _HkeyArray sObject
+   if the shiftKey is "Down" then
+      put the script_HkeyArray of sObject into hkeyArray
+   else 
+      put LocalArray ["dView"] into dView
+      put the displayed_HkeyArray of dView into hkeyArray
+   end if
+   return hkeyArray
+end _HkeyArray
+
 
 --> Global | LinkArray | Menu
 -
-on menu_DisplaySvgGraph displayView
-   put the displayed_Array of displayView into linkArray
+on menu_Show dView, showHow
+   put the link_Array of dView into hkeyArray
+   put the displayed_Hkey of dView into hKey
+   put false into stripMissingProps
+   --
+   put hkeyArray_DisplayData (hkeyArray, showHow, stripMissingProps, hKey) into dData
+   --
+   set the displayed_Data of dView to dData
+   set the show_How of dView to showHow
+end menu_Show
+
+getprop show_Param [dView]
+   put the show_How of dView into showHow
+   if showHow is empty then put "hkeyArray" into showHow
+   return showHow
+end show_Param
+
+getprop show_Params
+   return "projects,stacks,hKeys,depKeys,-,hkeyArray"
+end show_Params
+
+on menu_CollectDisplayed dView
+   put the link_Array of dView into hkeyArray
+   put array_ListKeys (hkeyArray) into hKeys
+   put script_CollectFromObjects (hKeys, true) into depScript
+   --
+   put the displayed_Hkey of dView into hKey
+   display_Text depScript, hKey, "Hkey Dependency Script"
+end menu_CollectDisplayed
+
+private on _
+end _
+
+on menu_DisplaySvgGraph dView
+   put the displayed_Array of dView into linkArray
    --
    display_LinkArrayGraph linkArray, "fast undirected spring"
 end menu_DisplaySvgGraph
 
-on menu_DisplayCrudeGraph displayView
+on menu_DisplayCrudeGraph dView
    local graphStyle
-   put the displayed_Array of displayView into linkArray
+   put the displayed_Array of dView into linkArray
    --
    ask file "Choose a file" with "some.dot"
    put it into sFile
@@ -47,22 +96,22 @@ on menu_DisplayCrudeGraph displayView
    display_DotArray dotArray
 end menu_DisplayCrudeGraph
 
-on _
-end _
+private on __
+end __
 
-on menu_GraphLinkArray displayView, graphStyle
-   put the displayed_Array of displayView into linkArray
+on menu_GraphLinkArray dView, graphStyle
+   put the displayed_Array of dView into linkArray
    
    put the result into svgFile
    --
    display_SVG svgFile, sObject
-   put the result into displayView
-   set the displayed_Object of displayView to sObject
+   put the result into dView
+   set the displayed_Object of dView to sObject
 end menu_GraphLinkArray
 
-on menu_SimpleGraph displayView
+on menu_SimpleGraph dView
    local pFile, pGraphStyle
-   put the displayed_Array of displayView into linkArray
+   put the displayed_Array of dView into linkArray
    --
    put dot_FromHkeyLinkArray (linkArray) into dotText
    dot_CreateGraph dotText, pFile, pGraphStyle
@@ -82,8 +131,8 @@ on menu_DisplaySvg scriptObject, shortSvgFile
    end if
 end menu_DisplaySvg
 
-private on __
-end __
+private on ___
+end ___
 
 on submenu_Dev
    return menu_DevTitle ("Global | LinkArray | Menu")
