@@ -43,6 +43,26 @@ end _DisplayMissing
 
 --> Global | HkeyArray | Tree | Menu
 -
+on menu_ListCallsOutsideScript dView
+   put the displayed_HkeyArray of dView into hkeyArray
+   put the displayed_Object of dView into sObject
+   
+   put array_ListKeys (hkeyArray) into hKeys
+   put hkeyIndex_FilterOutside (hKeys, sObject, true) into outsideKeys
+   
+   # List
+   display_Data outsideKeys, sObject, "Outside Deps"
+   
+   # Collect
+   put "Deps of" && sObject into sTitle
+   display_CollectedHkeys outsideKeys, sTitle
+end menu_ListCallsOutsideScript
+
+getprop disabled_ListCallsOutsideScript [dView]
+   put the displayed_Object of dView into sObject
+   return exists (sObject) is false
+end disabled_ListCallsOutsideScript
+   
 on menu_CallsOutsideScript dView
    put the show_How of dView into sHow
    put the displayed_Hkey of dView into hKey
@@ -55,7 +75,7 @@ on menu_CallsOutsideScript dView
       put hObject into sObject
    end if
    
-   display_CallsOutside hkeyArray, sObject, hKey
+   display_CallsOutside hkeyArray, sObject, hKey -- uses collection
 end menu_CallsOutsideScript
 
 on menu_TestDeps dView
