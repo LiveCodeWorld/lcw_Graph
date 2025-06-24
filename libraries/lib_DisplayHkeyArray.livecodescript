@@ -50,7 +50,7 @@ command display_HKeyArray hKey, pHkeyArray, pLabel, pShowHow, pStripMissing
    --
    put hkeyArray_DisplayData (pHkeyArray, pShowHow, pStripMissing, hKey) into dData
    --
-   display_Tool dData, hKey, "HkeyArray", "lcw_Graph"
+   display_Tool dData, "hKey", "HkeyArray", "lcw_Graph"
    put the result into dView
    
    set the show_How of dView to pShowHow

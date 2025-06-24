@@ -26,6 +26,41 @@ The data structure should perhaps be changed to the usual data/metadata arrangem
 
 --> Working On
 -
+command display_CreateHandlerSvgFolder hKey, pHkeyArray, pGraphStyle
+   /*
+   Crawls scripts to create an hkeyArray.
+   Graphs it
+   Saves the graph and dot file to an asset folder in the handler.livecode.wiki wiki folder
+   displays the svg
+   
+   -- graph_Hkey hKey
+   -- hKey_SetArray hkey, pHkeyArray
+   */
+   
+   if pHkeyArray is not an array then
+      put walk_ConstructHkeyArray (hKey) into pHkeyArray
+   end if
+   
+   put handler_AssetFolder() into dataFolder
+   folder_CreateNested dataFolder
+   --
+   displayGraph_HandlerArray hKey, pHkeyArray, pGraphStyle
+   put the result into svgView
+   
+   put the svg_File of svgView into svgFile
+   finder_Reveal svgFile
+   return svgFile
+end display_CreateHandlerSvgFolder
+
+command displayGraph_HandlerArray topHKey, hkeyArray, pGraphStyle
+   hkeyLine_Deconstruct topHKey, hName, hType, hObject
+   put handler_AssetFolder(hName) into dataFolder
+   
+   displayGraph_LinkArray hkeyArray, dataFolder, topHKey, pGraphStyle
+   put the result into svgView
+   return svgView
+end displayGraph_HandlerArray
+
 command displayGraph_HkeyArray hkeyArray, sObject, pGraphStyle
    set the cursor to watch
    --
@@ -33,6 +68,38 @@ command displayGraph_HkeyArray hkeyArray, sObject, pGraphStyle
    put the result into svgFile
    --
    put the name of sObject into sLabel
+   _DisplaySvg svgFile, sLabel, sObject, hkeyArray, pGraphStyle 
+   put the result into svgView
+   return svgView
+end displayGraph_HkeyArray
+
+command displayGraph_LinkArray hkeyArray, pDataFolder, pHkeyLabel, pGraphStyle, pProcessObject
+   -- using hkeyArray for now
+   put empty into sObject -- might be useful to store top object or hKey?
+   --
+   graph_CreateFromHkeyArray hkeyArray, pDataFolder, pGraphStyle, pProcessObject
+   put the result into svgFile
+   --
+   _DisplaySvg svgFile, pHkeyLabel, sObject, hkeyArray, pGraphStyle 
+   put the result into svgView
+   return svgView
+end displayGraph_LinkArray
+
+command graph_CreateFromHkeyArray hkeyArray, pDataFolder, pGraphStyle, pProcessObject
+   if pGraphStyle is empty then put "hierarchical" into pGraphStyle
+   put "HkeyArray Graph" into pOverlayOf
+   --
+   put true into clusterBoolean
+   put empty into mainstackHash
+   --
+   overlay_CreateGraph pDataFolder, hkeyArray, pGraphStyle, overlayOf, pGraphStyle, clusterBoolean, mainstackHash, "svg", pProcessObject
+   put the result into overlayArray
+   --
+   put overlayArray_GetImageFile (overlayArray, pDataFolder) into imageFile
+   return imageFile
+end graph_CreateFromHkeyArray
+
+private command _DisplaySvg svgFile, sLabel, sObject, hkeyArray, pGraphStyle 
    display_SVG svgFile, sLabel
    put the result into svgView
    --
@@ -41,7 +108,7 @@ command displayGraph_HkeyArray hkeyArray, sObject, pGraphStyle
    set the displayed_GraphStyle of svgView to pGraphStyle
    --
    return svgView
-end displayGraph_HkeyArray
+end _DisplaySvg
 
 
 --> Display | HkeyArray

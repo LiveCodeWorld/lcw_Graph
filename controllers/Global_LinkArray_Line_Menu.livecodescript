@@ -17,62 +17,46 @@ local LocalArray
 
 --> Menu | Props
 -
-on menu_Init tObject
-   -- called only once for top menu
-  pass menu_Init
-end menu_Init
-
 getprop menu_Target [tObject]
-   -- called once for each menu
    return the display_View of tObject
 end menu_Target
-
-getprop menu_CheckTarget [mTarget]
-   -- use to do initialisation
-   pass menu_CheckTarget
-end menu_CheckTarget
-
-getprop test_Param [mTarget]
-  return "b"
-end test_Param
-
-getprop test_Params [mTarget]
-   return "a,b,c"
-end test_Params
-
-getprop checked_TestChecked
-   return true
-end checked_TestChecked
-
-getprop disabled_Test
-  return false -- true, "delete"
-end disabled_Test
 
 
 --> Global | LinkArray | Line | Menu
 -
-on menu_Test displayView, abc
-   put displayView & CR & abc
-end menu_Test
+on menu_DisplayParents dView
+   get the selected_Path of dView
+   put the displayed_Array of dView into hKeyArray
+   put item -1 of it into hKey
+   --
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   
+   put hkeyArray_ParentKeyArray (hKeyArray) into parentKeyArray
+end menu_DisplayParents
 
-on menu_TestChecked
-  put menu_GetChecked (the params)
-end menu_TestChecked
+on menu_DisplaySubGraph dView
+   get the selected_Path of dView
+   put the displayed_Array of dView into hKeyArray
+   put item -1 of it into hKey
+   --
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   
+   put hkeyArray_ExtractSubArray (hKey, hKeyArray) into subArray
+   display_Data subArray, hKey, "subArray"
+   --   
+   displayGraph_HkeyArray subArray, hObject, "hierarchical"
+end menu_DisplaySubGraph
 
-on _
-end _
-
-on submenu_Dev
-   return "Dev | Menu"
-end submenu_Dev
-
-
---> Dev | Menu
--
-on menu_Experiment displayView
-   put displayView
-end menu_Experiment
-
-
---> Deps
--
+on menu_DeleteSubGraph dView
+   get the selected_Path of dView
+   put the displayed_Array of dView into hKeyArray
+   put item -1 of it into hKey
+   --
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   
+   put hkeyArray_DeleteSubArray (hKey, hkeyArray, hKey) into sHkeyArray
+   
+   -- displayGraph_HkeyArray subArray, hObject, "hierarchical"
+   -- display_SimpleGraph sHkeyArray
+   display_CreateHandlerSvgFolder hKey, sHkeyArray
+end menu_DeleteSubGraph

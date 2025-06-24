@@ -16,6 +16,132 @@ This library processes hkeyArrays.
 
 --> Working on
 -
+function hkeyArray_ChildKeyArray hKey, hKeyArray
+   return hKeyArray [hKey]
+end hkeyArray_ChildKeyArray
+
+function hkeyArray_ListParentKeys hKey, hKeyArray
+   put hkeyArray_ParentKeyArray (hKeyArray) into parentKeyArray
+   put parentKeyArray [hKey] into parentArray
+   return keys (parentArray)
+end hkeyArray_ListParentKeys
+
+function hkeyArray_ParentKeyArray hKeyArray
+   put the keys of hKeyArray into parentKeys
+   --
+   repeat for each key parentKey in hKeyArray
+      put hKeyArray [parentKey] into childKeyArray
+      repeat for each key childKey in childKeyArray
+         if childKey is among the lines of parentKeys then
+            put true into parentKeyArray [childKey][parentKey]
+         end if
+      end repeat
+   end repeat
+   return parentKeyArray
+end hkeyArray_ParentKeyArray
+
+function hkeyArray_DeleteSubArray hKey, hkeyArray, pNotThisNode
+   put hkeyArray_ParentKeyArray (hKeyArray) into parentKeyArray
+   put hkeyArray_ExtractSubArray (hKey, hKeyArray) into subArray
+   
+   repeat for each key subKey in subArray
+      put subArray [subKey] into subKeyArray
+      repeat for each key subLeaf in subKeyArray
+         delete variable hkeyArray [subKey][subLeaf]
+      end repeat
+      
+      # Leave top node = pNotThisNode 
+      if subKey = pNotThisNode then next repeat
+      
+      # How many parents?
+      delete variable parentKeyArray [subKey]
+      put parentKeyArray [subKey] into subKeyParentArray
+      
+      # Delete node if there are no parents
+      -- if hkeyArray [subKey] is empty then
+      if subKeyParentArray is empty then
+         delete variable hkeyArray [subKey]
+      else
+         breakpoint -- more than one parent
+      end if
+   end repeat
+   return hkeyArray
+end hkeyArray_DeleteSubArray
+
+function hkeyArray_DeleteObject someObject, hkeyArray
+   breakpoint -- need to rethink?
+   
+   set the wholematches to true
+   repeat for each key hKey in hkeyArray
+      set the cursor to busy
+      hkey_Deconstruct hKey, handlerName, handlerType, handlerNum, scriptObject
+      if exists(scriptObject) is false then
+         if someObject is scriptObject then
+            -- Missing
+            delete local hkeyArray [hKey]
+            next repeat
+         else
+            next repeat
+         end if
+      end if
+      
+      if the long id of someObject = the long id of scriptObject then
+         delete local hkeyArray [hKey]
+         next repeat
+      end if
+      
+      put hkeyArray [hKey] into handlerCalls
+      put empty into filteredCalls
+      repeat for each line callKey in handlerCalls
+         hkey_Deconstruct callKey, handlerName, handlerType, handlerNum, callObject
+         if exists(callObject) is false then
+            if someObject is callObject then
+               -- Missing
+               next repeat
+            else
+               put callKey & CR after filteredCalls
+               next repeat
+            end if
+         end if
+         if the long id of callObject is not the long id of scriptObject then
+            put callKey & CR after filteredCalls
+         end if
+      end repeat
+      delete last char of filteredCalls
+      put filteredCalls into hkeyArray [hKey]
+   end repeat
+   return hkeyArray
+end hkeyArray_DeleteObject
+
+command hKeyArray_DeleteHandler @hKeyLinkArray, handlerName, handlerType
+   -- deletes named nodes
+   -- and named nodes in links
+   local alreadyDeleted
+   repeat for each key hKey in hKeyLinkArray
+      put hKeyLinkArray [hKey] into subKeys
+      
+      put hKey_IsHandler(hKey, handlerName, handlerType) into isNamedHandler
+      if isNamedHandler then
+         linkArray_DeleteNode hKeyLinkArray, hKey, alreadyDeleted
+      end if
+      
+      put empty into goodSubKeys
+      repeat for each line subKey in subKeys
+         if hKey_IsHandler(subKey, handlerName, handlerType) is false then
+            put subKey & CR after goodSubKeys
+         end if
+      end repeat
+      delete char -1 of goodSubKeys
+      
+      -- if goodSubKeys is empty then
+      -- in case
+      -- delete local hKeyLinkArray [hKey]
+      if isNamedHandler is false then
+         put goodSubKeys into hKeyLinkArray [hKey]
+      end if
+   end repeat
+end hKeyArray_DeleteHandler
+
 function hkeyIndex_FilterOutside hKeys, sObject, pCarefully
    if pCarefully is true then
       if exists (sObject) is false then return "Error, cannot check filtered hkeys as object does nto exist:" && sObject
@@ -81,51 +207,6 @@ function objectHkeyArray_FromKeys hKeys
    end repeat
    return objectHkeyArray
 end objectHkeyArray_FromKeys
-
-function hkeyArray_DeleteObject someObject, hkeyArray
-   breakpoint -- need to rethink?
-   
-   set the wholematches to true
-   repeat for each key hKey in hkeyArray
-      set the cursor to busy
-      hkey_Deconstruct hKey, handlerName, handlerType, handlerNum, scriptObject
-      if exists(scriptObject) is false then
-         if someObject is scriptObject then
-            -- Missing
-            delete local hkeyArray [hKey]
-            next repeat
-         else
-            next repeat
-         end if
-      end if
-      
-      if the long id of someObject = the long id of scriptObject then
-         delete local hkeyArray [hKey]
-         next repeat
-      end if
-      
-      put hkeyArray [hKey] into handlerCalls
-      put empty into filteredCalls
-      repeat for each line callKey in handlerCalls
-         hkey_Deconstruct callKey, handlerName, handlerType, handlerNum, callObject
-         if exists(callObject) is false then
-            if someObject is callObject then
-               -- Missing
-               next repeat
-            else
-               put callKey & CR after filteredCalls
-               next repeat
-            end if
-         end if
-         if the long id of callObject is not the long id of scriptObject then
-            put callKey & CR after filteredCalls
-         end if
-      end repeat
-      delete last char of filteredCalls
-      put filteredCalls into hkeyArray [hKey]
-   end repeat
-   return hkeyArray
-end hkeyArray_DeleteObject
 
 
 --> HkeyArray | List
@@ -238,6 +319,23 @@ function hkeyArray_ExtractParentArray hKey, hkeyArray
    hkeyArray_ConstructParentArray hKey, hkeyArray, parentArray
    return parentArray
 end hkeyArray_ExtractParentArray
+
+command hkeyArray_ConstructParentArray hKey, hkeyArray, @parentArray
+   breapoint
+   set the wholematches to true
+   repeat for each key maybeParentKey in hkeyArray 
+      put hkeyArray [maybeParentKey] into childKeys
+      if hKey is among the lines of childKeys then
+         -- beware circular recursion (has hKey already been indexed?)
+         if maybeParentKey is among the keys of parentArray then
+            next repeat
+         end if
+         
+         array_AddToIndex hKey, maybeParentKey, parentArray
+         hkeyArray_ConstructParentArray maybeParentKey, hkeyArray, parentArray
+      end if
+   end repeat
+end hkeyArray_ConstructParentArray
 
 function hkeyArray_ExtractParentHkeys hKey, hkeyArray
    repeat for each key parentHkey in hkeyArray
@@ -799,35 +897,6 @@ end hkeyArray_DepSuite
 
 --> hKeyArray | Filter
 -
-command hKeyArray_DeleteHandler @hKeyLinkArray, handlerName, handlerType
-   -- deletes named nodes
-   -- and named nodes in links
-   local alreadyDeleted
-   repeat for each key hKey in hKeyLinkArray
-      put hKeyLinkArray [hKey] into subKeys
-      
-      put hKey_IsHandler(hKey, handlerName, handlerType) into isNamedHandler
-      if isNamedHandler then
-         linkArray_DeleteNode hKeyLinkArray, hKey, alreadyDeleted
-      end if
-      
-      put empty into goodSubKeys
-      repeat for each line subKey in subKeys
-         if hKey_IsHandler(subKey, handlerName, handlerType) is false then
-            put subKey & CR after goodSubKeys
-         end if
-      end repeat
-      delete char -1 of goodSubKeys
-      
-      -- if goodSubKeys is empty then
-      -- in case
-      -- delete local hKeyLinkArray [hKey]
-      if isNamedHandler is false then
-         put goodSubKeys into hKeyLinkArray [hKey]
-      end if
-   end repeat
-end hKeyArray_DeleteHandler
-
 command hKeyArray_FilterSystemMessages @hKeyLinkArray
    put rev_MessageNames() into revMessageNames
    put keys(hKeyLinkArray) into hKeys
