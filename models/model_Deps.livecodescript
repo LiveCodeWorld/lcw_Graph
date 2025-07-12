@@ -486,7 +486,7 @@ command hArray_FilterHkeyArray @hKeyArray, pHarray
    local alreadyDeleted
    repeat for each key hKey in hKeyArray
       if hkey_IsAuthored (hKey, pHarray) is false then
-         linkArray_DeleteNode hKeyArray, hKey, alreadyDeleted
+         linkArray_DeleteNodeRecurse hKeyArray, hKey, alreadyDeleted
          next repeat
       end if
       put hKeyArray [hKey] into hkeyLinks
@@ -494,7 +494,7 @@ command hArray_FilterHkeyArray @hKeyArray, pHarray
       
       repeat for each line hkeyLink in hkeyLinks
          if hkey_IsAuthored (hkeyLink, pHarray) is false then
-            linkArray_DeleteNode hKeyArray, hkeyLink, alreadyDeleted
+            linkArray_DeleteNodeRecurse hKeyArray, hkeyLink, alreadyDeleted
          end if
       end repeat
    end repeat

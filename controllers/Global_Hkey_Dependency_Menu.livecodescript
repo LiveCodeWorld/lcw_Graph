@@ -38,7 +38,7 @@ on _
 end _
 
 on submenu_Dev
-   return "Dev | Menu"
+   return menu_DevTitle ("Global | Hkey | Dependency | Menu")
 end submenu_Dev
 
 

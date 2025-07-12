@@ -21,12 +21,6 @@ getprop menu_Target [tObject]
    return the display_View of tObject
 end menu_Target
 
-command _Set
-   put the link_Array of dView into hkeyArray
-   put the displayed_Hkey of dView into hKey
-   put the displayed_GraphStyle of dView into pGraphStyle
-end _Set
-
 private function _HkeyArray sObject
    if the shiftKey is "Down" then
       put the script_HkeyArray of sObject into hkeyArray
@@ -37,15 +31,20 @@ private function _HkeyArray sObject
    return hkeyArray
 end _HkeyArray
 
-
---> Global | LinkArray | Menu
--
-on menu_Show dView, showHow
+private function _GetDisplayData dView, showHow
    put the link_Array of dView into hkeyArray
    put the displayed_Hkey of dView into hKey
    put false into stripMissingProps
    --
    put hkeyArray_DisplayData (hkeyArray, showHow, stripMissingProps, hKey) into dData
+   return dData
+end _GetDisplayData
+
+
+--> Global | LinkArray | Menu
+-
+on menu_Show dView, showHow
+   put _GetDisplayData (dView, showHow) into dData
    --
    set the displayed_Data of dView to dData
    set the show_How of dView to showHow
@@ -61,17 +60,29 @@ getprop show_Params
    return "projects,stacks,hKeys,depKeys,-,hkeyArray"
 end show_Params
 
-on menu_CollectDisplayed dView
+on menu_CollectScript dView
    put the link_Array of dView into hkeyArray
    put array_ListKeys (hkeyArray) into hKeys
    put script_CollectFromObjects (hKeys, true) into depScript
    --
    put the displayed_Hkey of dView into hKey
    display_Text depScript, hKey, "Hkey Dependency Script"
-end menu_CollectDisplayed
+end menu_CollectScript
 
 private on _
 end _
+
+on menu_DepStackNameScript dView
+   put _GetDisplayData (dView, "stacks") into dData
+   put keys (dData) into stackObjects
+   repeat for each line stackObject in stackObjects
+      put the short name of stackObject into sName
+      put sName & CR after depStackNames
+   end repeat
+   delete char -1 of depStackNames
+   --
+   display_TransportGetPropHandler depStackNames, "getprop dep_StackNames"
+end menu_DepStackNameScript
 
 on menu_DisplaySvgGraph dView
    put the displayed_Array of dView into linkArray

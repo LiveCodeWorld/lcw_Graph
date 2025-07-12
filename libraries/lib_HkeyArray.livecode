@@ -16,30 +16,46 @@ This library processes hkeyArrays.
 
 --> Working on
 -
-function hkeyArray_ChildKeyArray hKey, hKeyArray
-   return hKeyArray [hKey]
-end hkeyArray_ChildKeyArray
-
-function hkeyArray_ListParentKeys hKey, hKeyArray
-   put hkeyArray_ParentKeyArray (hKeyArray) into parentKeyArray
-   put parentKeyArray [hKey] into parentArray
-   return keys (parentArray)
-end hkeyArray_ListParentKeys
-
-function hkeyArray_ParentKeyArray hKeyArray
-   put the keys of hKeyArray into parentKeys
+command display_HkeyArrayDepTable hkeyArray, sObject
+   put hkeyArray_GetStackDepArray (hkeyArray) into stackDepArray
    --
-   repeat for each key parentKey in hKeyArray
-      put hKeyArray [parentKey] into childKeyArray
-      repeat for each key childKey in childKeyArray
-         if childKey is among the lines of parentKeys then
-            put true into parentKeyArray [childKey][parentKey]
-         end if
-      end repeat
-   end repeat
-   return parentKeyArray
-end hkeyArray_ParentKeyArray
+   delete variable stackDepArray ["Missing"]
+   put hkeyArray_HkeyTable (stackDepArray) into hkeyTable
+   
+   -- display_Data hkeyTable, sObject, "Script Dep Table"
+   -- display_Tool hkeyTable, sObject, "Script Dep Table", "lcw_Graph"
+   display_StandardTool hkeyTable, sObject, "Script Dep Table"
+   put the result into dView  
+   
+   # Set Table Style
+   set the tab_Stops  of dView to 240
+   set the field_Style of dView to "multiselect"
+   
+   # Set menus and mouse_DoubleUp
+   -- set the displayed_Object of dView to sObject -- bug: no idea why!
+   set the uOPN ["displayed_Object"] of dView to sObject
+   set the uOPN ["hkey_Array"] of dView to hkeyArray
+   set the uOPN ["stack_DepArray"] of dView to stackDepArray
+   
+   set the tool_MenuBit ["lcw_Menus"] of dView to "HkeyArray | Table"
+   
+   return dView
+end display_HkeyArrayDepTable
 
+function hkeyArray_HkeyTable hkeyArray
+   repeat for each key parentKey in hkeyArray
+      put hkeyArray [parentKey] into parentArray
+      get the keys of parentArray
+      put the number of lines of it into childKeyNum
+      put parentKey & tab & childKeyNum & CR after hkeyTable
+   end repeat
+   delete char -1 of hkeyTable
+   return hkeyTable
+end hkeyArray_HkeyTable
+
+
+--> HkeyArray | Delete
+-
 function hkeyArray_DeleteSubArray hKey, hkeyArray, pNotThisNode
    put hkeyArray_ParentKeyArray (hKeyArray) into parentKeyArray
    put hkeyArray_ExtractSubArray (hKey, hKeyArray) into subArray
@@ -68,51 +84,6 @@ function hkeyArray_DeleteSubArray hKey, hkeyArray, pNotThisNode
    return hkeyArray
 end hkeyArray_DeleteSubArray
 
-function hkeyArray_DeleteObject someObject, hkeyArray
-   breakpoint -- need to rethink?
-   
-   set the wholematches to true
-   repeat for each key hKey in hkeyArray
-      set the cursor to busy
-      hkey_Deconstruct hKey, handlerName, handlerType, handlerNum, scriptObject
-      if exists(scriptObject) is false then
-         if someObject is scriptObject then
-            -- Missing
-            delete local hkeyArray [hKey]
-            next repeat
-         else
-            next repeat
-         end if
-      end if
-      
-      if the long id of someObject = the long id of scriptObject then
-         delete local hkeyArray [hKey]
-         next repeat
-      end if
-      
-      put hkeyArray [hKey] into handlerCalls
-      put empty into filteredCalls
-      repeat for each line callKey in handlerCalls
-         hkey_Deconstruct callKey, handlerName, handlerType, handlerNum, callObject
-         if exists(callObject) is false then
-            if someObject is callObject then
-               -- Missing
-               next repeat
-            else
-               put callKey & CR after filteredCalls
-               next repeat
-            end if
-         end if
-         if the long id of callObject is not the long id of scriptObject then
-            put callKey & CR after filteredCalls
-         end if
-      end repeat
-      delete last char of filteredCalls
-      put filteredCalls into hkeyArray [hKey]
-   end repeat
-   return hkeyArray
-end hkeyArray_DeleteObject
-
 command hKeyArray_DeleteHandler @hKeyLinkArray, handlerName, handlerType
    -- deletes named nodes
    -- and named nodes in links
@@ -122,7 +93,7 @@ command hKeyArray_DeleteHandler @hKeyLinkArray, handlerName, handlerType
       
       put hKey_IsHandler(hKey, handlerName, handlerType) into isNamedHandler
       if isNamedHandler then
-         linkArray_DeleteNode hKeyLinkArray, hKey, alreadyDeleted
+         linkArray_DeleteNodeRecurse hKeyLinkArray, hKey, alreadyDeleted
       end if
       
       put empty into goodSubKeys
@@ -142,6 +113,9 @@ command hKeyArray_DeleteHandler @hKeyLinkArray, handlerName, handlerType
    end repeat
 end hKeyArray_DeleteHandler
 
+
+--> Move or Rename
+-
 function hkeyIndex_FilterOutside hKeys, sObject, pCarefully
    if pCarefully is true then
       if exists (sObject) is false then return "Error, cannot check filtered hkeys as object does nto exist:" && sObject
@@ -160,6 +134,89 @@ function hkeyIndex_FilterOutside hKeys, sObject, pCarefully
       return hKeys
    end if
 end hkeyIndex_FilterOutside
+
+function objectHkeyArray_FromKeys hKeys
+   repeat for each line hKey in hKeys
+      put word 4 to -1 hKey into sObject
+      put empty into objectHkeyArray [sObject][hKey]
+   end repeat
+   return objectHkeyArray
+end objectHkeyArray_FromKeys
+
+
+--> Props
+-
+getprop hKeyArray_ConstructNodeSection [hKey]
+   put the long id of the target into graphController
+   
+   put hkey_FetchOverlayData (hKey) into graphData
+   linkArray_DeconstructGraphData graphData, hLinkArray, hIdLinkArray, hIdArray, reversedIdArray
+   put graphData ["geometry"] into geometryArray
+   
+   put the node_TypeArray of graphController into nodeTypeArray
+   put hKeyArray_ConstructNodeSection (hIdArray, hLinkArray, graphController, nodeTypeArray) into nodeSection
+   return nodeSection
+end hKeyArray_ConstructNodeSection
+
+
+--> HkeyAray
+-
+function hkeyArray_StopsAtStart hkeyArray, pStartsWith
+   if pStartsWith is empty then put "display_" into pStartsWith
+   
+   repeat for each key pKey in hkeyArray
+      put hkey_StartsWith (pKey, pStartsWith, "C,M") into isDisplay
+      if isDisplay then 
+         -- delete variable hkeyArray [pKey]
+         put empty into hkeyArray [pKey]
+      else
+         put hkeyArray [pKey] into subArray
+         --
+         repeat for each key sKey in subArray
+            put hkey_StartsWith (pKey, pStartsWith, "C,M") into isDisplay
+            if isDisplay then
+               delete variable hkeyArray [pKey][sKey]
+            end if
+         end repeat
+         
+         if subArray [pKey] is empty then
+            -- delete variable hkeyArray [pKey]
+         end if
+      end if
+   end repeat
+   return hkeyArray
+end hkeyArray_StopsAtStart
+
+function hkeyArray_ListKeysWithoutObject hkeyArray, sObject
+   put revRuggedID (sObject) into rObject
+   put array_ListKeys (hkeyArray) into hKeys
+   filter hKeys without ("*" && rObject)
+   return hKeys
+end hkeyArray_ListKeysWithoutObject
+
+function hkeyArray_ChildKeyArray hKey, hKeyArray
+   return hKeyArray [hKey]
+end hkeyArray_ChildKeyArray
+
+function hkeyArray_ListParentKeys hKey, hKeyArray
+   put hkeyArray_ParentKeyArray (hKeyArray) into parentKeyArray
+   put parentKeyArray [hKey] into parentArray
+   return keys (parentArray)
+end hkeyArray_ListParentKeys
+
+function hkeyArray_ParentKeyArray hKeyArray
+   put the keys of hKeyArray into parentKeys
+   --
+   repeat for each key parentKey in hKeyArray
+      put hKeyArray [parentKey] into childKeyArray
+      repeat for each key childKey in childKeyArray
+         if childKey is among the lines of parentKeys then
+            put true into parentKeyArray [childKey][parentKey]
+         end if
+      end repeat
+   end repeat
+   return parentKeyArray
+end hkeyArray_ParentKeyArray
 
 function hkeyArray_ExtractExternalHkeys externalHkeyArray
    -- not used
@@ -191,24 +248,6 @@ command hkeyArray_FilterOutExternalObjects @hKeyArray, scriptObject, pIncludeSec
 end hkeyArray_FilterOutExternalObjects
 
 
---> Working on
--
-function hkeyArray_ListKeysWithoutObject hkeyArray, sObject
-   put revRuggedID (sObject) into rObject
-   put array_ListKeys (hkeyArray) into hKeys
-   filter hKeys without ("*" && rObject)
-   return hKeys
-end hkeyArray_ListKeysWithoutObject
-
-function objectHkeyArray_FromKeys hKeys
-   repeat for each line hKey in hKeys
-      put word 4 to -1 hKey into sObject
-      put empty into objectHkeyArray [sObject][hKey]
-   end repeat
-   return objectHkeyArray
-end objectHkeyArray_FromKeys
-
-
 --> HkeyArray | List
 -
 function hkeyArray_ListHkeys hkeyArray, pFirstKey
@@ -227,22 +266,7 @@ function hkeyArray_ListHkeys hkeyArray, pFirstKey
 end hkeyArray_ListHkeys
 
 
---> Props
--
-getprop hKeyArray_ConstructNodeSection [hKey]
-   put the long id of the target into graphController
-   
-   put hkey_FetchOverlayData (hKey) into graphData
-   linkArray_DeconstructGraphData graphData, hLinkArray, hIdLinkArray, hIdArray, reversedIdArray
-   put graphData ["geometry"] into geometryArray
-   
-   put the node_TypeArray of graphController into nodeTypeArray
-   put hKeyArray_ConstructNodeSection (hIdArray, hLinkArray, graphController, nodeTypeArray) into nodeSection
-   return nodeSection
-end hKeyArray_ConstructNodeSection
-
-
---> Working on
+--> HkeyArray | Construct
 -
 function hKeyArray_ConstructNodeSection hIdArray, hLinkArray, pGraphController, pNodeTypeArray
    repeat for each key handlerType in pNodeTypeArray
@@ -644,7 +668,7 @@ command hkeyArray_RemoveObjectLinks @hkeyArray, objectToRemove
    
    local alreadyDeleted
    repeat for each line stripKey in hkeysToStrip
-      linkArray_DeleteNode hkeyArray, stripKey, alreadyDeleted
+      linkArray_DeleteNodeRecurse hkeyArray, stripKey, alreadyDeleted
    end repeat
    put array_ListKeys (hkeyArray) into keysLeft
    return keysLeft
@@ -986,7 +1010,7 @@ command hkeyArray_StripNonLinked @hkeyArray, topKey
    repeat for each key hKey in reversedArray
       if hKey = topKey then next repeat
       if reversedArray [hKey] is empty then
-         linkArray_DeleteNode hkeyArray, hKey
+         linkArray_DeleteNodeRecurse hkeyArray, hKey
       end if
    end repeat
 end hkeyArray_StripNonLinked

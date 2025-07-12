@@ -35,15 +35,15 @@ command overlay_CreateGraph overlayFolder, hKeyArray, pOverlayName, pOverlayOf, 
       return empty
    end if
    
-   -- Recreate graph from exported overlayArray
+   # Recreate graph from exported overlayArray
    put overlay_GetArray (overlayFolder, pOverlayName) into overlayArray
-   if pOverlayOf is empty then put overlayArray_GetGraphProperty (overlayArray, "overlay_Of")  into pOverlayOf
-   if pGraphStyle is empty then put overlayArray_GetGraphProperty (overlayArray, "overlay_Style")  into pGraphStyle
+   if pOverlayOf is empty then put overlayArray_GetGraphProperty (overlayArray, "overlay_Of") into pOverlayOf
+   if pGraphStyle is empty then put overlayArray_GetGraphProperty (overlayArray, "overlay_Style") into pGraphStyle
    
    put empty into pDotHeaderArray
    put empty into pGraphPropertyArray
    
-   -- create graph arrays with local messages for processing
+   # Create graph arrays with local messages for processing
    dispatch "graph_TidyLinkArray" to pProcessObject with hKeyArray -- use "graph_TidyLinkArray @hKeyArray"
    put overlayArray_FromLinkArray (hKeyArray, pDotHeaderArray, pGraphPropertyArray, pKeyStyle) into overlayArray
    dispatch "graph_TidyOverlayArray" to pProcessObject with overlayArray -- use "graph_TidyOverlayArray @overlayArray"
@@ -60,19 +60,19 @@ command overlay_CreateGraph overlayFolder, hKeyArray, pOverlayName, pOverlayOf, 
    overlayArray_CreateFilesAndSetGeometry overlayArray, pMainstackHash, pImageFormat
    if token 1 of the result = "error" then return the result
    
-   -- we change to mainstack_Hash rather than hash the image
+   # Change to mainstack_Hash rather than hash the image
    overlayArray_SetGraphProperty overlayArray, "overlay_Hash", pMainstackHash
    overlay_SetArray overlayFolder, overlayArray, pOverlayName
    return overlayArray
 end overlay_CreateGraph
 
 command overlayArray_CreateFilesAndSetGeometry @overlayArray, pMainstackHash, pImageFormat
-   -- does not save overlay array
+   # Does not save overlay array
    if overlayArray is not an array then return empty
    put overlayArray_GetLinkArray (overlayArray) into hkeyArray
    if hkeyArray is not an array then return empty
    
-   -- creates all the dot and image files (but does not save the array files)
+   # Creates all the dot and image files (but does not save the array files)
    overlayArray_CreateDotFiles overlayArray, empty, pImageFormat
    put the result into gvResult
    if token 1 of gvResult = "error" then
@@ -83,12 +83,12 @@ command overlayArray_CreateFilesAndSetGeometry @overlayArray, pMainstackHash, pI
    put overlayArray_GetGraphProperty (overlayArray, "overlay_Folder") into overlayFolder
    put overlayArray_GetGraphProperty (overlayArray, "overlay_Name") into overlayName
    
-   -- now set geometry by using dot to recreate files and then extract geometry array
+   # Now set geometry by using dot to recreate files and then extract geometry array
    put overlay_GetCmapText (overlayFolder, overlayName) into cmapText
    put imagemap_ParseMap (cmapText) into geometryArray
    overlayArray_SetGeometryArray overlayArray, geometryArray
    
-   ## Store overlayArray in case not already stored
+   # Store overlayArray in case not already stored
    overlay_SetArray overlayFolder, overlayArray, overlayName, pMainstackHash
    return geometryArray
 end overlayArray_CreateFilesAndSetGeometry
@@ -229,6 +229,11 @@ private command _AddHeaderStuff @dotHeaderArray, graphPropertyArray
          delete local dotHeaderArray ["overlap"]
          delete local dotHeaderArray ["ordering"]
          delete local dotHeaderArray ["concentrate"]
+         break
+      case "spring"
+         if dotHeaderArray ["overlap"] is empty then
+            put false into dotHeaderArray ["overlap"]
+         end if
          break
       default
    end switch

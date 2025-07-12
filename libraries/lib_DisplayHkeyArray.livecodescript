@@ -50,7 +50,7 @@ command display_HKeyArray hKey, pHkeyArray, pLabel, pShowHow, pStripMissing
    --
    put hkeyArray_DisplayData (pHkeyArray, pShowHow, pStripMissing, hKey) into dData
    --
-   display_Tool dData, "hKey", "HkeyArray", "lcw_Graph"
+   display_Tool dData, pLabel, "HkeyArray", "lcw_Graph"
    put the result into dView
    
    set the show_How of dView to pShowHow
@@ -75,19 +75,6 @@ command display_ScriptFromHkeyArray hkeyArray, pTitle, pFirstKey
    display_ScriptFromHkeys hKeys, pTitle
    return the result
 end display_ScriptFromHkeyArray
-
-
---> Display | HkeyArray
--
-command display_ScriptHkeyArray hKeyArray, sObject
-   display_Data hKeyArray, hKey, "hKeyArray"
-   put the result into dView
-   --
-   display_SetInteractions dView, "HkeyArray | Script | Tree", "mDouble_DisplayHkeyTreeArray"
-   --
-   set the displayed_Object of dView to hObject
-   return dView
-end display_ScriptHkeyArray
 
 
 --> Display | Deps

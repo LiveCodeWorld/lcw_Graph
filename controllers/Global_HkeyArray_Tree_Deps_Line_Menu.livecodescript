@@ -41,10 +41,6 @@ on menu_MenuEdit displayView
    menu_Edit "Global | HkeyArray | Tree | Deps | Line | Menu"
 end menu_MenuEdit
 
-on submenu_Dev
-   return menu_DevTitle ("Global | HkeyArray | Tree | Deps | Line | Menu")
-end submenu_Dev
-
 private on __
 end __
 

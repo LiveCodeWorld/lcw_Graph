@@ -20,6 +20,41 @@ local UseExportedCalls = false
 
 --> Working on
 -
+function hkeyArray_FromStackDepArray hkeyDepArray
+   local hkeyArray
+   repeat for each element handlerArray in hkeyDepArray
+      union hkeyArray with handlerArray -- recursively
+   end repeat
+   return hkeyArray
+end hkeyArray_FromStackDepArray
+
+function hkeyArray_GetStackDepArray hkeyArray
+   local hkeyDepArray
+   hkeyArray_SetObjectArray hkeyDepArray, hkeyArray
+   return hkeyDepArray
+end hkeyArray_GetStackDepArray
+
+command hkeyArray_SetObjectArray @hkeyDepArray, hkeyArray
+   repeat for each key hKey in hkeyArray
+      set the cursor to busy
+      
+      -- add toplevel hKey to objectArray
+      _AddToObjectArray hkeyDepArray, hKey
+      
+      -- look at calls
+      put hkeyArray [hKey] into hkeyCalls
+      if hkeyCalls is an array then
+         repeat for each key hkeyCall in hkeyCalls
+            _AddToObjectArray hkeyDepArray, hkeyCall, hKey
+         end repeat
+      else
+         repeat for each line hkeyCall in hkeyCalls
+            _AddToObjectArray hkeyDepArray, hkeyCall, hKey
+         end repeat
+      end if
+   end repeat
+end hkeyArray_SetObjectArray
+
 getprop walk_HkeyArray [hKey]
    local hKeyArray
    put the long id of the target into tObject
@@ -187,41 +222,6 @@ getprop walk_ModuleBehaviorHkeyArray [fromFolder]
    put the walk_ScriptHkeyArray [bSearchObjects] of sObject into hkeyArray
    return hkeyArray
 end walk_ModuleBehaviorHkeyArray
-
-function hkeyArray_FromStackDepArray hkeyDepArray
-   local hkeyArray
-   repeat for each element handlerArray in hkeyDepArray
-      union hkeyArray with handlerArray -- recursively
-   end repeat
-   return hkeyArray
-end hkeyArray_FromStackDepArray
-
-function hkeyArray_GetStackDepArray hkeyArray
-   local hkeyDepArray
-   hkeyArray_SetObjectArray hkeyDepArray, hkeyArray
-   return hkeyDepArray
-end hkeyArray_GetStackDepArray
-
-command hkeyArray_SetObjectArray @hkeyDepArray, hkeyArray
-   repeat for each key hKey in hkeyArray
-      set the cursor to busy
-      
-      -- add toplevel hKey to objectArray
-      _AddToObjectArray hkeyDepArray, hKey
-      
-      -- look at calls
-      put hkeyArray [hKey] into hkeyCalls
-      if hkeyCalls is an array then
-         repeat for each key hkeyCall in hkeyCalls
-            _AddToObjectArray hkeyDepArray, hkeyCall, hKey
-         end repeat
-      else
-         repeat for each line hkeyCall in hkeyCalls
-            _AddToObjectArray hkeyDepArray, hkeyCall, hKey
-         end repeat
-      end if
-   end repeat
-end hkeyArray_SetObjectArray
 
 
 --> Props | Dep
