@@ -307,7 +307,10 @@ function dot_SubGraphContents someLabel, nodeSection, someRank, someStyle, someC
    if someColour is empty then put "grey60" into someColour
    if fillColour is empty then put "grey90" into fillColour
    
-   if someLabel is not empty then put tab & "label=" & kwote(someLabel) & ";" after subGraph
+   if someLabel is not empty then
+      put tab & "tooltip=" & kwote(someLabel) & ";" after subGraph
+      put tab & "label=" & kwote(someLabel) & ";" after subGraph
+   end if
    if someRank is not empty then put CR & tab & "rank = [[someRank]];" after subGraph
    put CR & tab & "style=[[someStyle]];" after subGraph
    put CR & tab & "color=[[someColour]];" after subGraph

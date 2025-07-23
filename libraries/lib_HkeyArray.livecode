@@ -16,14 +16,37 @@ This library processes hkeyArrays.
 
 --> Working on
 -
-command display_HkeyArrayDepTable hkeyArray, sObject
+function stackHkeyTable_Construct hkeyArray, pStackObjects, pStripMissing
+   get stackArray_Without (hkeyArray, pStackObjects, pStripMissing)
+   put hkeyArray_HkeyTable (it) into sHkeyTable
+   return sHkeyTable
+end stackHkeyTable_Construct
+
+function stackArray_Without hkeyArray, pStackObjects, pStripMissing
    put hkeyArray_GetStackDepArray (hkeyArray) into stackDepArray
-   --
-   delete variable stackDepArray ["Missing"]
-   put hkeyArray_HkeyTable (stackDepArray) into hkeyTable
    
-   -- display_Data hkeyTable, sObject, "Script Dep Table"
-   -- display_Tool hkeyTable, sObject, "Script Dep Table", "lcw_Graph"
+   # Delete Missing
+   if pStripMissing is not false then
+      delete variable stackDepArray ["Missing"]
+   end if
+   
+   # Delete sObject
+   repeat for each line stackObject in pStackObjects
+      delete variable stackDepArray [stackObject]
+   end repeat
+   --
+   return stackDepArray
+end stackArray_Without
+
+command display_HkeyArrayDepTable hkeyArray, sObject
+   # Strip sObject + missing and Construct Table 
+   put stackHkeyTable_Construct (hkeyArray, sObject) into hkeyTable
+   
+   # Sort
+   set the itemdelimiter to tab
+   sort numeric lines of hkeyTable by item 2 of each
+   
+   # Display Table
    display_StandardTool hkeyTable, sObject, "Script Dep Table"
    put the result into dView  
    
@@ -37,8 +60,8 @@ command display_HkeyArrayDepTable hkeyArray, sObject
    set the uOPN ["hkey_Array"] of dView to hkeyArray
    set the uOPN ["stack_DepArray"] of dView to stackDepArray
    
+   # Set Menu
    set the tool_MenuBit ["lcw_Menus"] of dView to "HkeyArray | Table"
-   
    return dView
 end display_HkeyArrayDepTable
 

@@ -22,6 +22,19 @@ This allow easy access to the graph metadata associated with a script.
 At the moment storing and help about an objects properties etc along with the description of the script.
 */
 
+getprop script_Help
+   put the script_HelpFile of the target into someFile
+   if there is not a file someFile then return empty
+   put text_Get (someFile) into someHelp
+   return someHelp
+end script_Help
+
+setprop script_Help someHelp
+   put the script_HelpFile [false] of the target into someFile
+   put someHelp into url ("binfile:" & someFile)
+   return someFile
+end script_Help
+
 getprop script_Markdown
    -- should use pandoc (just a stub for now)
    put the script_Help of the target into sMarkDown
@@ -36,19 +49,6 @@ end object_Help
 setprop object_Help someHelp
    set the script_Help of the target to someHelp
 end object_Help
-
-getprop script_Help
-   put the script_HelpFile of the target into someFile
-   if there is not a file someFile then return empty
-   put text_Get (someFile) into someHelp
-   return someHelp
-end script_Help
-
-setprop script_Help someHelp
-   put the script_HelpFile [false] of the target into someFile
-   put someHelp into url ("binfile:" & someFile)
-   return someFile
-end script_Help
 
 
 --> Script | Graph | Misc

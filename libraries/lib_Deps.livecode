@@ -7,6 +7,43 @@ type: library
 version: 0.1
 
 
+--> Props
+-
+getprop ghurl_DepUrls   
+   put the env_PathArray of the target into dArray
+   put ghurl_ListDepUrls(dArray) into ghURLs
+   return ghURLs
+end ghurl_DepUrls
+
+getprop dep_StackNames
+   get the env_PathArray of the target
+   put keys (it) into sNames
+   return sNames
+end dep_StackNames
+
+getprop dep_StackPaths
+   put env_GetRepoFolder() into envFolder
+   put the env_PathArray of the target into dArray
+   repeat for each key sName in dArray
+      put envFolder & dArray [sName] into sPath
+      put sPath & CR after sPaths
+   end repeat
+   delete char -1 of sPaths
+   return sPaths
+end dep_StackPaths
+
+getprop dep_RelativePaths
+   put the dep_StackNames of the target into sNames
+   replace comma with CR in sNames
+   repeat for each line sName in sNames
+      get the env_RelativeFile of stack sName
+      put it & CR after rPaths
+   end repeat
+   delete char -1 of rPaths
+   return rPaths
+end dep_RelativePaths
+
+
 --> Deps | HkeyArray
 -
 function deps_FromHkeyArray hKey, hkeyDepArray, pReturnShortHkey

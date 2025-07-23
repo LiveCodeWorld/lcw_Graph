@@ -26,6 +26,52 @@ The data structure should perhaps be changed to the usual data/metadata arrangem
 
 --> Working On
 -
+command graph_CreateFromHkeyArray hkeyArray, pDataFolder, pGraphStyle, pProcessObject
+   if pGraphStyle is empty then put "hierarchical" into pGraphStyle
+   put "HkeyArray Graph" into pOverlayOf
+   --
+   put true into clusterBoolean
+   put empty into mainstackHash
+   --
+   overlay_CreateGraph pDataFolder, hkeyArray, pGraphStyle, overlayOf, pGraphStyle, clusterBoolean, mainstackHash, "svg", pProcessObject
+   put the result into overlayArray
+   --
+   put overlayArray_GetImageFile (overlayArray, pDataFolder) into imageFile
+   return imageFile
+end graph_CreateFromHkeyArray
+
+
+--> reDisplayGraph
+-
+command reDisplayGraph_HkeyArray hkeyArray, sObject, pGraphStyle
+   -- component: true
+   set the cursor to watch
+   --
+   graph_CreateFromScriptHkeyArray hkeyArray, sObject, pGraphStyle
+   put the result into svgFile
+   --
+   put the name of sObject into sLabel
+   _DisplaySvg svgFile, sLabel, sObject, hkeyArray, pGraphStyle 
+   put the result into svgView
+   return svgView
+end reDisplayGraph_HkeyArray
+
+command reDisplayGraph_LinkArray hkeyArray, pDataFolder, pHkeyLabel, pGraphStyle, pProcessObject
+   -- component: true
+   set the cursor to watch
+   --
+   put empty into sObject -- might be useful to store top object or hKey?
+   graph_CreateFromHkeyArray hkeyArray, pDataFolder, pGraphStyle, pProcessObject
+   put the result into svgFile
+   --
+   _DisplaySvg svgFile, pHkeyLabel, sObject, hkeyArray, pGraphStyle 
+   put the result into svgView
+   return svgView
+end reDisplayGraph_LinkArray
+
+
+--> DisplayGraph
+-
 command display_HkeyArrayGraph hkeyArray, pGraphStyle
    -- component: true
    
@@ -53,7 +99,7 @@ command display_CreateHandlerSvgFolder hKey, pHkeyArray, pGraphStyle
       put walk_ConstructHkeyArray (hKey) into pHkeyArray
    end if
    
-   put handler_AssetFolder() into dataFolder
+   put wikiFolder_HandlerAssets() into dataFolder
    folder_CreateNested dataFolder
    --
    displayGraph_HandlerArray hKey, pHkeyArray, pGraphStyle
@@ -66,61 +112,12 @@ end display_CreateHandlerSvgFolder
 
 command displayGraph_HandlerArray topHKey, hkeyArray, pGraphStyle
    hkeyLine_Deconstruct topHKey, hName, hType, hObject
-   put handler_AssetFolder(hName) into dataFolder
+   put wikiFolder_HandlerAssets(hName) into dataFolder
    
-   displayGraph_LinkArray hkeyArray, dataFolder, topHKey, pGraphStyle
+   reDisplayGraph_LinkArray hkeyArray, dataFolder, topHKey, pGraphStyle
    put the result into svgView
    return svgView
 end displayGraph_HandlerArray
-
-command displayGraph_HkeyArray hkeyArray, sObject, pGraphStyle
-   set the cursor to watch
-   --
-   graph_CreateFromScriptHkeyArray hkeyArray, sObject, pGraphStyle
-   put the result into svgFile
-   --
-   put the name of sObject into sLabel
-   _DisplaySvg svgFile, sLabel, sObject, hkeyArray, pGraphStyle 
-   put the result into svgView
-   return svgView
-end displayGraph_HkeyArray
-
-command displayGraph_LinkArray hkeyArray, pDataFolder, pHkeyLabel, pGraphStyle, pProcessObject
-   -- using hkeyArray for now
-   put empty into sObject -- might be useful to store top object or hKey?
-   --
-   graph_CreateFromHkeyArray hkeyArray, pDataFolder, pGraphStyle, pProcessObject
-   put the result into svgFile
-   --
-   _DisplaySvg svgFile, pHkeyLabel, sObject, hkeyArray, pGraphStyle 
-   put the result into svgView
-   return svgView
-end displayGraph_LinkArray
-
-command graph_CreateFromHkeyArray hkeyArray, pDataFolder, pGraphStyle, pProcessObject
-   if pGraphStyle is empty then put "hierarchical" into pGraphStyle
-   put "HkeyArray Graph" into pOverlayOf
-   --
-   put true into clusterBoolean
-   put empty into mainstackHash
-   --
-   overlay_CreateGraph pDataFolder, hkeyArray, pGraphStyle, overlayOf, pGraphStyle, clusterBoolean, mainstackHash, "svg", pProcessObject
-   put the result into overlayArray
-   --
-   put overlayArray_GetImageFile (overlayArray, pDataFolder) into imageFile
-   return imageFile
-end graph_CreateFromHkeyArray
-
-private command _DisplaySvg svgFile, sLabel, sObject, hkeyArray, pGraphStyle 
-   display_SVG svgFile, sLabel
-   put the result into svgView
-   --
-   set the displayed_Object of svgView to sObject
-   set the displayed_HkeyArray of svgView to hkeyArray
-   set the displayed_GraphStyle of svgView to pGraphStyle
-   --
-   return svgView
-end _DisplaySvg
 
 
 --> Display | HkeyArray
@@ -149,15 +146,6 @@ command display_DotFileSvg dotFile, pGraphStyle, pSvgFile
    set the graph_Style [true] of svgView to pGraphStyle
    return svgView
 end display_DotFileSvg
-
-function dot_DisplayTitle dotText, dotFile
-   put dot_GetName (dotText) into displayTitle
-   put file_GetShort (dotFile) into shortFile
-   if shortFile is not empty then
-      put " (" & shortFile & ")" after displayTitle
-   end if
-   return displayTitle
-end dot_DisplayTitle
 
 command display_DotText textOrFile, pDisplayView, pPalette
    -- display_DotText
@@ -272,16 +260,6 @@ command display_DotUrl dotURL
 end display_DotUrl
 
 
---> Display | Events
--
-on mDoubleUp_SVG displayView, shortSvgFile
-   put the displayed_URL of displayView into someURL
-   put url_FromShortFile (shortSvgFile, someURL) into svgURL
-   --
-   display_SVG svgURL, shortSvgFile
-end mDoubleUp_SVG
-
-
 --> Display | Graph | Tools
 -
 command display_ExampleSvgs pURL
@@ -302,6 +280,12 @@ command display_ExampleSvgs pURL
    return displayView
 end display_ExampleSvgs
 
+on mDoubleUp_SVG displayView, shortSvgFile
+   put the displayed_URL of displayView into someURL
+   put url_FromShortFile (shortSvgFile, someURL) into svgURL
+   --
+   display_SVG svgURL, shortSvgFile
+end mDoubleUp_SVG
 
 
 --> Display | Media
@@ -344,6 +328,15 @@ end display_ScriptEditorSvg
 
 --> Dot
 -
+function dot_DisplayTitle dotText, dotFile
+   put dot_GetName (dotText) into displayTitle
+   put file_GetShort (dotFile) into shortFile
+   if shortFile is not empty then
+      put " (" & shortFile & ")" after displayTitle
+   end if
+   return displayTitle
+end dot_DisplayTitle
+
 function dot_MenuNameText dotName
    put dot_MenuNameParam (dotName) into dotNameParam
    if token 1 of dotNameParam is among the items of "http,https" then
@@ -477,6 +470,17 @@ end html_ExtractAllLinks
 
 --> Private
 -
+private command _DisplaySvg svgFile, sLabel, sObject, hkeyArray, pGraphStyle 
+   display_SVG svgFile, sLabel
+   put the result into svgView
+   --
+   set the displayed_Object of svgView to sObject
+   set the displayed_HkeyArray of svgView to hkeyArray
+   set the displayed_GraphStyle of svgView to pGraphStyle
+   --
+   return svgView
+end _DisplaySvg
+
 private command _AddToNameArray @dotNameArray, dotURL
    set the itemdelimiter to slash
    put item -1 of dotURL into shortName

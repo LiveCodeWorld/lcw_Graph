@@ -20,6 +20,58 @@ local UseExportedCalls = false
 
 --> Working on
 -
+private function _GetHandlerCalls hKeyLine, rObject
+   -- htable_ExactLineOffsets hkeyLine, hTable, startLineNum, endLineNum -- breaks as revAvailableHandlers has changed M/C
+   put the revAvailableHandlers of rObject into hTable
+   hkeyLine_Deconstruct hKeyLine, hName, hType, hObject
+   htable_OrLineOffsets hName, hType, hTable, startLineNum, endLineNum -- should it be Either private or public?
+   if endLineNum = 0 then return empty
+   
+   # Get handler
+   put the script of rObject into someScript
+   put line startLineNum to endLineNum of someScript into foundHandler
+   
+   # Check it is not to be skipped
+   if the shiftkey is "Up" then
+      switch
+         case hName begins with "display_"
+         case line 2 of foundHandler contains "-- component: true"
+            return empty -- should do something so graph is styled to show component
+      end switch
+   end if
+   
+   # This is too complex as it calculates hashes and all sorts (update needed)
+   put handler_ExtractCalls (foundHandler) into shortHkeyCalls
+   return shortHkeyCalls
+end _GetHandlerCalls
+
+private command _WalkHkeyRecursive shortHkey, parentHKeyLine, @hKeyArray
+   -- first we look for it in WalkSearchHierarchy
+   hkeyLine_Deconstruct parentHKeyLine, pName, pType, pObject
+   --
+   put hkey_FindShortHkey (shortHkey, pObject, WalkSearchHierarchy) into foundCall
+   --
+   if foundCall is empty then 
+      put shortHkey && "of Missing" into missingCall
+      put true into hKeyArray [parentHKeyLine][missingCall]
+      return false
+   end if
+   
+   # Add it to the array
+   if hKeyArray [parentHKeyLine][foundCall] is true then return empty -- already indexed (don't recurse)
+   put true into hKeyArray [parentHKeyLine][foundCall]
+    
+   # Repeat and recurse for each call found
+   hkeyLine_Deconstruct foundCall, fName, fType, fObject
+   put _GetHandlerCalls (foundCall, fObject) into childShortHkeys
+   repeat for each line childShortHkey in childShortHkeys
+      set the cursor to busy
+      _WalkHkeyRecursive childShortHkey, foundCall, hKeyArray
+   end repeat
+   --
+   return true
+end _WalkHkeyRecursive
+
 function hkeyArray_FromStackDepArray hkeyDepArray
    local hkeyArray
    repeat for each element handlerArray in hkeyDepArray
@@ -147,33 +199,6 @@ command walk_HkeyCalls @hKeyArray, hKey
       end repeat
    end if
 end walk_HkeyCalls
-
-private command _WalkHkeyRecursive shortHkey, parentHKeyLine, @hKeyArray
-   -- first we look for it in WalkSearchHierarchy
-   hkeyLine_Deconstruct parentHKeyLine, pName, pType, pObject
-   --
-   put hkey_FindShortHkey (shortHkey, pObject, WalkSearchHierarchy) into foundCall
-   --
-   if foundCall is empty then 
-      put shortHkey && "of Missing" into missingCall
-      put true into hKeyArray [parentHKeyLine][missingCall]
-      return false
-   end if
-   
-   -- add it to the array
-   if hKeyArray [parentHKeyLine][foundCall] is true then return empty -- already indexed (don't recurse)
-   put true into hKeyArray [parentHKeyLine][foundCall]
-   
-   -- now lets repeat and recurse for each call found
-   hkeyLine_Deconstruct foundCall, fName, fType, fObject
-   put _GetHandlerCalls (foundCall, fObject) into childShortHkeys
-   repeat for each line childShortHkey in childShortHkeys
-      set the cursor to busy
-      _WalkHkeyRecursive childShortHkey, foundCall, hKeyArray
-   end repeat
-   --
-   return true
-end _WalkHkeyRecursive
 
 
 --> SearchHierarchy | Model
@@ -494,30 +519,6 @@ function walk_GetObjectHkeyArray tObject, pSearchObjects, pUseExportedCalls
    put _WalkAvailableHandlers (hTable) into hKeyArray
    return hKeyArray
 end walk_GetObjectHkeyArray
-
-
---> Private
--
-private function _GetHandlerCalls hKeyLine, rObject
-   if UseExportedCalls is true then
-      breakpoint
-      put hkey_FetchCalls (hKeyLine) into shortHkeyCalls
-   else
-      -- htable_ExactLineOffsets hkeyLine, hTable, startLineNum, endLineNum -- breaks as revAvailableHandlers has changed M/C
-      put the revAvailableHandlers of rObject into hTable
-      --
-      hkeyLine_Deconstruct hKeyLine, hName, hType, hObject
-      htable_OrLineOffsets hName, hType, hTable, startLineNum, endLineNum -- should it be Either private or public?
-      if endLineNum = 0 then return empty
-      --
-      put the script of rObject into someScript
-      put line startLineNum to endLineNum of someScript into foundHandler
-      
-      -- this is too complex as it calculates hashes and all sorts (update needed)
-      put handler_ExtractCalls (foundHandler) into shortHkeyCalls
-   end if
-   return shortHkeyCalls
-end _GetHandlerCalls
 
 
 --> Private | Walk

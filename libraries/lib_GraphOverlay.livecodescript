@@ -17,6 +17,43 @@ but look to new ans simpler ways forwards.
 
 --> Working on
 -
+function object_ToSlug oName
+   return "default_header" -- for now
+   
+   # Construct a safe informative graph title
+   if oName is not empty then
+      put kwote (pageSlug) into graphTitle
+   else
+      put "default_header" into graphTitle
+   end if
+end object_ToSlug
+
+function overlayArray_ConstructDot overlayArray, pOverlayName 
+   put overlayArray_ConstructHeader (overlayArray) into dotHeader
+   put dot_DefSectionFromArray (overlayArray, pOverlayName) into defSection
+   
+   overlayArray_DeconstructData overlayArray, linkArray, idArray, idLinkArray, reverseIdLinkArray, dotClusterArray
+   
+   put overlayArray_GetHeaderProperty (overlayArray, "dot_ClusterRank") into dotCluster
+   if dotClusterArray is an array and dotCluster is not "none" then
+      put overlayArray_ConstructClusterSection (overlayArray, pOverlayName) into clusterSection
+   end if
+   
+   -- put hKeyArray_ConstructNodeSection (idArray, idLinkArray, graphController, nodeTypeArray) into linkSection
+   put linkArray_DotNodeLinks (idLinkArray) into linkSection
+   
+   # Construct a safe informative graph title
+   if pOverlayName is empty then
+      put overlayArray_GetGraphProperty (overlayArray, "overlay_Of") into oName
+      put object_ToSlug(oName) into graphTitle
+   else
+      put pOverlayName into graphTitle
+   end if
+   replace space with "_" in graphTitle
+   
+   put dot_TextFromSections (dotHeader, defSection, clusterSection, linkSection, graphTitle) into dotText
+   return dotText
+end overlayArray_ConstructDot
 
 
 --> Graph | Overlay
@@ -167,30 +204,6 @@ which can be returned using the script_OverlayData of hkey_FetchOverlayData.
 This library and it's handlers could be renamed to graphArray / libOPN_GraphArray,
 but overlayArray while not as intuitive, is at least unique (there may be other types of graph?).
 */
-
-function overlayArray_ConstructDot overlayArray, pOverlayName 
-   put overlayArray_ConstructHeader (overlayArray) into dotHeader
-   put dot_DefSectionFromArray (overlayArray, pOverlayName) into defSection
-   
-   overlayArray_DeconstructData overlayArray, linkArray, idArray, idLinkArray, reverseIdLinkArray, dotClusterArray
-   
-   put overlayArray_GetHeaderProperty (overlayArray, "dot_ClusterRank") into dotCluster
-   if dotClusterArray is an array and dotCluster is not "none" then
-      put overlayArray_ConstructClusterSection (overlayArray, pOverlayName) into clusterSection
-   end if
-   
-   -- put hKeyArray_ConstructNodeSection (idArray, idLinkArray, graphController, nodeTypeArray) into linkSection
-   put linkArray_DotNodeLinks (idLinkArray) into linkSection
-   
-   if pOverlayName is empty then
-      put "overlayArray_ConstructDot" into pGraphTitle
-   else
-      put pOverlayName into pGraphTitle
-      replace space with "_" in pGraphTitle
-   end if
-   put dot_TextFromSections (dotHeader, defSection, clusterSection, linkSection, pGraphTitle) into dotText
-   return dotText
-end overlayArray_ConstructDot
 
 function overlayArray_ConstructHeader overlayArray, pOverlayName
    overlayArray_DeconstructMetadata overlayArray, graphPropertyArray, dotHeaderArray, nodePropertyArray, edgePropertyArray, dotNodeStyleArray, pOverlayName

@@ -81,7 +81,14 @@ private on _
 end _
 
 on menu_DisplaySvg hKey, shortFile
-   display_HkeySvg hKey, svgFile
+   put hkey_Folder (hKey) into hkeyFolder
+   put hkeyFolder & shortFile into svgFile
+   if there is a file svgFile then
+      display_HkeySvgFile svgFile, hkey
+   else
+      put svgFile
+      finder_Reveal hkeyFolder
+   end if
 end menu_DisplaySvg
 
 on menu_DisplayDot hKey, shortFile

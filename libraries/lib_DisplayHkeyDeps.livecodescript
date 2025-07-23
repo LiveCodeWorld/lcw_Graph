@@ -12,33 +12,22 @@ version: 0.3
 
 --> Display
 -
--- command display_HkeySvg hKey, shortSvgFile
-put hkey_MetadataFolder (hKey) into mFolder
-put mFolder & shortSvgFile into svgFile
---
-display_Svg svgFile, "Hkey Deps"
-put the result into displayView
-set the displayed_Hkey of displayView to hkey
-return displayView
-end display_HkeySvg
-
 command display_HkeySVG hkey
    put hkey_SvgFile (hKey) into svgFile
-   --
-   put hkey into stackLabel
-   if scriptEditor_PaneExists ("Deps") then
-      display_ScriptEditorSvg svgFile
-   else
-      display_Svg svgFile, stackLabel
-   end if
-   put the result into displayView
-   --
-   if exists (displayView) then
-      -- could be empty if the svg does nto exist
-      set the displayed_Hkey of displayView to hkey
-   end if
-   return displayView
+   display_HkeySvgFile svgFile, hkey
+   return the result
 end display_HkeySVG
+
+command display_HkeySvgFile svgFile, hkey
+   -- if scriptEditor_PaneExists ("Deps") then display_ScriptEditorSvg svgFile
+   
+   display_Svg svgFile, hkey
+   put the result into dView
+   if exists (dView) then
+      set the displayed_Hkey of dView to hkey
+   end if
+   return dView
+end display_HkeySvgFile
 
 command display_ClusterDepGraph hkey, searchHierarchy, pClusterBoolean, pProcessObject  
    graph_HkeyCreateCluster hkey, searchHierarchy, pClusterBoolean, pProcessObject
