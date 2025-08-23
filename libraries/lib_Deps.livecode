@@ -1,0 +1,245 @@
+﻿script "lib_Deps"
+--> MetaData
+-
+license: GPLv3
+name: lib_Deps
+type: library
+version: 0.1
+
+
+--> Working on
+-
+getprop dep_UsedPaths
+   put the dep_UsedNames of the target into sNames
+   put the dep_Files [sNames] of the target into sFiles
+   return sFiles
+end dep_UsedPaths
+
+getprop dep_MenuPaths
+   put the dep_MenuNames of the target into sNames
+   put the dep_Files [sNames] of the target into sFiles
+   return sFiles
+end dep_MenuPaths
+
+getprop dep_Files [sNames]
+   put the stackFile_Root of the target into stackRoot
+   put the stackFile_Array of the target into sfArray
+   repeat for each line sName in sNames
+      put sfArray [sName] into relPath
+      put file_FromRelative (relPath, stackRoot) into stackPath
+      if there is a stack stackPath then
+         put stackPath & CR after sFiles
+      else
+         -- breakpoint
+      end if
+   end repeat
+   delete char -1 of sFiles
+   return sFiles
+end dep_Files
+
+getprop dep_MenuNames
+   put the dep_Array of the target into depArray
+   get depArray ["dep_MenuNames"]
+   return keys (it)
+end dep_MenuNames
+
+getprop dep_UsedNames
+   put the dep_Array of the target into depArray
+   get depArray ["dep_UsedNames"]
+   return keys (it)
+end dep_UsedNames
+
+getprop dep_Array
+   put the uOPN ["dep_Array"] of me into dArray
+   return dArray
+end dep_Array
+
+setprop dep_Array dArray
+   set the uOPN ["dep_Array"] of me to dArray
+   return dArray
+end dep_Array
+
+getprop dep_HkeyArray [pWalk]
+   if pWalk is true then
+      put the walk_HkeyArray of the target into hkeyArray
+   else
+      put the script_HkeyArray of the target into hkeyArray
+   end if
+   return hkeyArray
+end dep_HkeyArray
+
+
+--> Props
+-
+getprop dep_StackHandler [pWalk]
+   put the dep_Stacks [pWalk] of the target into dStacks
+   put stack_NamesFromObjects (dStacks) into sNames
+   replace CR with comma in sNames
+   put "return" && kwote (sNames) into hBody
+   get handler_Construct ("G", "dep_Stacks", hBody)
+   return it
+end dep_StackHandler
+
+getprop dep_StackTable [pWalk]
+   put the dep_StackArray [pWalk] of the target into sArray
+   put hKeyStackTable_From (sArray) into hkeyTable
+   return hkeyTable
+end dep_StackTable
+
+getprop dep_Stacks [pWalk]
+   put the dep_StackArray [pWalk] of the target into sArray
+   put keys (sArray) into depStacks
+   return depStacks
+end dep_Stacks
+
+getprop dep_StackArray [pWalk]
+   put the defaultstack into sObject
+   put the dep_HkeyArray [pWalk] of the target into hkeyArray
+   --
+   put hKeyStackArray_Without (hkeyArray, sObject) into sArray
+   return sArray
+end dep_StackArray
+
+getprop dep_StackObjectData [pWalk]
+   put the dep_HkeyArray [pWalk] of the target into hkeyArray
+   put hkeyStackArray_From (hkeyArray) into depObjectData
+   return depObjectData
+end dep_StackObjectData
+
+getprop dep_Projects [pHKeyArray]
+   put the long id of the target into sObject
+   if pHKeyArray is not an array then
+      put the walk_HkeyArray of sObject into pHKeyArray
+   end if
+   --
+   put hkeyArray_GetProjectDepArray (pHKeyArray) into depProjectData
+   put the project_Name of sObject into projectName
+   delete variable depProjectData [projectName]
+   --
+   put keys (depProjectData) into projectNames
+   return projectNames
+end dep_Projects
+
+
+--> Props
+-
+getprop dep_StackNames
+   get the env_PathArray of the target
+   put keys (it) into sNames
+   return sNames
+end dep_StackNames
+
+getprop dep_StackPaths
+   put env_GetRepoFolder() into envFolder
+   put the env_PathArray of the target into dArray
+   repeat for each key sName in dArray
+      put envFolder & dArray [sName] into sPath
+      put sPath & CR after sPaths
+   end repeat
+   delete char -1 of sPaths
+   return sPaths
+end dep_StackPaths
+
+getprop dep_RelativePaths
+   put the dep_StackNames of the target into sNames
+   replace comma with CR in sNames
+   repeat for each line sName in sNames
+      get the env_RelativeFile of stack sName
+      put it & CR after rPaths
+   end repeat
+   delete char -1 of rPaths
+   return rPaths
+end dep_RelativePaths
+
+
+--> Deps | HkeyArray
+-
+function deps_FromHkeyArray hKey, hkeyDepArray, pReturnShortHkey
+   put array_List (hkeyDepArray) into allHkeys
+   sort allHkeys by item 1 of each
+   repeat for each line depKey in allHkeys
+      put item 1 to 2 of depKey into shortDepKey
+      if shortDepKey =  item 1 to 2 of hKey then next repeat
+      if pReturnShortHkey is not false then
+         put shortDepKey & CR after hKeyDeps
+      else
+         put depKey & CR after hKeyDeps
+      end if
+   end repeat
+   delete char -1 of hKeyDeps
+   return hKeyDeps
+end deps_FromHkeyArray
+
+
+--> Deps | Stored
+-
+function deps_HkeyStackNames hKey
+   put deps_FetchFromStored (hKey) into hkeys
+   put hkey_ListStackNames (hkeys) into stackNames
+   return stackNames
+end deps_HkeyStackNames
+
+function deps_FetchFromStored hKey, pReturnShortHkey
+   put hkey_GetLinkArray (hKey) into hkeyDepArray
+   put deps_FromHkeyArray (hKey, hkeyDepArray, pReturnShortHkey) into hKeyDeps
+   return hKeyDeps
+end deps_FetchFromStored
+
+function deps_FetchFromStoredAnotherWay hKey, pReturnShortHkey
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put the script_LinkArray of hObject into scriptLinkArray
+   put hkeyArray_ExtractSubArray (hKey,scriptLinkArray) into hkeyLinkArray
+   --
+   put deps_FromHkeyArray (hKey, hkeyLinkArray, pReturnShortHkey) into hKeyDeps
+   return hKeyDeps
+end deps_FetchFromStoredAnotherWay
+
+
+--> Hkey | Deps
+-
+function hkey_FetchDeps hKey, pFetchHow
+   breakpoint -- nto working
+   
+   local hKeyArray
+   hkey_RecurseCallArray hKey, hkeyArray, pFetchHow
+   put array_List (hKeyArray) into allShortDeps
+   put item 1 to 2 of hKey into shortKey
+   line_Delete shortKey, allShortDeps
+   return allShortDeps
+end hkey_FetchDeps
+
+
+--> Hkey | LinkArray
+-
+/*
+A LinkArray is used to graph arrays. To do this LinkArrays provide a suite of tools that take complex keys and convert them into simple IDs,
+and dictionaries to translate from these IDS to the orginal keys.
+*/
+
+function hkey_GetLinkArray hKey, pOverlayName
+   put hkey_GetOverlayArray (hKey, pOverlayName) into overlayArray
+   put overlayArray ["data"]["linkArray"] into hkeyArray
+   return hkeyArray
+end hkey_GetLinkArray
+
+command hkey_SetLinkArray hKey, hkeyArray, pOverlayName
+   -- fixed to do a simple write
+   put hkey_FetchOverlayData (hKey) into overlayData
+   overlayData_NormalizeName pOverlayName, overlayData
+   --
+   put hkeyArray into overlayData [pOverlayName]["data"]["linkArray"]
+   --
+   hkey_SaveOverlayData hKey, overlayData
+   return overlayArray
+   
+   /*
+   -- makes no sense to set hkeyArray without setting the rest of the derived arrays
+   -- umm yes it does
+   put library_HandlerFile (hKey, empty, false) into overlayFolder
+   overlay_SetLinkArray overlayFolder, hkeyArray, pOverlayName, pGraphStyle
+   overlay_CreateGraph overlayFolder, hKeyArray, pOverlayName, pOverlayOf, pGraphStyle, pDotCluster, pMainstackHash, pImageFormat, pProcessObject
+   
+   put the result into overlayArray
+   return overlayArray
+   */
+end hkey_SetLinkArray

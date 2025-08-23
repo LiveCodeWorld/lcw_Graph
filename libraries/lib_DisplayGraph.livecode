@@ -1,0 +1,449 @@
+﻿script "lib_DisplayGraph"
+--> MetaData
+-
+license: GPLv3
+name: lib_DisplayGraph
+type: library
+version: 0.2
+
+/*
+A library to do with displaying overlays, creating them from folders of data (overlay_Folder)
+and providing a set of custom properties that can be used to manipulate them.
+
+Previously there were many intefaces and libraries - overlayData, overlayFolder, overlayArray, linkArray etc
+This library is designed to provide a standard way to interface with these handlers, 
+using overlay_Folder and overlay_Name to refer to graph overlays uniquely.
+
+= To Do =
+At the moment the data structure is a nested set of dotArrays keyed by the overlayName of each overlayArray.
+This means there is no real metadata for overlayData, and thngs like overlayName are stored
+as a hack by slooping through metadata properties of each overlayArray.
+
+The data structure should perhaps be changed to the usual data/metadata arrangement.
+
+*/
+
+
+--> Working On
+-
+command graph_CreateFromHkeyArray hkeyArray, pDataFolder, pGraphStyle, pProcessObject
+   if pGraphStyle is empty then put "hierarchical" into pGraphStyle
+   put "HkeyArray Graph" into pOverlayOf
+   --
+   put true into clusterBoolean
+   put empty into mainstackHash
+   --
+   overlay_CreateGraph pDataFolder, hkeyArray, pGraphStyle, overlayOf, pGraphStyle, clusterBoolean, mainstackHash, "svg", pProcessObject
+   put the result into overlayArray
+   --
+   put overlayArray_GetImageFile (overlayArray, pDataFolder) into imageFile
+   return imageFile
+end graph_CreateFromHkeyArray
+
+
+--> DisplayGraph
+-
+command display_HkeyArrayGraph hkeyArray, pGraphStyle
+   -- component: true
+   
+   if pGraphStyle is empty then put "hierarchical" into pGraphStyle
+   -- overlayArray_ReconstructAndCreateFiles hKeyArray, pOverlayName, overlayFolder, pGraphStyle, dotHeaderArray, graphPropertyArray
+   put overlayArray_FromLinkArray (hkeyArray) into overlayArray
+   overlayArray_SetGraphProperty overlayArray, "overlay_Style", pGraphStyle
+   overlayArray_CreateAndDisplayGraph overlayArray, pGraphStyle
+   put the result into imageView
+   return imageView
+end display_HkeyArrayGraph
+
+command display_CreateHandlerSvgFolder hKey, pHkeyArray, pGraphStyle
+   /*
+   Crawls scripts to create an hkeyArray.
+   Graphs it
+   Saves the graph and dot file to an asset folder in the handler.livecode.wiki wiki folder
+   displays the svg
+   
+   -- graph_Hkey hKey
+   -- hKey_SetArray hkey, pHkeyArray
+   */
+   
+   if pHkeyArray is not an array then
+      put walk_ConstructHkeyArray (hKey) into pHkeyArray
+   end if
+   
+   put wikiFolder_HandlerAssets() into dataFolder
+   folder_CreateNested dataFolder
+   --
+   displayGraph_HandlerArray hKey, pHkeyArray, pGraphStyle
+   put the result into svgView
+   
+   put the svg_File of svgView into svgFile
+   finder_Reveal svgFile
+   return svgFile
+end display_CreateHandlerSvgFolder
+
+command displayGraph_HandlerArray topHKey, hkeyArray, pGraphStyle
+   hkeyLine_Deconstruct topHKey, hName, hType, hObject
+   put wikiFolder_HandlerAssets(hName) into dataFolder
+   
+   reDisplayGraph_LinkArray hkeyArray, dataFolder, topHKey, pGraphStyle
+   put the result into svgView
+   return svgView
+end displayGraph_HandlerArray
+
+
+--> Display | HkeyArray
+-
+command display_DotTextSvg dotText, dotFile, pGraphStyle
+   dot_CreateGraph dotText, dotFile, pGraphStyle
+   --
+   put the result into svgFile
+   display_SVG svgFile, graphName
+   put the result into svgView
+   --
+   set the dot_File of svgView to dotFile
+   set the graph_Style of svgView to pGraphStyle
+   return svgView
+end display_DotTextSvg
+
+command display_DotFileSvg dotFile, pGraphStyle, pSvgFile
+   local dotText, dotCommand
+   dot_SvgFromDotFile dotFile, pGraphStyle, dotCommand, pSvgFile, dotText
+   --
+   put dot_GetName (dotText) into graphName
+   display_SVG pSvgFile, graphName
+   put the result into svgView
+   --
+   set the dot_File of svgView to dotFile
+   set the graph_Style [true] of svgView to pGraphStyle
+   return svgView
+end display_DotFileSvg
+
+command display_DotText textOrFile, pDisplayView, pPalette
+   -- display_DotText
+   if there is a file textOrFile then
+      put textOrFile into dotFile
+      put dot_GetText (dotFile) into dotText
+   else
+      put empty into dotFile
+      put textOrFile into dotText
+   end if
+   --
+   put dot_DisplayTitle (dotText, dotFile) into displayTitle
+   display_Text dotText, displayTitle, "Dot Text", pDisplayView, pPalette
+   --
+   put the result into displayView
+   set the dot_File of displayView to dotFile
+   --
+   set the title_Menu of displayView to "Global | Dot | Graph | Text | Menu"
+   return displayView
+end display_DotText
+
+command display_DotGraphs dotFile, pSvgView
+   put gv_DecomposeDotFile (dotFile) into dotGraphs
+   --   
+   display_Text dotGraphs, "Dot Graphs", "Global | Display | Dot | Graphs | Menu"
+   put the result into dView
+   --
+   set the linked_SvgView of dView to pSvgView
+   set the dot_File of dView to dotFile
+   --
+   put folder_Above (dotFile) into dotFolder
+   dot_SplitAndSaveGraphs dotGraphs, dotFolder
+   put the result into namedGraphArray
+   set the named_GraphArray of dView to namedGraphArray
+   --
+   if exists(pSvgView) then
+      put the graph_Style of pSvgView into graphStyle
+      set the graph_Style of dView to graphStyle
+   end if
+   --
+   return dView
+end display_DotGraphs
+
+command display_DotGraph dotURL, pStackStyle, pLocOrRect
+   stack_CloneInvisible "View|Dot|Graph", "Display Dot Graph"
+   put the result into cloneStackName
+   put the long id of widget 1 of cd 1 of stack cloneStackName into graphView
+   --
+   put the card_InnerRect of graphView into gRect
+   set the dot_URL [gRect] of graphView to dotURL
+   put the result into dotArray
+   --
+   set the dot_Name of graphView to dotName
+   --
+   stack_ShowAndGo graphView, cloneStackName, gName, pStackStyle, pLocOrRect
+   return graphView
+end display_DotGraph
+
+command display_Dot dotText, pGraphStyle, pGraphName, pDotFile
+   dot_CreateGraph dotText, pDotFile, pGraphStyle
+   --
+   put the result into svgFile
+   display_SVG svgFile, pGraphName
+   --
+   return svgFile
+   
+   /*
+   -- display_Dot dotText, pStyleOrDotArray, pImageView, pStackLabel, pDotFile, pResizeStyle
+   if exists (pImageView) is false then
+      if pResizeStyle is empty then put "fit inside frame" into pResizeStyle
+      if pStackLabel is empty then put "Dot" into pStackLabel
+      display_Image empty, true, pStackLabel, true
+      put the result into pImageView
+   end if
+   
+   if pStyleOrDotArray is an array then
+      set the overlay_Array of pImageView to pStyleOrDotArray
+   else
+      set the overlay_Style of pImageView to pStyleOrDotArray
+   end if
+   
+   set the image_File of pImageView to ""
+   set the uOPN ["dot_File"] of pImageView to pDotFile
+   --
+   set the dot_Text of pImageView to dotText 
+   
+   object_GoTo pImageView, true
+   return pImageView
+   */
+end display_Dot
+
+
+--> Display | Dot
+-
+command display_DotArray dotArray, pDotFile
+   put dotArray ["name"] into graphTitle
+   display_Data dotArray, graphTitle, "Dot Array"
+   put the result into displayView
+   --
+   set the dot_File of displayView to pDotFile
+   display_SetInteractions displayView, "Dot | Graph | Array", "mDouble_DotArray", "lcw_Graph"
+   return displayView
+end display_DotArray
+
+command display_DotUrl dotURL
+   put dot_FetchArray (dotURL) into dotArray
+   --
+   set the itemdelimiter to slash
+   put item -1 of dotURL into shortFile
+   display_Data dotArray, shortFile, "Dot"
+   return the result
+end display_DotUrl
+
+
+--> Display | Graph | Tools
+-
+command display_ExampleSvgs pURL
+   -- pURL is a web page which contains links to svgs
+   if pURL is empty then
+      put "https://dev.w3.org/SVG/tools/svgweb/samples/svg-files/" into pURL
+   end if
+   put url pURL into someHTML
+   --
+   put html_ExtractAllLinks (someHTML) into svgLinks
+   filter svgLinks with "*.svg"
+   --
+   display_Data svgLinks, "Found Links", "SVG"
+   put the result into displayView
+   set the displayed_URL of displayView to pURL
+   --
+   display_SetInteractions displayView, "SVG | Tree", "mDoubleUp_SVG"
+   return displayView
+end display_ExampleSvgs
+
+on mDoubleUp_SVG displayView, shortSvgFile
+   put the displayed_URL of displayView into someURL
+   put url_FromShortFile (shortSvgFile, someURL) into svgURL
+   --
+   display_SVG svgURL, shortSvgFile
+end mDoubleUp_SVG
+
+
+--> Display | Media
+-
+command display_CreateScriptObjectGraph sObject, pGraphStyle, pProcessObject
+   /*
+   You can alter the way the graph is constructed by placing a "graph_FilterProcessedArray" handler
+   at the same level as the "display_CreateScriptObjectGraph"
+   
+   Puts everything in the project_OverlayFolder.
+   Could / should change this to 
+   */
+   
+   if exists (pProcessObject) is false then
+      put item 1 of line -2 of the executioncontexts into pProcessObject
+   end if
+   
+   graph_CreateScriptObject sObject, pGraphStyle, pProcessObject
+   put the result into imageFile
+   --
+   display_ScriptSVG sObject
+   --
+   return imageFile
+end display_CreateScriptObjectGraph
+
+
+--> Display | SVG
+-
+command display_ScriptEditorSvg svgFile, pTabName
+   if pTabName is empty then put "Deps" into pTabName
+   
+   put "View|ScriptEditor|SVG" into viewName
+   scriptEditor_AddPane pTabName, viewName
+   put the result into displayView
+   
+   set the svg_File [true] of displayView to svgFile
+   return displayView
+end display_ScriptEditorSvg
+
+
+--> Dot
+-
+function dot_DisplayTitle dotText, dotFile
+   put dot_GetName (dotText) into displayTitle
+   put file_GetShort (dotFile) into shortFile
+   if shortFile is not empty then
+      put " (" & shortFile & ")" after displayTitle
+   end if
+   return displayTitle
+end dot_DisplayTitle
+
+function dot_MenuNameText dotName
+   put dot_MenuNameParam (dotName) into dotNameParam
+   if token 1 of dotNameParam is among the items of "http,https" then
+      put dotNameParam into dotURL
+      put url dotURL into dotText
+   else
+      put scaffold_Get (dotName) into dotText
+   end if
+   return dotText
+end dot_MenuNameText
+
+function dot_MenuNameParam dotName
+   put dot_MenuNameParamArray() into dotNameArray
+   put dotNameArray [dotName] into dotURL
+   return dotURL
+end dot_MenuNameParam
+
+function dot_MenuNameParamArray
+   -- construct a dictionary to store urls in and enable menu interface based on keys
+   local dotNameArray
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/colors.gv.txt"
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/bazel.gv.txt"
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/sdh.gv.txt"
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/directed/go-package.gv.txt"
+   _AddToNameArray dotNameArray, "https://graphviz.org/Gallery/undirected/gd_1994_2007.gv.txt"
+   --
+   put scaffold_ListShortFiles() into shortFiles
+   set the itemdelimiter to "."
+   repeat for each line shortFile in shortFiles
+      if item -1 of shortFile is not "gv" then next repeat
+      --
+      -- _AddToNameArray dotNameArray, shortFile
+      put "scaffold" into dotNameArray [shortFile]
+   end repeat
+   return dotNameArray
+end dot_MenuNameParamArray
+
+function dot_UrlNameMenu
+   put dot_MenuNameParamArray() into dotNameArray
+   -- put LocalArray ["dotNameArray"] into dotNameArray
+   put keys (dotNameArray) into nameMenu
+   replace CR with comma in nameMenu
+   return nameMenu & ",-,minimal"
+end dot_UrlNameMenu
+
+function dot_GetMinimal
+   put "digraph { a->b }" into dotText
+   return dotText
+end dot_GetMinimal
+
+function dot_RandomColour
+   put colour_GetRandom() into rColour
+   put colour_RgbToHex (rColour) into hColour
+   return hColour
+end dot_RandomColour
+
+
+--> Deps
+-
+private function colour_GetRandom
+   -- was "randomColour"
+   put random(255) into item 1 of someColour
+   put random(255) into item 2 of someColour
+   put random(255) into item 3 of someColour
+   return someColour
+end colour_GetRandom
+
+private function colour_RgbToHex rgbColour
+   -- was "colour_ConvertToWeb"
+   
+   put "#" into theWebColor -- leading "#"
+   repeat for each item myItem in rgbColour -- numeric triplet -  R,G,B
+      put format("%02X",myItem) after theWebColor
+   end repeat
+   return theWebColor
+   
+   -- alternative technique
+   put "#" into theWebColor -- leading "#"
+   repeat for each item myItem in rgbColour -- numeric triplet - R,G,B
+      get baseconvert(myItem,10,16)
+      if the length of it is 1 then put zero before it  -- each component must be 2-digit
+      put it after theWebColor
+   end repeat
+   return theWebColor
+end colour_RgbToHex
+
+function url_FromShortFile shortSvgFile, someURL
+   -- set the itemdelimiter to slash
+   put someURL into svgURL
+   if char -1 of svgURL is not slash then put slash after svgURL
+   put shortSvgFile after svgURL
+   return svgURL
+end url_FromShortFile
+
+private function html_ExtractAllLinks someHtml
+   /*
+   This one is prob better:
+   
+   <a[\s]+[^>]*?href[\s]?=[\s\"\']+(.*?)[\"\']+.*?>([^<]+|.*?)?<\/a>
+         
+   from http://regexlib.com/REDetails.aspx?regexp_id=968
+   
+   
+   based on http://regexlib.com/REDetails.aspx?regexp_id=774
+   
+   Pattern:  href[\s]*=[\s]*&quot;[^\n&quot;]*&quot;
+         RegExp Author:  Tony Hawe
+   Matching Text:	href =&quot;http://www.theregister.com/&quot;|||href=&quot;http://theregister.co.uk&quot;|||hre
+   Non-Matching Text:	href=http://theregister.co.uk
+   Description:	A very short pattern for extracting hrefs from HTML, does not validate they are within a tag
+   */
+   
+   local urlIndex
+   replace lineFeed with empty in someHtml -- seems necessary
+   
+   put "href[\s]*=[\s]*'([^\n']*)'" into someReg
+   replace "'" with quote in someReg -- for now to make regExp readable
+   
+   repeat
+      if matchchunk(someHtml, someReg, startCharNum, endCharNum) is false then
+         delete last char of urlIndex
+         return urlIndex
+      else
+         put char startCharNum to endCharNum of someHtml into someUrl
+         put someUrl & CR after urlIndex
+         delete char 1 to endCharNum + 1 of someHtml
+      end if
+   end repeat
+end html_ExtractAllLinks
+
+
+--> Private
+-
+private command _AddToNameArray @dotNameArray, dotURL
+   set the itemdelimiter to slash
+   put item -1 of dotURL into shortName
+   replace ".gv.txt" with empty in shortName
+   put dotURL into dotNameArray [shortName]
+end _AddToNameArray
