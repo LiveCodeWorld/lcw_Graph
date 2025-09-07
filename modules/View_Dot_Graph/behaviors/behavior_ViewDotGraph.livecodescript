@@ -21,6 +21,14 @@ local LocalArray
 
 --> Working on
 -
+getprop browser_URL
+   return the url of the browser_View of me
+end browser_URL
+
+setprop browser_URL sURL
+   set the url of the browser_View of me to sURL
+end browser_URL
+
 getprop auto_ScaleFactor [targetRect]
    local pScaleProportionally
    
@@ -260,7 +268,7 @@ getprop dot_Array
    if there is not a file dotFile then return empty
    
    put the graph_Style of me into graphStyle
-   put dot_CommandFromGraphStyle (graphStyle) into dotCommand
+   put dot_LayoutEngine (graphStyle) into dotCommand
    _CreateJsonAndSetDotArray dotFile, dotCommand
    put the result into dotArray
    return dotArray
@@ -349,8 +357,12 @@ on mouseDown
 end mouseDown
 
 command LayoutControl pRect
+   put _BrowserWidget() into browserWidget
+   if pRect is empty then
+      put the rect of me into pRect
+   end if 
+   
    lock screen
-   _SetFrameRect pRect
    -- 
    put the scale_Proportionally of me into scaleProportionally
    put the inner_Rect [pRect] of me into innerRect
@@ -360,20 +372,19 @@ command LayoutControl pRect
    
    _ScaleNodes dotArray, innerRect, topDown, scaleProportionally
    _ScaleEdges dotArray, bbRect, topDown, innerRect, scaleProportionally
-   --
-   set the rect of _BrowserControl() to innerRect
-   unlock screen
-end LayoutControl
-
-private command _SetFrameRect @pRect
+   
+   # Browser Rect
+   if exists (browserView) then
+      set the rect of browserWidget to innerRect
+   end if
+   
    set lockmessages to true
-   if pRect is empty then
-      put the rect of me into pRect
-   else if the lockloc  of me is true then
+   if the lockloc of me is true then
       set the rect of me to pRect
    end if
    set lockmessages to false
-end _SetFrameRect
+   unlock screen
+end LayoutControl
 
 private function _GetNodeRect nodeArray, dotArray, targetRect, pTopDown, pScaleProportionally
    put graph_OriginalNodeRect (nodeArray, pTopDown) into oNodeRect
@@ -454,7 +465,7 @@ setprop graph_Style graphStyle
    put the dot_File of me into dotFile
    if there is not a file dotFile then return empty
    
-   put dot_CommandFromGraphStyle (graphStyle) into dotCommand
+   put dot_LayoutEngine (graphStyle) into dotCommand
    _CreateJsonAndSetDotArray dotFile, dotCommand
    put the result into dotArray
    return dotArray
@@ -462,7 +473,7 @@ end graph_Style
 
 getprop dot_Command
    put the graph_Style of me into graphStyle
-   put dot_CommandFromGraphStyle (graphStyle) into dotCommand
+   put dot_LayoutEngine (graphStyle) into dotCommand
 end dot_Command
 
 setprop dot_Command dotCommand
@@ -541,7 +552,7 @@ setprop dot_File [graphStyle] dotFile
    if graphStyle is empty then
       put the dot_Command of me into dotCommand
    else
-      put dot_CommandFromGraphStyle (graphStyle) into dotCommand
+      put dot_LayoutEngine (graphStyle) into dotCommand
       set lockmessages to true
       set the graph_Style of me to graphStyle
       set lockmessages to false
@@ -640,11 +651,15 @@ end graph_Controls
 
 getprop node_Ids
    put the controlids of me into nodeIDs
-   put the short id of _BrowserControl() into browserID
-   --
-   set the wholeMatches to true
-   put lineOffset (browserID, nodeIDs) into lineNum
-   delete line lineNum of nodeIDs
+   
+   put _BrowserWidget() into bWidget
+   if exists (bWidget) then
+      put the short id of sfda into browserID
+      --
+      set the wholeMatches to true
+      put lineOffset (browserID, nodeIDs) into lineNum
+      delete line lineNum of nodeIDs
+   end if
    --
    return nodeIDs
 end node_Ids
@@ -912,11 +927,17 @@ end object_Array
 --> Appearance
 -
 getprop browser_Visible
-   return the visible of _BrowserControl()
+   put _BrowserWidget() into bWidget
+   if exists (bWidget) is false then return empty
+   
+   return the visible of bWidget
 end browser_Visible
 
 setprop browser_Visible sBoolean
-   set the visible of _BrowserControl() to (sBoolean is true)
+   put _BrowserWidget() into bWidget
+   if exists (bWidget) is false then return empty
+   
+   set the visible of bWidget to (sBoolean is true)
 end browser_Visible
 
 setprop faded_Nodes [bLevel] nodeNames
@@ -1262,10 +1283,10 @@ end _GetEdgeNames
 --> Events
 -
 on preOpenControl
-   get the behavior of _BrowserControl()
+   get the behavior of _BrowserWidget()
    if exists (stack "behavior_ViewImageSVG") then
       put the name of stack "behavior_ViewImageSVG" into bObject
-      set the behavior of _BrowserControl() to bObject
+      set the behavior of _BrowserWidget() to bObject
    end if
    pass preOpenControl
 end preOpenControl
@@ -1464,13 +1485,15 @@ end dot_Name
 --> Objects
 -
 getprop browser_View
-   return _BrowserControl()
+   return _BrowserWidget()
 end browser_View
 
-private function _BrowserControl
+private function _BrowserWidget
+   if exists (widget "Browser" of me) is false then return empty
+   --
    put the long id of widget "Browser" of me into browserControl
    return browserControl
-end _BrowserControl
+end _BrowserWidget
 
 getprop graph_View
    return the long id of me

@@ -89,13 +89,23 @@ on menu_SetDotUrl graphView, dotName
    put dot_MenuNameText (dotName) into dotText
    set the dot_Text of graphView to dotText
    set the dot_Name of graphView to dotName
+   --
+   put dot_MenuNameParam (dotName) into dotURL
+   if dotURL is not "scaffold" then
+      -- https://graphviz.org/Gallery/directed/go-package.svg
+      set the itemdelimiter to "."
+      put "svg" into item -2 to -1 of dotURL
+      --
+      set the browser_URL of graphView to dotURL
+      set the browser_Visible of graphView to true
+   end if
 end menu_SetDotUrl
 
 on menu_DisplayDotUrl graphView, dotName
    put dot_MenuNameText (dotName) into dotText
    display_DotText dotText, dotName
 end menu_DisplayDotUrl
-   
+
 on menu_GraphStyle graphView, graphStyle
    set the graph_Style of graphView to graphStyle
 end menu_GraphStyle
@@ -156,6 +166,16 @@ on menu_ShowBrowser graphView
    put the browser_Visible of graphView into sBoolean
    set the browser_Visible of graphView to (sBoolean is false)
 end menu_ShowBrowser
+
+on menu_DeleteBrowser graphView
+   put the browser_View of graphView into browserView
+   delete browserView
+end menu_DeleteBrowser
+
+getprop checked_DeleteBrowser [graphView]
+   put the browser_View of graphView into browserView
+   return exists (browserView)
+end checked_DeleteBrowser
 
 on submenu_Tools
    return "Global | Dot | Graph | Tools | Menu"

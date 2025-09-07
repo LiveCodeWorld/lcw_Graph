@@ -228,7 +228,7 @@ end hkeyArray_ConstructDot
 --> Dot | From
 -
 function dot_LayoutEngine pGraphStyle
-   -- was "dot_CommandFromGraphStyle" 
+   -- was "dot_LayoutEngine" 
    -- defaults to "dot"
    dot_GraphStyleToLayoutEngine pGraphStyle
    return pGraphStyle

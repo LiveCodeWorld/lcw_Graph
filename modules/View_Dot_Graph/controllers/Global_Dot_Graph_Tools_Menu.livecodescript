@@ -37,7 +37,7 @@ end _ChooseDot
 
 private function _FetchText dotURL, exportFormat
    put "dot" into dotCommand
-   -- put dot_CommandFromGraphStyle (graphStyle) into dotCommand
+   -- put dot_LayoutEngine (graphStyle) into dotCommand
    --
    put url dotURL into dotText
    --
@@ -114,7 +114,7 @@ end menu_FetchDot
 on menu_FetchDotText indexView, whichDot
    put _ChooseDot (whichDot) into dotText
    display_Text dotText
-end menu_FetchDotText 
+end menu_FetchDotText
 
 on menu_FetchDotArray indexView, whichDot
    put _ChooseDot (whichDot) into dotText

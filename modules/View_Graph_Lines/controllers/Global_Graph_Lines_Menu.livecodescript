@@ -23,7 +23,7 @@ end displayGraphText_Params
 
 function _FetchText dotURL, exportFormat
    put "dot" into dotCommand
-   -- put dot_CommandFromGraphStyle (graphStyle) into dotCommand
+   -- put dot_LayoutEngine (graphStyle) into dotCommand
    --
    put url dotURL into dotText
    --

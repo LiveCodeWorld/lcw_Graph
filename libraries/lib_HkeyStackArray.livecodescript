@@ -531,23 +531,6 @@ function hKeyStackArray_ListHkeys stackArray
    return hKeys
 end hKeyStackArray_ListHkeys
 
-setprop hkeyStackArray_Menus showHow
-   put the data_View of the target into dView
-   if exists (dView) is false then return false
-   --
-   put "Global | Script | Dep | Line | Menu" into mTitle
-   if showHow = "hkeys" then
-      put the index_Field of dView into indexField
-      set the line_Menu of indexField to "Global | Script | Hkey | Line | Menu"
-   else
-      set the itemdelimiter to " | "
-      put text_InitialCaps (showHow) into item 3 of mTitle
-      put the tree_View of dView into arrayView
-      set the line_Menu of arrayView to mTitle
-   end if
-   return true
-end hkeyStackArray_Menus
-
 setprop hkeyStackArray_ShowHow showHow
    put the data_View of the target into dView
    if exists (dView) is false then return false
