@@ -19,7 +19,7 @@ getprop hkey_InHierarchy [hKey]
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
    put hType && hName into shortHKey
    --
-   put hkey_FoundArray (shortHKey, tObject, pProjectName) into foundArray 
+   put hkey_FoundArray (shortHKey, tObject) into foundArray 
    return foundArray ["foundHkey"]
 end hkey_InHierarchy
 

@@ -14,7 +14,7 @@ setprop hkeyStackArray_ShowHow showHow
    put the data_View of the target into dView
    if exists (dView) is false then return false
    --
-   put the uOPN ["displayed_HkeyArray"] of dView into hkeyArray
+   put the uOPN ["hkey_Array"] of dView into hkeyArray
    put the uOPN ["displayed_Object"] of dView into sObject
    put the uOPN ["strip_MissingProps"] of dView into stripMissing
    --

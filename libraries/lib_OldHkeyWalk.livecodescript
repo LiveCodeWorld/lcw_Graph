@@ -18,7 +18,7 @@ local AllowPrivateWithFirstObject = true
 local UseExportedCalls = false
 
 
---> Walk | Old
+--> Walk | Hierarchy
 -
 getprop walk_Hierarchy
    put the long id of the target into tObject

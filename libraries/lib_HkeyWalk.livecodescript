@@ -21,6 +21,36 @@ local LivecodeDictionaryTerms
 local WalkSearchHierarchy
 
 
+--> Working on
+-
+function displayData_ScriptObjects
+   put the name of stack "View|Data" into searchObjects
+   --
+   put CR & the name of stack "lib_MenuPop" after searchObjects
+   put CR & the name of stack "lib_MenuText" after searchObjects
+   --
+   put CR & the name of stack "behavior_ViewData" after searchObjects
+   put CR & the name of stack "behavior_DataTree" after searchObjects
+   put CR & the name of stack "behavior_ViewDataPoly" after searchObjects
+   put CR & the name of stack "behavior_ViewIndex" after searchObjects
+   --
+   return searchObjects
+end displayData_ScriptObjects
+
+getprop walk_Hierarchy
+   put the long id of the target into tObject
+   --
+   if the module_Name of tObject is empty then
+      put revRuggedID (tObject) into tObject
+      put hierarchy_Construct (tObject) into walkHierarchy
+      hierarchy_AddEnv walkHierarchy
+   else
+      put the module_BehaviorHierarchy of tObject into walkHierarchy
+   end if
+   return walkHierarchy
+end walk_Hierarchy
+
+
 --> Walk | HkeyArray
 -
 getprop walk_HkeyArray [pShortHkey]
@@ -120,7 +150,7 @@ end _WalkAvailableHandlers
 -
 getprop module_Name
    put the effective filename of the defaultstack into sPath
-   put module_NameFromPath (sPath) into moduleName
+   put default_ModuleNameFromFolder (sPath) into moduleName
    return moduleName
 end module_Name
 
@@ -261,24 +291,6 @@ getprop module_Behaviors
    return moduleBehaviors
 end module_Behaviors
 
-getprop walk_Hierarchy
-   put the long id of the target into tObject
-   --
-   if the module_Name of tObject is empty then
-      put revRuggedID (tObject) into tObject
-      put hierarchy_Construct (tObject) into walkHierarchy
-      hierarchy_AddEnv walkHierarchy
-   else
-      put the module_BehaviorHierarchy of tObject into walkHierarchy
-   end if
-   return walkHierarchy
-end walk_Hierarchy
-
-
---> Deps
--
---> Props
--
 getprop handler_Key [hKey]
    put the long id of the target into tObject
    put revRuggedID (tObject) into hObject
@@ -979,20 +991,8 @@ command line_Delete someLine, @someIndex
    return lineNum
 end line_Delete
 
-function module_ConstructFolder stackPath
-   put project_FolderFromPath (stackPath) into projectFolder
-   if there is not a folder projectFolder then return empty
-   
-   set the itemdelimiter to slash
-   put the number of items of projectFolder into pNum
-   if item (pNum + 1) of stackPath is not "Modules" then return empty
-   
-   put item 1 to (pNum + 2) of stackPath & slash into moduleFolder
-   return moduleFolder
-end module_ConstructFolder
-
 function module_ConstructShortFolder sPath
-   put module_ConstructFolder (sPath) into moduleFolder
+   put module_FolderFromStackPath (sPath) into moduleFolder
    set the itemdelimiter to slash
    put item -1 of moduleFolder into shortFolder
    return shortFolder
@@ -1006,12 +1006,6 @@ function module_FolderFromPath stackPath, projectFolder
    put item 1 to (pNum + 2) of stackPath & slash into moduleFolder
    return moduleFolder
 end module_FolderFromPath
-
-function module_NameFromPath sPath
-   put module_ConstructShortFolder (sPath) into moduleName
-   replace "_" with "|" in moduleName
-   return moduleName
-end module_NameFromPath
 
 command object_AddBehaviors @objectIndex
    repeat for each line someObject in objectIndex
